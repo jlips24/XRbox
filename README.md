@@ -99,13 +99,14 @@ topology (VPNs also use private addresses). An unavailable pair stays unknown.
 
 ## Current limits
 
-- Real sign-in and media receipt have been observed in user testing; stable video,
-  physical controls and audible output are not yet validated.
+- The user reports desktop playback working. New controller shortcuts still need
+  real-console validation; automated tests do not establish physical behavior.
 - No XR renderer, passthrough, Frame package or Frame battery measurements yet.
 - Linux ARM64 hardware decoding and GPU surface import are unresolved. Portable
   non-macOS compilation uses FFmpeg software decoding; it is not a Frame efficiency solution.
 - macOS requires VideoToolbox hardware decode; there is no silent software fallback.
-- Rumble and dedicated Xbox/Guide button availability are not validated. Gameplay
+- Rumble is not validated. Physical Xbox/Guide is reserved for the host and ignored
+  by console input; the virtual shortcut still needs console validation. Gameplay
   button/axis mappings reuse upstream; controller identification depends on OS access.
 - CPU/memory, end-to-end latency and power are not yet
   measured. Decode-to-callback time is not input-to-display latency.
@@ -150,12 +151,33 @@ close Diagnostics, dismiss sign-out confirmation, or cancel a pending connection
 Sign-out has a confirmation screen. Keyboard arrows/Enter/Escape and mouse remain
 available. Microsoft authentication itself takes place in the system browser.
 
-During gameplay, press **View + Menu** together to open XRBox's stream menu. Menu
-navigation is kept local and sends neutral gameplay input while the menu is open.
-Choose **Resume game** or press B to return. All other buttons, sticks and triggers
-pass through immediately on resume; **only View and Menu** remain suppressed until
-both are released. Because the chord is recognized when both buttons are down,
-the first button can reach the console before the second is pressed.
+During gameplay:
+
+| Shortcut | Action |
+| --- | --- |
+| **Select + Start** (View + Menu) | Send one Xbox/Guide press to the console when the chord is released |
+| **Select + Start + LB + RB** | Open XRBox's stream menu; takes priority over the smaller chord |
+
+Hold Select+Start while adding LB/RB to open XRBox; it will not also send Guide.
+The virtual Guide press lasts 120 ms and is sent through the existing Remote Play
+input protocol, without synthesizing an OS key or pressing the physical Xbox button.
+A long hold still sends a short press when released; remote Guide long-press
+behavior is not implemented.
+
+Menu navigation stays local and sends neutral gameplay input while open. Resume
+with A or B. All other buttons (including LB/RB), sticks and triggers pass through
+immediately on resume; **only Select/View and Start/Menu** remain suppressed until
+both are released. Individual buttons can reach the console before a complete
+shortcut is detected; ordinary gameplay input is not delayed to buffer chords.
+
+The **physical Xbox/Guide button is ignored by XRBox's console-input mapping**.
+It may still open the host OS/Steam overlay. XRBox does not alter system shortcuts
+or enable upstream system-gesture capture. Steam documents its
+[global Guide chords](https://partner.steamgames.com/doc/features/steam_controller/getting_started_for_players?l=english),
+and Windows uses the [Xbox button for Game Bar](https://support.microsoft.com/en-us/servicing/os/windows/docs/2025/10/windows-gaming-full-screen-experience).
+Apple offers a [system-gesture preference](https://developer.apple.com/documentation/gamecontroller/gccontrollerelement/preferredsystemgesturestate)
+but explicitly does not guarantee that it is respected. These shortcuts avoid
+needing the reserved physical button; OS-specific behavior still needs testing.
 
 The app samples one controller source for both menu and gameplay. Idle controller
 polling is 30 Hz; active streaming retains the 125 Hz sampling rate. Idle menus

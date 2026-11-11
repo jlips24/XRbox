@@ -173,3 +173,47 @@ Manual retest with 0.1.5:
 
 Physical controller routing, console behavior, final visual usability and battery
 impact still require this user hardware test. No latency/battery results claimed.
+
+## 0.1.6 — virtual Xbox Guide and overlapping shortcuts
+
+Implemented the user's clarified mapping: Select/View+Start/Menu sends remote
+Xbox/Guide; adding LB+RB opens XRBox instead. Guide commits on chord release as a
+120 ms protocol-button pulse. Physical Guide input is not forwarded and no host
+system gesture capture, input synthesis or OS settings changes are made. This
+supersedes 0.1.5's two-button app-menu shortcut.
+
+Executed:
+
+- `make test`: application (19 tests), API/auth, session and controller suites
+  passed. The OS-Keychain integration test remains ignored by default.
+- `make check`: formatting and Clippy passed with warnings denied.
+- `make package`: built and ad-hoc signed 0.1.6 with pinned dependencies.
+- Packaged `--smoke`: rendered 10 synthetic GPU UI frames and exited successfully,
+  without credentials, controller sampling, host shortcut changes or Xbox access.
+
+New regression coverage: all 24 press orders for the four-button chord, slow
+bumper additions, no smaller-chord action when opening XRBox, held/repeated
+shortcuts, exact Guide pulse expiration, partial release, focus loss, disconnect,
+idle/menu cancellation, physical Guide filtering, immediate normal inputs and
+View/Menu-only release gating. A shared-controller test feeds the real upstream
+GamepadInputSource and checks encoded input packets for Guide down and up. Added
+headless egui tests for keyboard Enter/Escape and disabled modal-background actions.
+Existing auth persistence, redaction, session cleanup and controller tests still pass.
+
+Manual console retest:
+
+1. Launch the packaged 0.1.6, connect and press Select+Start together, then release.
+   The Xbox Guide should open once; no host Guide button is pressed by this action.
+2. Hold Select+Start for several seconds: no Guide until release, then a short
+   press (not remote long-press behavior). Try releasing either button first.
+3. Hold Select+Start and add LB/RB, also trying bumpers first. XRBox's menu should
+   open without opening the console's Guide. Release the shortcut and resume.
+4. While resuming, hold another button, stick or trigger. It should pass through
+   immediately; only Select/Start wait for release. LB/RB are not gated on resume.
+5. Test focus loss or controller disconnect during both a pending shortcut and
+   Guide pulse; returning must not replay it. Check that single Select/Start and
+   bumper presses still act normally in games.
+
+Real console response to the Guide pulse and platform-specific host interception
+still require hardware validation. Pressing the physical Xbox button may still
+open the host overlay; ignoring it in XRBox cannot prevent that OS behavior.

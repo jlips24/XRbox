@@ -38,6 +38,8 @@ current validation evidence over older planning assumptions.
 - `controller.rs` and `navigation.rs`: shared physical sampling, menu/game input
   routing, spatial focus and controller repeat. After stream-menu resume, only
   View/Menu wait for release; other gameplay input must resume immediately.
+  View/Select+Menu/Start sends remote Guide on chord release; adding LB+RB opens
+  XRBox instead. Physical Guide stays reserved to the host and is not forwarded.
 - `media.rs`: upstream RTP/decoder/audio wiring and stage counters.
 - `config.rs` and `diagnostics.rs`: non-secret app data and sanitized logging.
 - `vendor/openxcloud`: seven library crates pinned to the revision in
@@ -84,7 +86,10 @@ account. Use `make package` for the ad-hoc signed macOS development bundle and
 
 ## Reporting and hardware boundary
 
-Run checks appropriate to each change and report what actually executed. Update
+Run checks appropriate to each change and report what actually executed. Add
+meaningful regression coverage for behavioral changes where practical, especially
+shortcut priority, focus/disconnect cleanup and input suppression. Use headless UI
+and fake-service tests where possible; document remaining hardware-only checks. Update
 documentation when behavior, commands or limitations change. For streaming fixes,
 separate packet receipt, frame assembly, decoding and presentation evidence; never
 equate network traffic or signaling state with successful video playback.

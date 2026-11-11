@@ -151,3 +151,28 @@ focus changes disarm held UI selections until neutral so a held A does not activ
 a new screen; this UI rule does not gate gameplay on resume. Actions use stable IDs
 so changing Copy feedback or status text does not shift selection. New screens
 focus their primary tile. Sign-out is confirmed. No Xbox protocol changes are made.
+
+## OS-independent Guide shortcuts (0.1.6)
+
+Supersedes 0.1.5's menu hotkey: View/Select+Menu/Start sends remote Guide;
+View+Menu+LB+RB opens XRBox. The two-button candidate commits only when View or
+Menu is released. As long as both remain held, adding the bumpers gives the larger
+chord priority regardless of press order, without a timeout that could fire Guide
+while attempting the app shortcut. A completed app shortcut cancels any pending
+Guide. The reserved pair is suppressed until fully released after recognition.
+Unrelated controls continue immediately after closing the menu, including bumpers.
+
+The session thread runs a deterministic shortcut state machine before the existing
+input source. It produces a 120 ms NEXUS pulse followed by a release. Focus loss,
+controller disconnect, idle state or an open app menu cancels candidate/pulse state.
+Both reserved buttons must be released before rearming on focus return/reconnect;
+other held controls are not gated. Physical NEXUS is stripped from input. This
+never generates host OS input events and does not claim/suppress host system
+shortcuts. The bundled SystemGestureGuard remains unused: Apple's foreground
+preference is not a portable guarantee, and host defaults must remain unchanged.
+
+Tests cover all 24 press orders for the four-button shortcut, one-shot/release
+semantics, timing, focus/disconnect cancellation, immediate non-shortcut controls,
+raw physical Guide filtering, shared-controller menu priority, and actual protocol
+packet press/release encoding. Headless egui tests also exercise keyboard actions
+and prevent activation of disabled modal backgrounds.
