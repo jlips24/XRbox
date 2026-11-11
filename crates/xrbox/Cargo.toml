@@ -1,6 +1,6 @@
 [package]
 name = "xrbox"
-version = "0.1.3"
+version = "0.1.4"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -25,6 +25,7 @@ crossbeam-channel.workspace = true
 open.workspace = true
 serde_json.workspace = true
 directories.workspace = true
+chrono.workspace = true
 
 [target.'cfg(not(target_os = "macos"))'.dependencies]
 xcloud-media = { workspace = true, features = ["ffmpeg"] }

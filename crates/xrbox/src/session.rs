@@ -151,6 +151,7 @@ async fn run(
     ctx: egui::Context,
 ) {
     let mut auth = auth::service(false).expect("HTTP client");
+    let mut auth_persistent = false;
     let mut active: Option<Active> = None;
     let mut job: Option<tokio::task::JoinHandle<anyhow::Result<Outcome>>> = None;
     let mut ticker = tokio::time::interval(Duration::from_millis(8));
@@ -172,8 +173,12 @@ async fn run(
                     Command::SignOut => {
                         stop(&mut active, &video).await;
                         let result = auth.clear_session();
-                        let persistent_clear =
-                            auth::service(true).and_then(|a| a.clear_session().map_err(anyhow::Error::from));
+                        // The current persistent service already clears the same Keychain item.
+                        let persistent_clear = if auth_persistent {
+                            Ok(())
+                        } else {
+                            auth::service(true).and_then(|a| a.clear_session().map_err(anyhow::Error::from))
+                        };
                         *state.lock() = Snapshot::default();
                         status(
                             &state,
@@ -193,6 +198,7 @@ async fn run(
                                 continue;
                             }
                         };
+                        auth_persistent = true;
                         let auth = auth.clone();
                         state.lock().busy = true;
                         status(&state, &ctx, "Checking saved sign-in");
@@ -204,7 +210,10 @@ async fn run(
                         stop(&mut active, &video).await;
                         *state.lock() = Snapshot::default();
                         match auth::service(persistent) {
-                            Ok(service) => auth = service,
+                            Ok(service) => {
+                                auth = service;
+                                auth_persistent = persistent;
+                            },
                             Err(_) => {
                                 status(&state, &ctx, "Cannot initialize authentication");
                                 continue;
@@ -231,6 +240,7 @@ async fn run(
                             && let Ok(restored) = auth::service(persistent)
                         {
                             auth = restored;
+                            auth_persistent = persistent;
                         }
                         if active.is_some() {
                             continue;
