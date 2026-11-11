@@ -84,6 +84,7 @@ pub struct Navigation {
     input: Input,
     controls: Vec<(String, egui::Rect)>,
     focus: Option<String>,
+    scroll_focus: Option<String>,
     screen: String,
     select: bool,
 }
@@ -99,6 +100,7 @@ impl Navigation {
         if self.screen != screen {
             self.screen = screen.into();
             self.focus = None;
+            self.scroll_focus = None;
             self.input.armed = false;
             self.controls.clear();
         }
@@ -145,7 +147,8 @@ impl Navigation {
                 })
                 .min_by(|a, b| a.1.total_cmp(&b.1));
             if let Some((id, _)) = target {
-                self.focus = Some(id.clone());
+                let id = id.clone();
+                self.focus(&id);
             }
         }
         self.controls.clear();
@@ -156,7 +159,10 @@ impl Navigation {
         back || (enabled && ctx.input(|i| i.key_pressed(egui::Key::Escape)))
     }
     pub fn focus(&mut self, id: &str) {
-        self.focus = Some(id.into());
+        if self.focus.as_deref() != Some(id) {
+            self.focus = Some(id.into());
+            self.scroll_focus = Some(id.into());
+        }
     }
     pub fn button(
         &mut self,
@@ -168,7 +174,7 @@ impl Navigation {
     ) -> bool {
         let enabled = enabled && ui.is_enabled();
         if enabled && primary && self.focus.is_none() {
-            self.focus = Some(id.into());
+            self.focus(id);
         }
         let focused = self.focus.as_deref() == Some(id);
         let button = egui::Button::new(egui::RichText::new(text).size(19.0))
@@ -193,12 +199,14 @@ impl Navigation {
         if enabled {
             self.controls.push((id.into(), response.rect));
         }
-        if focused {
-            response.scroll_to_me(Some(egui::Align::Center));
+        if enabled && self.scroll_focus.as_deref() == Some(id) {
+            // Reveal newly selected controls once; idle hover must not fight scrolling.
+            response.scroll_to_me(None);
+            self.scroll_focus = None;
         }
         let clicked = response.clicked() || (enabled && focused && self.select);
         if clicked {
-            self.focus = Some(id.into());
+            self.focus(id);
             self.select = false;
         }
         clicked
@@ -373,5 +381,105 @@ mod tests {
             output.textures_delta.clear();
         }
         assert_eq!(clicks, 1);
+    }
+    #[test]
+    fn stationary_hover_preserves_user_scroll_without_recentering_focus_every_frame() {
+        let ctx = egui::Context::default();
+        ctx.style_mut_of(egui::Theme::Dark, |s| {
+            s.scroll_animation = egui::style::ScrollAnimation::none()
+        });
+        ctx.set_visuals(egui::Visuals::dark());
+        let mut nav = Navigation::default();
+        for frame in 0..8 {
+            let mut offset = 0.0;
+            let mut input = egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(800.0, 400.0),
+                )),
+                ..Default::default()
+            };
+            input
+                .events
+                .push(egui::Event::PointerMoved(egui::pos2(40.0, 200.0)));
+            let mut output = ctx.run_ui(input, |ui| {
+                nav.begin(&ctx, &sample(B::NONE), true, "home", Duration::ZERO);
+                let area = egui::ScrollArea::vertical()
+                    .max_height(260.0)
+                    .vertical_scroll_offset(200.0)
+                    .show(ui, |ui| {
+                        nav.button(ui, "signin", "Sign in with Microsoft", true, true);
+                        ui.add_space(250.0);
+                        nav.button(ui, "other", "Another action", true, false);
+                        ui.add_space(500.0);
+                        ui.weak("XRBox · Console Remote Play");
+                    });
+                offset = area.state.clamped_offset().y;
+            });
+            output.textures_delta.clear();
+            // Initial focus reveal may be applied on the following frame.
+            if frame >= 2 {
+                assert!(
+                    (offset - 200.0).abs() < 0.1,
+                    "stationary hover moved scroll to {offset}"
+                );
+            }
+        }
+    }
+    #[test]
+    fn changed_focus_reveals_offscreen_tile_but_repeated_focus_does_not_lock_scroll() {
+        let ctx = egui::Context::default();
+        ctx.set_visuals(egui::Visuals::dark());
+        ctx.style_mut_of(egui::Theme::Dark, |s| {
+            s.scroll_animation = egui::style::ScrollAnimation::none()
+        });
+        let mut nav = Navigation::default();
+        let mut revealed = false;
+        for frame in 0..10 {
+            let input = egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(800.0, 400.0),
+                )),
+                time: Some(frame as f64 / 30.0),
+                ..Default::default()
+            };
+            let mut offset = 0.0;
+            let mut output = ctx.run_ui(input, |ui| {
+                nav.begin(&ctx, &sample(B::NONE), true, "consoles", Duration::ZERO);
+                if frame >= 2 {
+                    nav.focus("second");
+                }
+                let mut area = egui::ScrollArea::vertical().max_height(260.0);
+                if frame >= 6 {
+                    area = area.vertical_scroll_offset(200.0);
+                }
+                offset = area
+                    .show(ui, |ui| {
+                        nav.button(ui, "first", "First console", true, true);
+                        ui.add_space(600.0);
+                        nav.button(ui, "second", "Second console", true, true);
+                        ui.add_space(300.0);
+                        ui.label("End");
+                    })
+                    .state
+                    .clamped_offset()
+                    .y;
+            });
+            output.textures_delta.clear();
+            if (2..6).contains(&frame) {
+                revealed |= offset > 400.0;
+            }
+            if frame >= 8 {
+                assert!(
+                    (offset - 200.0).abs() < 0.1,
+                    "repeated focus recentered to {offset}"
+                );
+            }
+        }
+        assert!(
+            revealed,
+            "new focus must still reveal the offscreen console tile"
+        );
     }
 }

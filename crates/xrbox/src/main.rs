@@ -230,6 +230,11 @@ impl eframe::App for App {
                     });
                 });
             });
+            ui.weak(concat!(
+                "XRBox ",
+                env!("CARGO_PKG_VERSION"),
+                " · Console Remote Play"
+            ));
             ui.add_space(8.0);
         });
         egui::CentralPanel::default().show(root, |ui| {
@@ -301,9 +306,7 @@ impl eframe::App for App {
                     if snapshot.busy && self.navigation.button(ui, "cancel", "Cancel connection", true, snapshot.code.is_none()) {
                         self.session.send(Command::Disconnect);
                     }
-                    ui.add_space(24.0);
-                    ui.separator();
-                    ui.weak(concat!("XRBox ", env!("CARGO_PKG_VERSION"), " · Console Remote Play"));
+
                 });
             });
         });
