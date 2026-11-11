@@ -6880,7 +6880,7 @@ checksum = "e450f9b2ed1dff33c94c12589a87338689467b9c4f5d8a5710bd09a847d2c8a7"
 
 [[package]]
 name = "xrbox"
-version = "0.1.8"
+version = "0.1.9"
 dependencies = [
  "anyhow",
  "chrono",
@@ -6890,6 +6890,7 @@ dependencies = [
  "egui",
  "open",
  "parking_lot 0.13.0",
+ "serde",
  "serde_json",
  "tokio",
  "tracing",

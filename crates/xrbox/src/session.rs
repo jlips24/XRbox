@@ -13,7 +13,7 @@ use xcloud_api::{
 };
 use xcloud_proto::{
     models::RemoteConsole,
-    preferences::{StreamKind, StreamPreferences, StreamResolutionMode},
+    preferences::StreamKind,
     streaming_types::{PeerConnectionState, StreamLifecycleState, StreamingStatsSnapshot},
 };
 use xcloud_stream::orchestrator::{
@@ -38,6 +38,7 @@ pub struct Snapshot {
     pub decoded_age_seconds: Option<f64>,
 }
 pub enum Command {
+    Configure(crate::config::Settings),
     Restore,
     SignIn(bool),
     Discover(bool),
@@ -163,6 +164,7 @@ async fn run(
     };
     let mut menu_ticker = tokio::time::interval(Duration::from_millis(33));
     menu_ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    let mut preferences = crate::config::Settings::default();
     let mut auth = auth::service(false).expect("HTTP client");
     let mut auth_persistent = false;
     let mut active: Option<Active> = None;
@@ -174,10 +176,23 @@ async fn run(
         tokio::select! {
             command = rx.recv() => {
                 let Some(command) = command else { break };
+                if let Command::Configure(settings) = command {
+                    if settings.validate().is_ok() {
+                        let _ = controller.set_bindings(settings.hotkeys);
+                        if let Some(a) = active.as_mut() {
+                            settings.apply_controller(&mut a.input);
+                            a.media.muted.store(settings.muted, Ordering::Relaxed);
+                            if settings.muted && !preferences.muted { a.media.audio.lock().stop(); }
+                        }
+                        preferences = settings;
+                    }
+                    continue;
+                }
                 cancel(&mut job).await;
                 state.lock().busy = false;
                 state.lock().code = None;
                 match command {
+                    Command::Configure(_) => unreachable!("handled without cancelling session jobs"),
                     Command::Shutdown => break,
                     Command::Disconnect => {
                         stop(&mut active, &video).await;
@@ -315,7 +330,7 @@ async fn run(
                         state.lock().consoles = consoles;
                     }
                     Ok(Ok(Outcome::Connect(id, api, lpt))) => {
-                        match build_active(api, auth.clone(), ctx.clone(), &id, &lpt, &controller) {
+                        match build_active(api, auth.clone(), ctx.clone(), &id, &lpt, &controller, &preferences) {
                             Ok(a) => {
                                 *video.lock() = Some(a.media.reader.clone());
                                 active = Some(a);
@@ -494,17 +509,16 @@ fn build_active(
     id: &str,
     lpt: &str,
     controller: &crate::controller::Controller,
+    preferences: &crate::config::Settings,
 ) -> anyhow::Result<Active> {
     let transport = Arc::new(WebRtcTransport::try_new()?);
-    let (media, pipeline) = Media::attach(&transport, ctx);
+    let (media, pipeline) = Media::attach(&transport, ctx, preferences.muted);
     let orchestrator = SignalingOrchestrator::new(Some(api), Some(auth), transport.clone())?;
-    orchestrator.set_preferences(StreamPreferences {
-        resolution: StreamResolutionMode::P1080,
-        ..Default::default()
-    });
+    orchestrator.set_preferences(preferences.stream_preferences());
     orchestrator.set_diagnostics_polling_enabled(true);
     let events = orchestrator.subscribe();
     let mut input = xcloud_input::source::GamepadInputSource::new(controller.stream_sampler());
+    preferences.apply_controller(&mut input);
     input.set_input_queue(Some(orchestrator.input_queue()));
     orchestrator.set_gamepad_connection_state(0, true);
     orchestrator.connect_stream(StreamKind::Home, id, lpt);
@@ -608,5 +622,58 @@ mod restore_tests {
                 || message.contains("Sign in")
                 || message.contains("HTTP 400")
         );
+    }
+}
+
+#[cfg(test)]
+mod configure_tests {
+    use super::*;
+    #[tokio::test]
+    async fn configuration_preserves_auth_progress_and_applies_custom_controller_bindings() {
+        use xcloud_proto::input::{gamepad::RawGamepadState, models::GamepadButtons as B};
+        let (tx, rx) = mpsc::channel(2);
+        let bindings = crate::config::HotkeyBindings {
+            guide: (B::VIEW | B::X).bits(),
+            menu: (B::MENU | B::Y).bits(),
+        };
+        tx.send(Command::Configure(crate::config::Settings {
+            hotkeys: bindings,
+            ..Default::default()
+        }))
+        .await
+        .unwrap();
+        drop(tx);
+        let state = Arc::new(Mutex::new(Snapshot {
+            busy: true,
+            code: Some(("synthetic".into(), "synthetic".into())),
+            ..Default::default()
+        }));
+        let controller = crate::controller::Controller::default();
+        let ctx = egui::Context::default();
+        run(
+            rx,
+            state.clone(),
+            Default::default(),
+            Arc::new(AtomicBool::new(true)),
+            ctx.clone(),
+            controller.clone(),
+            false,
+        )
+        .await;
+        assert!(state.lock().busy);
+        assert!(state.lock().code.is_some());
+        for buttons in [B::NONE, B::MENU | B::Y, B::NONE] {
+            let mut sampler: xcloud_input::source::Sampler =
+                Box::new(move || xcloud_input::source::NativeGamepadSample {
+                    connected: true,
+                    state: RawGamepadState {
+                        buttons,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                });
+            controller.poll(&mut sampler, true, true, Duration::ZERO, &ctx);
+        }
+        assert!(controller.menu());
     }
 }
