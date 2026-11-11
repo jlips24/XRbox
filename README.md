@@ -155,20 +155,30 @@ During gameplay:
 
 | Shortcut | Action |
 | --- | --- |
-| **Select + Start** (View + Menu) | Send one Xbox/Guide press to the console when the chord is released |
-| **Select + Start + LB + RB** | Open XRBox's stream menu; takes priority over the smaller chord |
+| **Select** (View) | Send one Select press on release |
+| **Start** (Menu) | Send one Start press on release |
+| **Select + Start** | Send one Xbox/Guide press |
+| **Select + Start + LB + RB** | Open XRBox's stream menu instead |
 
-Hold Select+Start while adding LB/RB to open XRBox; it will not also send Guide.
-The virtual Guide press lasts 120 ms and is sent through the existing Remote Play
-input protocol, without synthesizing an OS key or pressing the physical Xbox button.
-A long hold still sends a short press when released; remote Guide long-press
-behavior is not implemented.
+Pressing either Select or Start begins a gesture; neither is sent to the console
+on button-down. The most specific completed shortcut is remembered, and it fires
+when the **first Select/Start button pressed is released**. Releasing the other
+button or bumpers first does not downgrade or trigger it. Hold Select+Start while
+adding LB/RB, then release the initiating button to open XRBox without sending Guide.
+If both Select and Start first appear in the same sample, Select is treated as first.
+
+Single Select, single Start and virtual Guide use the same 120 ms protocol-button
+press followed by release. Long holds produce one short press on release; held
+Select/Start or Guide long-press behavior is not implemented. Rapid taps are queued
+with a release gap so repeated presses remain distinct (bounded to 16 queued taps;
+overflow is discarded with a sanitized warning). No OS key events are generated.
 
 Menu navigation stays local and sends neutral gameplay input while open. Resume
 with A or B. All other buttons (including LB/RB), sticks and triggers pass through
 immediately on resume; **only Select/View and Start/Menu** remain suppressed until
-both are released. Individual buttons can reach the console before a complete
-shortcut is detected; ordinary gameplay input is not delayed to buffer chords.
+both are released. Bumpers and other controls remain live while constructing a
+shortcut; **Select and Start are always buffered**, so their individual presses
+cannot leak into a combined shortcut. Ordinary gameplay input is not buffered.
 
 The **physical Xbox/Guide button is ignored by XRBox's console-input mapping**.
 It may still open the host OS/Steam overlay. XRBox does not alter system shortcuts

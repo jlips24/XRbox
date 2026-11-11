@@ -38,8 +38,10 @@ current validation evidence over older planning assumptions.
 - `controller.rs` and `navigation.rs`: shared physical sampling, menu/game input
   routing, spatial focus and controller repeat. After stream-menu resume, only
   View/Menu wait for release; other gameplay input must resume immediately.
-  View/Select+Menu/Start sends remote Guide on chord release; adding LB+RB opens
-  XRBox instead. Physical Guide stays reserved to the host and is not forwarded.
+  Select/View and Start/Menu are deferred bindings: never forward their raw
+  button-down events. Resolve the most specific completed binding when the first
+  Select/Start pressed is released. The pair sends Guide; adding LB+RB opens XRBox.
+  Singles use the same deferred recognizer and protocol pulse path. Physical Guide stays reserved to the host and is not forwarded.
 - `media.rs`: upstream RTP/decoder/audio wiring and stage counters.
 - `config.rs` and `diagnostics.rs`: non-secret app data and sanitized logging.
 - `vendor/openxcloud`: seven library crates pinned to the revision in

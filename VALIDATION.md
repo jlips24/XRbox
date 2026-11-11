@@ -217,3 +217,50 @@ Manual console retest:
 Real console response to the Guide pulse and platform-specific host interception
 still require hardware validation. Pressing the physical Xbox button may still
 open the host overlay; ignoring it in XRBox cannot prevent that OS behavior.
+
+## 0.1.7 — defer single Select/Start through the shortcut recognizer
+
+The reported leakage in 0.1.6 was real: it forwarded the first Select/Start press
+before recognizing a combination. Singles are now entries in the same ordered
+binding table as Guide and XRBox menu. Raw Select/Start are always masked. The
+first Select/Start pressed owns the gesture; its release commits the most specific
+completed binding observed while held. Releasing other chord members first does
+not dispatch or downgrade it. The app-menu shortcut now also fires on that release.
+Protocol actions are bounded 120 ms presses, including singles (no long-press
+semantics). Repeated taps use a bounded queue and an 8 ms release gap. Bumpers and
+all unrelated controls remain immediate; only Select/Start are deferred.
+
+Executed:
+
+- `make test`: 213 passed (108 API/auth, 38 input, 44 session, 23 app); one actual
+  OS-Keychain integration test intentionally ignored. No real Xbox or credentials.
+- `make check`: formatting and Clippy passed with warnings denied.
+- `make package`: built and ad-hoc signed version 0.1.7.
+- Packaged `--smoke`: 10 synthetic GPU UI frames, successful exit.
+
+Tests cover deferred singles, no output while held, first-button release for both
+Guide press/release orders, all 24 x 24 press/release permutations of the app
+shortcut, priority retention after partial release, distinct rapid taps, queue
+bounds, queued-action cancellation, focus/disconnect/idle/menu reset, ordinary
+controls passing immediately and physical Guide filtering. Shared-controller tests
+inspect actual upstream-encoded packets for singles, Guide and XRBox menu. Bumper
+passthrough is explicitly asserted; Select/Start must be absent from combined
+shortcut packets. These checks would reject 0.1.6's raw single-button behavior.
+
+Manual retest with 0.1.7:
+
+1. Connect to the Xbox. Hold Select alone: it must not act until released, then
+   act once. Repeat for Start, including long holds and quick repeated taps.
+2. Press Select then Start, release Start first: no Guide until Select releases.
+   Reverse the press order and verify that Start's release owns that gesture.
+   Neither case should send individual Select or Start presses.
+3. Add LB/RB while holding the pair, release the initiating Select/Start: XRBox's
+   menu should open once without console Guide or individual Select/Start actions.
+   Try releasing bumpers/secondary button first; it must still choose XRBox.
+4. Resume while holding other controls: those pass immediately; Select/Start
+   remain suppressed until released. Focus loss/disconnect must cancel pending
+   actions without replay on return.
+
+Console response, physical timing and final UX require this user hardware test.
+Single Select/Start long-press behavior intentionally changes to a short press on
+release, and bumper input is not buffered during shortcut construction.

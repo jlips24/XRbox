@@ -176,3 +176,27 @@ semantics, timing, focus/disconnect cancellation, immediate non-shortcut control
 raw physical Guide filtering, shared-controller menu priority, and actual protocol
 packet press/release encoding. Headless egui tests also exercise keyboard actions
 and prevent activation of disabled modal backgrounds.
+
+## Deferred Select/Start bindings (0.1.7)
+
+Supersedes 0.1.6's partial-chord passthrough. A single ordered binding table contains
+Select, Start, Select+Start (Guide), and Select+Start+LB+RB (XRBox). The first sampled
+Select/Start press starts a pending gesture and all raw Select/Start bits are masked.
+The highest-priority complete binding seen while the initiating button remains
+held is latched. Only release of that initiating button commits it, even if other
+buttons were released first. A simultaneous sampled pair deterministically uses
+Select as the initiator. No single-button fallback gets its own recognizer.
+
+Protocol actions use the same 120 ms pulse path. A bounded queue (16 pending
+presses) and at least one 8 ms release interval preserve rapid repeated presses;
+queue overflow is dropped with a sanitized warning. An app-menu action cancels
+pending pulses; focus loss/disconnect/idle/open menu resets all recognizer and
+queue state. Only Select/Start must release before rearming; unrelated inputs
+remain immediate. This intentionally replaces held Select/Start with short presses
+on release. Bumper input remains unbuffered.
+
+Regression tests enumerate 24 press orders by 24 release orders for app-menu
+priority, both press/release orders of the Guide chord, deferred singles, rapid
+repeated taps, bounded queue/cancellation, ordinary-input passthrough, and the
+actual protocol packets for singles, Guide and the app menu. Pending combined
+gestures produce no Select/Start packets before or after resolution.
