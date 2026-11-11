@@ -1,7 +1,9 @@
 mod auth;
 mod config;
+mod controller;
 mod diagnostics;
 mod media;
+mod navigation;
 mod session;
 
 use session::{Command, Session};
@@ -13,6 +15,9 @@ struct App {
     texture: xcloud_gpu::VideoTexture,
     render: eframe::egui_wgpu::RenderState,
     persistent: bool,
+    navigation: navigation::Navigation,
+    confirm_signout: bool,
+    launched: std::time::Instant,
     diagnostics_open: bool,
     copied_at: Option<std::time::Instant>,
     dimensions: (u32, u32),
@@ -36,11 +41,17 @@ impl App {
         cc.egui_ctx.set_visuals(egui::Visuals::dark());
         cc.egui_ctx.style_mut_of(egui::Theme::Dark, |style| {
             style.spacing.item_spacing = egui::vec2(12.0, 12.0);
-            style.spacing.button_padding = egui::vec2(16.0, 10.0);
+            style.spacing.button_padding = egui::vec2(22.0, 16.0);
+            style
+                .text_styles
+                .insert(egui::TextStyle::Body, egui::FontId::proportional(18.0));
+            style
+                .text_styles
+                .insert(egui::TextStyle::Heading, egui::FontId::proportional(32.0));
             style.visuals.selection.bg_fill = egui::Color32::from_rgb(35, 100, 62);
             style.visuals.panel_fill = egui::Color32::from_rgb(16, 20, 23);
         });
-        let session = Session::new(cc.egui_ctx.clone());
+        let session = Session::new(cc.egui_ctx.clone(), !smoke);
         if smoke {
             // Synthetic only: exercise code layout without reading credentials or contacting Microsoft.
             session.state.lock().code = Some((
@@ -56,6 +67,9 @@ impl App {
             texture: Default::default(),
             render,
             persistent: true,
+            navigation: Default::default(),
+            confirm_signout: false,
+            launched: std::time::Instant::now(),
             diagnostics_open: false,
             copied_at: None,
             dimensions: (0, 0),
@@ -120,24 +134,75 @@ impl eframe::App for App {
                 }
             }
         }
+        let pad = self.session.controller.sample();
+        let menu_open = self.session.controller.menu();
+        let menu_visible = !snapshot.active || menu_open;
+        let screen = format!(
+            "{}-{}-{}",
+            if self.confirm_signout {
+                "signout"
+            } else if snapshot.active {
+                if menu_open { "stream-menu" } else { "playing" }
+            } else if snapshot.code.is_some() {
+                "code"
+            } else if snapshot.consoles.is_empty() {
+                "welcome"
+            } else {
+                "consoles"
+            },
+            snapshot.busy,
+            self.diagnostics_open
+        );
+        let back = self.navigation.begin(
+            ctx,
+            &pad,
+            menu_visible && ctx.input(|i| i.focused),
+            &screen,
+            self.launched.elapsed(),
+        );
+        if back {
+            if self.diagnostics_open {
+                self.diagnostics_open = false;
+            } else if self.confirm_signout {
+                self.confirm_signout = false;
+            } else if snapshot.active {
+                self.session.controller.set_menu(false);
+            } else if snapshot.busy {
+                self.session.send(Command::Disconnect);
+            }
+        }
+        if self.diagnostics_open {
+            self.navigation.focus("diagnostics");
+        }
         egui::Panel::top("controls").show(root, |ui| {
-            ui.add_space(8.0);
+            ui.add_space(10.0);
             ui.horizontal(|ui| {
                 ui.heading(
-                    egui::RichText::new("XRBox").color(egui::Color32::from_rgb(120, 225, 150)),
+                    egui::RichText::new("XRBox").color(egui::Color32::from_rgb(130, 235, 150)),
                 );
-                ui.weak("CONSOLE REMOTE PLAY");
+                ui.weak(" /  CONSOLE REMOTE PLAY");
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.button("Diagnostics").clicked() {
-                        self.diagnostics_open = !self.diagnostics_open;
-                    }
-                    if (snapshot.active || snapshot.busy)
-                        && ui.button("Disconnect / cancel").clicked()
-                    {
-                        self.session.send(Command::Disconnect);
-                    }
-                    if ui.button("Sign out").clicked() {
-                        self.session.send(Command::SignOut);
+                    ui.set_max_width(160.0);
+                    if !menu_visible {
+                        if ui.button("Stream menu").clicked() {
+                            self.session.controller.set_menu(true);
+                        }
+                    } else {
+                        if self
+                            .navigation
+                            .button(ui, "diagnostics", "Diagnostics", true, false)
+                        {
+                            self.diagnostics_open = !self.diagnostics_open;
+                        }
+                        if self.navigation.button(
+                            ui,
+                            "signout",
+                            "Sign out",
+                            !self.confirm_signout && !self.diagnostics_open,
+                            false,
+                        ) {
+                            self.confirm_signout = true;
+                        }
                     }
                 });
             });
@@ -147,79 +212,97 @@ impl eframe::App for App {
                 }
                 ui.label(&snapshot.status);
             });
+            ui.add_space(10.0);
+        });
+        egui::Panel::bottom("controller_hints").show(root, |ui| {
+            ui.add_space(8.0);
+            ui.horizontal(|ui| {
+                ui.strong(if menu_visible {
+                    "A  Select     B  Back     D-pad / Left stick  Navigate"
+                } else {
+                    "View + Menu  Open XRBox menu"
+                });
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    ui.weak(if pad.connected {
+                        &pad.name
+                    } else {
+                        "Pair a controller · keyboard and mouse also supported"
+                    });
+                });
+            });
             ui.add_space(8.0);
         });
         egui::CentralPanel::default().show(root, |ui| {
-            if snapshot.active {
-                let available = ui.available_rect_before_wrap();
-                self.texture.draw(ui.painter(), available, self.dimensions.0, self.dimensions.1);
+            if self.diagnostics_open { ui.disable(); }
+            if snapshot.active && !menu_open {
+                self.texture.draw(ui.painter(), ui.available_rect_before_wrap(), self.dimensions.0, self.dimensions.1);
                 return;
             }
             egui::ScrollArea::vertical().show(ui, |ui| {
-                ui.add_space(36.0);
+                ui.add_space(28.0);
                 ui.vertical_centered(|ui| {
-                    ui.set_max_width(600.0);
-                    if let Some((code, url)) = &snapshot.code {
-                        ui.heading("Connect your Microsoft account");
-                        ui.label("Open Microsoft sign-in, then enter this code.");
+                    ui.set_max_width(680.0);
+                    if self.confirm_signout {
+                        ui.heading("Sign out of XRBox?");
+                        ui.label("Your saved sign-in will be removed. An active stream will disconnect.");
+                        ui.add_space(20.0);
+                        if self.navigation.button(ui, "keep-account", "Keep playing", true, true) { self.confirm_signout = false; }
+                        if self.navigation.button(ui, "confirm-signout", "Sign out", true, false) {
+                            self.confirm_signout = false;
+                            self.session.send(Command::SignOut);
+                        }
+                    } else if snapshot.active {
+                        ui.heading("Stream menu");
+                        ui.label("Gameplay input is paused while this menu is open.");
+                        ui.add_space(20.0);
+                        if self.navigation.button(ui, "resume", "Resume game", true, true) { self.session.controller.set_menu(false); }
+                        if self.navigation.button(ui, "disconnect", "Disconnect from Xbox", true, false) { self.session.send(Command::Disconnect); }
+                    } else if let Some((code, url)) = &snapshot.code {
+                        ui.heading("Let's get you signed in");
+                        ui.label("Use your Microsoft account. Enter this code in your browser.");
                         ui.add_space(16.0);
                         egui::Frame::group(ui.style()).inner_margin(24.0).show(ui, |ui| {
-                            // egui's bundled Hack monospace font has a distinctive zero.
-                            ui.label(egui::RichText::new(code).font(egui::FontId::monospace(40.0)));
+                            ui.label(egui::RichText::new(code).font(egui::FontId::monospace(48.0)));
                         });
                         let copied = self.copied_at.is_some_and(|t| t.elapsed().as_secs() < 3);
-                        if ui.button(if copied { "Copied" } else { "Copy code" }).clicked() {
-                            ctx.copy_text(code.clone());
-                            self.copied_at = Some(std::time::Instant::now());
+                        if self.navigation.button(ui, "copy", if copied { "Code copied" } else { "Copy sign-in code" }, true, true) {
+                            ctx.copy_text(code.clone()); self.copied_at = Some(std::time::Instant::now());
                             ctx.request_repaint_after(std::time::Duration::from_secs(3));
                         }
-                        if ui.button("Open Microsoft sign-in").clicked()
+                        if self.navigation.button(ui, "open-signin", "Open Microsoft sign-in", true, false)
                             && matches!(url.as_str(), "https://microsoft.com/devicelogin" | "https://www.microsoft.com/link" | "https://microsoft.com/link" | "https://www.microsoft.com/devicelogin")
                         { let _ = open::that(url); }
                         ui.weak(url);
-                        ui.add_space(12.0);
-                        ui.label("Waiting for approval. This screen updates automatically.");
+                        ui.label("Waiting for approval. We'll take you to your consoles automatically.");
                     } else if !snapshot.consoles.is_empty() {
+                        ui.label(egui::RichText::new("JUMP BACK IN").color(egui::Color32::from_rgb(130, 235, 150)));
                         ui.heading("Your consoles");
-                        ui.label("Choose an Xbox to start playing.");
-                        ui.add_space(16.0);
+                        ui.label("Choose your Xbox. Pick up where you left off.");
+                        ui.add_space(20.0);
                         for console in &snapshot.consoles {
-                            egui::Frame::group(ui.style()).inner_margin(20.0).show(ui, |ui| {
-                                ui.set_min_width(480.0);
-                                ui.horizontal(|ui| {
-                                    ui.vertical(|ui| {
-                                        ui.strong(&console.device_name);
-                                        ui.weak(format!("{} · {}", console.console_type, console.power_state));
-                                    });
-                                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                        if ui.add_enabled(!snapshot.busy, egui::Button::new("Play")).clicked() {
-                                            self.session.send(Command::Connect(console.server_id.clone()));
-                                        }
-                                    });
-                                });
-                            });
-                        }
-                        if ui.add_enabled(!snapshot.busy, egui::Button::new("Refresh consoles")).clicked() {
-                            self.session.send(Command::Discover(self.persistent));
-                        }
-                    } else {
-                        ui.heading("Your Xbox. A bigger screen.");
-                        ui.label("Sign in with the Microsoft account linked to your console.");
-                        ui.add_space(24.0);
-                        ui.add_enabled_ui(!snapshot.busy, |ui| {
-                            if ui.button("Sign in with Microsoft").clicked() {
-                                self.copied_at = None;
-                                self.session.send(Command::SignIn(self.persistent));
+                            if self.navigation.button(ui, &format!("console-{}", console.server_id),
+                                &format!("{}\n{} · {}\nPlay on this console", console.device_name, console.console_type, console.power_state), !snapshot.busy, true) {
+                                self.session.send(Command::Connect(console.server_id.clone()));
                             }
-                            ui.checkbox(&mut self.persistent, "Remember sign-in securely");
-                        });
-                        ui.weak("Saved in your OS credential store. Sign out removes saved credentials.");
-                        ui.weak("If secure storage is unavailable, uncheck Remember sign-in and try again.");
+                        }
+                        if self.navigation.button(ui, "refresh", "Refresh consoles", !snapshot.busy, false) { self.session.send(Command::Discover(self.persistent)); }
+                    } else {
+                        ui.label(egui::RichText::new("WELCOME HOME").color(egui::Color32::from_rgb(130, 235, 150)));
+                        ui.label(egui::RichText::new("Your Xbox.\nA bigger screen.").size(48.0).strong());
+                        ui.label("Your console, your games, right here.");
+                        ui.add_space(24.0);
+                        if self.navigation.button(ui, "signin", "Sign in with Microsoft", !snapshot.busy, true) {
+                            self.copied_at = None; self.session.send(Command::SignIn(self.persistent));
+                        }
+                        if self.navigation.button(ui, "remember", if self.persistent { "Remember sign-in: On" } else { "Remember sign-in: Off" }, !snapshot.busy, false) { self.persistent = !self.persistent; }
+                        ui.weak("Saved securely in your OS credential store. Turn Off for session-only sign-in.");
                     }
-                    ui.add_space(32.0);
+                    if snapshot.busy && self.navigation.button(ui, "cancel", "Cancel connection", true, snapshot.code.is_none()) {
+                        self.session.send(Command::Disconnect);
+                    }
+                    ui.add_space(24.0);
                     ui.separator();
-                    ui.weak("Enable Remote Features on your Xbox and pair a controller with this device.");
-                    ui.weak(concat!("XRBox ", env!("CARGO_PKG_VERSION"), " · Native desktop preview"));
+                    ui.weak(concat!("XRBox ", env!("CARGO_PKG_VERSION"), " · Console Remote Play"));
                 });
             });
         });
@@ -288,8 +371,24 @@ impl eframe::App for App {
         }
         if self.smoke {
             self.smoke_frames += 1;
-            if self.smoke_frames == 5 {
+            if self.smoke_frames == 3 {
                 self.session.state.lock().code = None;
+            }
+            if self.smoke_frames == 5 {
+                self.session.state.lock().consoles = vec![xcloud_proto::models::RemoteConsole {
+                    device_name: "Synthetic Xbox".into(),
+                    server_id: "smoke-only".into(),
+                    console_type: "Xbox Series X".into(),
+                    power_state: "On".into(),
+                    ..Default::default()
+                }];
+            }
+            if self.smoke_frames == 7 {
+                self.confirm_signout = true;
+            }
+            if self.smoke_frames == 8 {
+                self.confirm_signout = false;
+                self.diagnostics_open = true;
             }
             if self.smoke_frames == 10 {
                 println!("XRBox smoke: rendered 10 UI frames");

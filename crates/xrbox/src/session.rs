@@ -51,6 +51,7 @@ pub struct Session {
     pub state: Arc<Mutex<Snapshot>>,
     pub video: Video,
     pub focused: Arc<AtomicBool>,
+    pub controller: crate::controller::Controller,
     join: Option<std::thread::JoinHandle<()>>,
 }
 enum Outcome {
@@ -81,7 +82,7 @@ struct Active {
     next_recovery: Instant,
 }
 impl Session {
-    pub fn new(ctx: egui::Context) -> Self {
+    pub fn new(ctx: egui::Context, native_controller: bool) -> Self {
         let (tx, rx) = mpsc::channel(16);
         let state = Arc::new(Mutex::new(Snapshot {
             status: "Sign in to discover your Xbox".into(),
@@ -89,6 +90,8 @@ impl Session {
         }));
         let video: Video = Default::default();
         let focused = Arc::new(AtomicBool::new(true));
+        let controller = crate::controller::Controller::default();
+        let shared_controller = controller.clone();
         let (s, v, f) = (state.clone(), video.clone(), focused.clone());
         let join = std::thread::spawn(move || {
             let runtime = tokio::runtime::Builder::new_multi_thread()
@@ -96,7 +99,7 @@ impl Session {
                 .enable_all()
                 .build()
                 .expect("Tokio runtime");
-            runtime.block_on(run(rx, s, v, f, ctx));
+            runtime.block_on(run(rx, s, v, f, ctx, shared_controller, native_controller));
             runtime.shutdown_timeout(Duration::from_secs(2));
         });
         Self {
@@ -104,6 +107,7 @@ impl Session {
             state,
             video,
             focused,
+            controller,
             join: Some(join),
         }
     }
@@ -149,7 +153,16 @@ async fn run(
     video: Video,
     focused: Arc<AtomicBool>,
     ctx: egui::Context,
+    controller: crate::controller::Controller,
+    native_controller: bool,
 ) {
+    let mut sampler: xcloud_input::source::Sampler = if native_controller {
+        xcloud_input::native::native_sampler()
+    } else {
+        Box::new(xcloud_input::native::sample_stub)
+    };
+    let mut menu_ticker = tokio::time::interval(Duration::from_millis(33));
+    menu_ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     let mut auth = auth::service(false).expect("HTTP client");
     let mut auth_persistent = false;
     let mut active: Option<Active> = None;
@@ -301,7 +314,7 @@ async fn run(
                         state.lock().consoles = consoles;
                     }
                     Ok(Ok(Outcome::Connect(id, api, lpt))) => {
-                        match build_active(api, auth.clone(), ctx.clone(), &id, &lpt) {
+                        match build_active(api, auth.clone(), ctx.clone(), &id, &lpt, &controller) {
                             Ok(a) => {
                                 *video.lock() = Some(a.media.reader.clone());
                                 active = Some(a);
@@ -321,7 +334,12 @@ async fn run(
                 }
                 ctx.request_repaint();
             }
+            _ = menu_ticker.tick(), if active.is_none() => {
+                controller.set_menu(false);
+                controller.poll(&mut sampler, false, focused.load(Ordering::Relaxed), &ctx);
+            }
             _ = ticker.tick(), if active.is_some() => {
+                controller.poll(&mut sampler, true, focused.load(Ordering::Relaxed), &ctx);
                 let a = active.as_mut().expect("guarded active");
                 let mut terminal = false;
                 while let Ok(event) = a.events.try_recv() {
@@ -474,6 +492,7 @@ fn build_active(
     ctx: egui::Context,
     id: &str,
     lpt: &str,
+    controller: &crate::controller::Controller,
 ) -> anyhow::Result<Active> {
     let transport = Arc::new(WebRtcTransport::try_new()?);
     let (media, pipeline) = Media::attach(&transport, ctx);
@@ -484,8 +503,7 @@ fn build_active(
     });
     orchestrator.set_diagnostics_polling_enabled(true);
     let events = orchestrator.subscribe();
-    let mut input =
-        xcloud_input::source::GamepadInputSource::new(xcloud_input::native::native_sampler());
+    let mut input = xcloud_input::source::GamepadInputSource::new(controller.stream_sampler());
     input.set_input_queue(Some(orchestrator.input_queue()));
     orchestrator.set_gamepad_connection_state(0, true);
     orchestrator.connect_stream(StreamKind::Home, id, lpt);
@@ -525,7 +543,7 @@ mod tests {
     }
     #[test]
     fn invalid_console_disconnect_and_shutdown_do_not_start_media() {
-        let mut session = Session::new(egui::Context::default());
+        let mut session = Session::new(egui::Context::default(), false);
         session.send(Command::Connect("not-discovered".into()));
         session.send(Command::Disconnect);
         session.shutdown();
