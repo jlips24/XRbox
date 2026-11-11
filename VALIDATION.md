@@ -264,3 +264,26 @@ Manual retest with 0.1.7:
 Console response, physical timing and final UX require this user hardware test.
 Single Select/Start long-press behavior intentionally changes to a short press on
 release, and bumper input is not buffered during shortcut construction.
+
+## 0.1.8 — stop repeated focus scrolling and pin version footer
+
+Reproduced the old navigation behavior in a headless egui test: stationary hover
+caused unchanged selected tiles to recenter the scroll area repeatedly, overriding
+the requested user scroll position (200 points reset to zero). The regression
+passes with one reveal per actual focus change. A companion test verifies that
+newly selected offscreen tiles still scroll into view and that assigning the same
+focus repeatedly does not fight scrolling. The version label was moved into the
+fixed bottom panel so it is no longer clipped by page scrolling.
+
+Executed: `cargo test --locked -p xrbox` (25 passed) and `make check` (formatting
+and Clippy with warnings denied). Packaging was already started before the user
+asked to skip rebuilding; no further build or app launch was requested. No
+packaged smoke test was run for this change, and no credentials or console session
+were accessed. The headless tests establish the scrolling fix, not direct
+observation of the user's GPU flicker.
+
+Manual retest: reopen the 0.1.8 bundle and hover the sign-in tile and a discovered
+console tile before connecting. Confirm the bottom version text stays visible and
+steady. Resize the window, scroll the page and navigate between offscreen tiles
+with the controller; only changed focus should request a reveal. Confirm the app
+shows 0.1.8 so an older running app is not mistaken for the updated bundle.

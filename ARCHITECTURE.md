@@ -200,3 +200,17 @@ priority, both press/release orders of the Guide chord, deferred singles, rapid
 repeated taps, bounded queue/cancellation, ordinary-input passthrough, and the
 actual protocol packets for singles, Guide and the app menu. Pending combined
 gestures produce no Select/Start packets before or after resolution.
+
+## Stable hover and focus scrolling (0.1.8)
+
+Navigation previously requested centering of the focused tile every frame. That
+could override pointer-driven scrolling and repeatedly move/clamp content while
+hover triggered repaints. Focus changes now enqueue one reveal request, consumed
+when the matching tile renders; unchanged focus does not reissue it. Reveal uses
+minimal scrolling rather than centering. The version/Remote Play text lives in the
+fixed bottom panel rather than the scrollable page.
+
+Headless tests verify stable user scroll position during stationary hover, that a
+new offscreen focus is still revealed, and that repeated focus assignment does not
+lock scrolling. This removes a reproduced source of scroll movement; final
+confirmation of the reported visible text flicker remains a user UI check.
