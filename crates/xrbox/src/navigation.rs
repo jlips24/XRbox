@@ -196,21 +196,84 @@ impl Navigation {
                 },
             ));
         let response = ui.push_id(id, |ui| ui.add_enabled(enabled, button)).inner;
+        self.activate(id, response, enabled)
+    }
+    pub fn toolbar_button(
+        &mut self,
+        ui: &mut egui::Ui,
+        id: &str,
+        label: &str,
+        icon: crate::toolbar::Icon,
+        enabled: bool,
+    ) -> bool {
+        let enabled = enabled && ui.is_enabled();
+        let focused = self.focus.as_deref() == Some(id);
+        let (_, rect) = ui.allocate_space(egui::vec2(76.0, 44.0));
+        let response = ui.interact(
+            rect,
+            ui.make_persistent_id(("toolbar", id)),
+            if enabled {
+                egui::Sense::click()
+            } else {
+                egui::Sense::hover()
+            },
+        );
+        let painter = ui.painter();
+        let fill = if response.hovered() && enabled {
+            egui::Color32::from_rgb(48, 58, 53)
+        } else {
+            egui::Color32::from_rgb(28, 33, 37)
+        };
+        let foreground = if enabled {
+            egui::Color32::from_rgb(220, 230, 225)
+        } else {
+            egui::Color32::from_gray(100)
+        };
+        painter.rect_filled(rect, 5.0, fill);
+        if focused {
+            painter.rect_stroke(
+                rect.shrink(1.5),
+                5.0,
+                egui::Stroke::new(2.0, egui::Color32::from_rgb(155, 255, 175)),
+                egui::StrokeKind::Inside,
+            );
+        }
+        icon.paint(
+            painter,
+            egui::pos2(rect.center().x, rect.top() + 13.0),
+            foreground,
+        );
+        painter.text(
+            egui::pos2(rect.center().x, rect.bottom() - 9.0),
+            egui::Align2::CENTER_CENTER,
+            label,
+            egui::FontId::proportional(11.0),
+            foreground,
+        );
+        response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, enabled, label));
+        let response = response.on_hover_text(label);
+        self.activate(id, response, enabled)
+    }
+    fn activate(&mut self, id: &str, response: egui::Response, enabled: bool) -> bool {
         if enabled {
             self.controls.push((id.into(), response.rect));
         }
         if enabled && self.scroll_focus.as_deref() == Some(id) {
-            // Reveal newly selected controls once; idle hover must not fight scrolling.
             response.scroll_to_me(None);
             self.scroll_focus = None;
         }
-        let clicked = response.clicked() || (enabled && focused && self.select);
+        let clicked =
+            response.clicked() || (enabled && self.focus.as_deref() == Some(id) && self.select);
         if clicked {
             self.focus(id);
             self.select = false;
-            ui.ctx().request_repaint();
+            response.ctx.request_repaint();
         }
         clicked
+    }
+    #[cfg(test)]
+    pub fn test_controls(&self) -> Vec<(String, egui::Rect)> {
+        self.controls.clone()
     }
 }
 

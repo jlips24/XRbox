@@ -7,6 +7,7 @@ mod navigation;
 mod presentation;
 mod session;
 mod settings_ui;
+mod toolbar;
 
 use session::{Command, Session};
 use std::sync::atomic::Ordering;
@@ -248,49 +249,30 @@ impl eframe::App for App {
         if !clean {
             egui::Panel::top("controls").show(root, |ui| {
                 ui.add_space(10.0);
-                ui.horizontal(|ui| {
-                    ui.heading(
-                        egui::RichText::new("XRBox").color(egui::Color32::from_rgb(130, 235, 150)),
-                    );
-                    ui.weak(" /  CONSOLE REMOTE PLAY");
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        ui.set_max_width(160.0);
-                        if !menu_visible {
-                            if ui.button("Stream menu").clicked() {
-                                self.session.controller.set_menu(true);
-                            }
-                        } else if !self.editor.open && !self.confirm_signout {
-                            if self.navigation.button(
-                                ui,
-                                "settings",
-                                "Settings",
-                                !self.diagnostics_open,
-                                false,
-                            ) {
-                                self.editor.show(&self.settings);
-                                self.editor.draft.remember_signin = self.persistent;
-                                if snapshot.active {
-                                    self.session.controller.set_menu(true);
-                                }
-                            }
-                            if self
-                                .navigation
-                                .button(ui, "diagnostics", "Diagnostics", true, false)
-                            {
-                                self.diagnostics_open = !self.diagnostics_open;
-                            }
-                            if self.navigation.button(
-                                ui,
-                                "signout",
-                                "Sign out",
-                                !self.confirm_signout && !self.diagnostics_open,
-                                false,
-                            ) {
-                                self.confirm_signout = true;
-                            }
+                let mode = if !menu_visible {
+                    toolbar::Mode::Stream
+                } else if self.editor.open || self.confirm_signout {
+                    toolbar::Mode::Hidden
+                } else {
+                    toolbar::Mode::Actions {
+                        diagnostics_open: self.diagnostics_open,
+                    }
+                };
+                match toolbar::header(ui, &mut self.navigation, mode) {
+                    Some(toolbar::Action::Settings) => {
+                        self.editor.show(&self.settings);
+                        self.editor.draft.remember_signin = self.persistent;
+                        if snapshot.active {
+                            self.session.controller.set_menu(true);
                         }
-                    });
-                });
+                    }
+                    Some(toolbar::Action::Diagnostics) => {
+                        self.diagnostics_open = !self.diagnostics_open
+                    }
+                    Some(toolbar::Action::SignOut) => self.confirm_signout = true,
+                    Some(toolbar::Action::Menu) => self.session.controller.set_menu(true),
+                    None => {}
+                }
                 ui.horizontal(|ui| {
                     if snapshot.busy {
                         ui.spinner();
