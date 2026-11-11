@@ -2,6 +2,9 @@
 
 Updated: November 11, 2026. Current source: **0.1.10**.
 
+The detailed Godot implementation/build sequence is in [XR_PLAN.md](XR_PLAN.md).
+This file tracks overall decisions, progress and product acceptance gates.
+
 ## Current decisions
 
 The desktop proof of concept is implemented in native Rust and the user has
