@@ -61,7 +61,7 @@ portability or an upstream CI workflow.
 
 ## Dependency updates on GitHub
 
-`.github/dependabot.yml` schedules Cargo workspace updates for Mondays at 09:00
+`.github/dependabot.yml` schedules Cargo workspace updates daily at 09:00
 America/New_York, with at most five open version-update PRs. Related graphics and
 WebRTC crates are grouped; other minor/patch updates share a routine group and
 other major updates remain separate. Groups are reviewed manually; no auto-merge
@@ -71,7 +71,7 @@ Push the configuration to the GitHub repository's **default branch** to activate
 version updates. In repository Settings, enable the dependency graph, Dependabot
 alerts and Dependabot security updates if they are not already enabled. Alerts
 and security updates are separate repository settings, not enabled by this YAML.
-Security updates are not restricted to the weekly version-update schedule.
+Security updates are not restricted to the daily version-update schedule.
 See [GitHub's configuration documentation](https://docs.github.com/en/code-security/concepts/supply-chain-security/about-the-dependabot-yml-file).
 
 The root entry covers Cargo manifests and the shared lockfile. The pinned Rust

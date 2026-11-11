@@ -8,11 +8,15 @@ PC, an embedded browser runtime, or separately configured services. Electron and
 cloud gaming are excluded.
 
 The current milestone is reliable desktop streaming on macOS Apple Silicon.
-The user reports desktop playback working after the 0.1.1 video fix.
-New secure sign-in restoration in 0.1.2 still needs user validation. Full XR work
-is a separate milestone. Read README.md, ARCHITECTURE.md, VALIDATION.md and the relevant parts
-of Plan.md before making architectural changes. Prefer implemented behavior and
-current validation evidence over older planning assumptions.
+The user has reported desktop playback working. Recent authentication, controller
+shortcut and UI changes still need the manual checks recorded in VALIDATION.md.
+Standalone Steam Frame, Linux ARM64 hardware decoding, XR presentation and battery
+performance remain unvalidated; full XR work is a separate milestone.
+
+Read README.md, ARCHITECTURE.md, VALIDATION.md and the relevant parts of Plan.md
+before architectural changes. Prefer implemented behavior and current validation
+evidence over older planning assumptions. Read the application version from
+crates/xrbox/Cargo.toml; do not infer it from old examples or an existing app bundle.
 
 ## Respect the user's machine
 
@@ -27,8 +31,11 @@ current validation evidence over older planning assumptions.
   terminate their running app, or run ignored keychain/audio tests without an
   explicit request. Synthetic tests and in-memory UI smoke tests are appropriate.
 - Keep secure credential persistence enabled by default, as requested by the user,
-  with automatic restoration and a session-only option. Never introduce plaintext token files
-  or log tokens, device codes, raw auth responses, SDP, ICE addresses or account IDs.
+  with automatic restoration and a session-only option. Persist refresh credentials
+  in the OS credential store; keep temporary access, stream and transfer tokens in
+  memory. Preserve refresh rotation, sign-out cleanup and visible storage errors.
+  Never introduce plaintext token files or log tokens, device codes, raw auth
+  responses, SDP, ICE addresses or account IDs.
 
 ## Code boundaries
 
@@ -41,7 +48,11 @@ current validation evidence over older planning assumptions.
   Select/View and Start/Menu are deferred bindings: never forward their raw
   button-down events. Resolve the most specific completed binding when the first
   Select/Start pressed is released. The pair sends Guide; adding LB+RB opens XRBox.
-  Singles use the same deferred recognizer and protocol pulse path. Physical Guide stays reserved to the host and is not forwarded.
+  Singles use the same deferred recognizer and protocol pulse path. Physical Guide
+  stays reserved to the host and is not forwarded. Preserve bounded input queues
+  and cancellation on focus loss/disconnect; do not enable system-gesture capture.
+  Reveal a selected tile only on focus change; idle hover must not recenter the
+  page. Keep the version footer outside scrollable content.
 - `media.rs`: upstream RTP/decoder/audio wiring and stage counters.
 - `config.rs` and `diagnostics.rs`: non-secret app data and sanitized logging.
 - `vendor/openxcloud`: seven library crates pinned to the revision in
@@ -60,12 +71,17 @@ not establish that a particular pipeline can use it efficiently on Frame.
 ## Build and checks
 
 Use the project-pinned toolchain and Cargo.lock. `make help` lists supported tasks.
+For runtime changes, use the relevant tests and checks:
 
 ```sh
-make build
 make check
 make test
 ```
+
+Build with `make build` when needed for the task. Documentation/configuration-only
+changes do not need an app rebuild or launch; validate the changed files instead.
+Honor a request to skip rebuilds, packaging or app launches. Do not run live auth,
+credential or console tests merely to validate unrelated changes.
 
 For changes to vendored protocol/media code, run the affected regression tests
 and the applicable broader checks:
@@ -83,8 +99,31 @@ Do not disable assertions or weaken tests just to obtain passing results.
 `make smoke` opens the UI briefly without credentials. For isolated non-secret
 logs, prefix that command with an explicit temporary XRBOX_DATA_DIR.
 `make auth-probe` contacts Microsoft and discards the code; it does not authorize an
-account. Use `make package` for the ad-hoc signed macOS development bundle and
-`make package-release` for an optimized bundle. Neither installs the app.
+account. When packaging is requested or needed, use `make package` for the ad-hoc
+signed macOS development bundle and `make package-release` for an optimized bundle.
+Neither installs the app. The packager can use an existing signing identity via
+`--sign-identity`; do not create certificates or modify Keychain trust automatically.
+Ad-hoc rebuilds may require renewed credential-access approval.
+
+## Dependencies and repository changes
+
+Dependabot configuration lives in .github/dependabot.yml: Cargo updates are checked
+daily at 09:00 America/New_York, with related graphics/WebRTC groups and at most
+five open version-update PRs. Keep schedule documentation consistent with the YAML.
+Do not auto-merge updates. Review API compatibility, enabled features (including
+native clipboard support), hardware decode/import paths, native runtime libraries
+and license compatibility; 0.x minor upgrades may be breaking changes.
+
+The pinned Rust toolchain and vendored OpenXCloud source revision require manual
+updates. Dependabot does not update that source snapshot. There are currently no
+GitHub Actions checks; do not claim that a dependency PR has passed CI just because
+it was opened by Dependabot. Add action dependency coverage if workflows are added.
+
+Keep commits grouped by purpose and avoid unrelated user changes. Do not commit
+build output, generated video fixtures, local logs or credentials; preserve the
+.gitignore rules. Do not add a remote, push, publish or create releases unless the
+user asks. Documentation and config changes should receive appropriate lightweight
+validation rather than unrelated runtime tests.
 
 ## Reporting and hardware boundary
 
