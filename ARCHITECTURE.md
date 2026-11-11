@@ -214,3 +214,42 @@ Headless tests verify stable user scroll position during stationary hover, that 
 new offscreen focus is still revealed, and that repeated focus assignment does not
 lock scrolling. This removes a reproduced source of scroll movement; final
 confirmation of the reported visible text flicker remains a user UI check.
+
+## Fullscreen, settings and configurable shortcuts (0.1.9)
+
+Greenlight's source groups streaming, video/audio and input options; see its
+[video/audio settings](https://github.com/unknownskl/greenlight/blob/main-v2/packages/desktop/renderer/pages/settings/video.tsx),
+[streaming settings](https://github.com/unknownskl/greenlight/blob/main-v2/packages/desktop/renderer/pages/settings/streaming.tsx)
+and [input settings](https://github.com/unknownskl/greenlight/blob/main-v2/packages/desktop/renderer/pages/settings/input.tsx).
+XRBox uses a native controller-first settings editor with only implemented options;
+it does not introduce cloud, region spoofing, social features or browser services.
+
+`config.rs` owns a serde settings model, defaults/validation, conversion into
+upstream stream/input preferences and non-secret file persistence. `settings_ui.rs`
+owns draft editing, controller chord recording, cancellation and an asynchronous
+save job. Only a successful save replaces applied preferences. Save errors remain
+visible; invalid files fall back to defaults without being overwritten on load.
+Closing while a save is in progress waits for it. Settings load is a small local
+file read at startup; no credentials enter this model or file.
+
+The session's Configure command is handled before authentication-job cancellation
+and leaves busy/code state untouched. It updates live input settings, mute and
+hotkey bindings; new resolution preferences are used for the next stream. The
+Opus callback checks mute under the existing output lock; muting stops queued
+output, preventing a concurrent PCM push from restarting it. No decoder or Xbox
+protocol implementation changed.
+
+Hotkeys retain the shared single/chord recognizer. Guide/menu bindings are now
+validated settings. Matching ranks by button count and then action priority
+(XRBox wins ties); cancellation retains the configured mapping. Mapping changes
+reset pending input and require Select/Start release before rearming. Recording
+uses the raw cached controller sample while gameplay is gated by the local menu.
+
+`presentation.rs` tracks native fullscreen requests across asynchronous OS
+transitions and handles external fullscreen exits. Fullscreen gameplay suppresses
+informational panels and uses a black, zero-margin central panel, with a hidden
+pointer. The configured menu chord, F11, Escape and pointer secondary action provide
+recovery paths. Fit/stretch/zoom change only GPU draw geometry and clipping; decoded
+frames remain on the existing GPU texture path. Menus/settings restore normal
+controls without changing the stream. Fullscreen and resolution remain desktop
+features here; no OpenXR/Frame efficiency claim follows from them.

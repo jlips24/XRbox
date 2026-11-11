@@ -85,3 +85,51 @@ native library requirements, especially clipboard, hardware decoder and GPU impo
 support. No hosted CI exists yet, so GitHub will not automatically run these local
 checks just because Dependabot is configured. Actual Dependabot execution must be
 verified on GitHub after upload; local YAML validation alone does not establish it.
+
+## Fullscreen and settings (0.1.9)
+
+Use the controller-navigable **Settings** action on the home screen or stream menu.
+A selects/cycles a setting; B returns to categories, then closes settings. Changes
+remain a draft until **Apply and save settings** completes. Closing without Apply
+discards the draft. Saving runs on a background thread, and failures are shown.
+
+- **Display:** Enter/leave fullscreen, fullscreen on connection, and Fit / Stretch /
+  Zoom. Fullscreen gameplay hides the title/status panels, footer, pointer and
+  central-panel margins; aspect-preserving Fit may still show letterboxing.
+- **Streaming:** Auto / 720p / 1080p request for the next connection. The console
+  decides actual quality. No unsupported bitrate or hardware-decoder toggles.
+- **Audio:** Live mute/unmute using the current system output device.
+- **Controller:** Stick deadzone (0–40%), Y inversion and gameplay A/B swap. Menu
+  controls always remain A to select and B to return.
+- **Hotkeys:** Record the Xbox Guide and XRBox menu combinations or reset defaults.
+  Each must contain at least two digital buttons, including Select/View or
+  Start/Menu; physical Xbox/Guide and identical shortcuts are rejected. Release
+  the A button used to start recording, hold the desired combination, then release
+  the initiating Select/Start. B alone or Escape cancels recording. Apply saves it.
+- **Remember sign-in:** Persistent preference for future sign-ins and startup
+  restoration. Turning it off does not delete existing Keychain entries or change
+  the current authenticated session; Sign out removes saved credentials.
+
+In gameplay, **F11** toggles fullscreen; **Escape** leaves fullscreen (or opens the
+stream menu when windowed), and right-click opens the stream menu. The configured
+controller menu shortcut always remains available in fullscreen. Select Fullscreen
+in the stream menu to switch mode and resume. Settings can also toggle fullscreen
+while remaining open. Opening the local menu/settings pauses gameplay input; after
+resuming, only Select/Start wait for release, including with custom shortcuts.
+
+Hotkey resolution remains release-based: the most specific completed combination
+wins when the first Select/Start pressed is released. Ties choose XRBox menu.
+Unrelated buttons remain live while building a gesture, so custom combinations
+using face buttons or bumpers may send those controls to the console before the
+complete shortcut is resolved. New mappings cancel pending old shortcuts safely.
+
+Preferences are non-secret JSON at `settings.json` inside the XRBox data directory
+(or XRBOX_DATA_DIR). Writes use a temporary file and rename. Malformed or invalid
+settings show a warning and use defaults; the file is not overwritten until Apply.
+Credentials remain exclusively in OS secure storage or memory. A save must succeed
+before new settings are applied to the running session; resolution waits for the
+next connection. No system settings or default applications are modified.
+
+The existing app bundle is not updated by source edits. When you choose to build,
+use the Makefile tasks above. Native fullscreen transitions, physical controller
+capture and real stream/audio behavior still need manual verification.

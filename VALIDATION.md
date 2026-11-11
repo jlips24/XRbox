@@ -287,3 +287,63 @@ console tile before connecting. Confirm the bottom version text stays visible an
 steady. Resize the window, scroll the page and navigate between offscreen tiles
 with the controller; only changed focus should request a reveal. Confirm the app
 shows 0.1.8 so an older running app is not mistaken for the updated bundle.
+
+## 0.1.9 — fullscreen, settings and configurable shortcuts
+
+Implemented native fullscreen with informational panels/footer/cursor hidden and a
+zero-margin video area during gameplay. F11 toggles, Escape leaves fullscreen (or
+opens the stream menu when windowed), right-click opens the menu, and the configured
+controller menu shortcut stays available. Fit/stretch/zoom use GPU draw geometry.
+
+Added controller-navigable settings categories for display, requested resolution,
+audio mute, controller deadzone/Y inversion/A-B swap and hotkey capture/reset. The
+settings editor saves non-secret preferences atomically on a background thread,
+then applies them. Resolution changes wait for the next connection. Recording and
+menu use pause gameplay; changing hotkeys cancels old pending actions. Custom
+bindings must include Select/Start, reject physical Guide and duplicates, and use
+specificity/menu priority while preserving deferred singles.
+
+Executed:
+
+- `cargo test --locked -p xrbox`: final 42 app tests passed.
+- `make test`: broader API/auth (108 passed, 1 Keychain test ignored), input
+  (38 passed) and session (44 passed) suites also passed, alongside the then-current
+  40 app tests. Two additional settings failure-path tests passed in the final run.
+- `make check`: final formatting and Clippy passed with warnings denied.
+- No app bundle rebuild, GPU smoke launch, credential read or Xbox session, honoring
+  the user's earlier request to skip rebuilding/launching the app. The existing
+  dist bundle is not this source version.
+
+Coverage includes native Fullscreen command output, full-viewport zero-margin
+layout, async fullscreen state transitions, fit/stretch/zoom geometry, controller
+activation in every settings category, recorder arming/first-release/cancellation,
+custom binding specificity/ties/reset, atomic save/load/replacement/defaults/invalid
+files and write failures, save completion/error behavior, upstream input settings,
+mute/unmute through a fake audio backend, and applying settings without clearing
+existing authentication busy/code state. Previous 576 chord-order regressions and
+hover/focus scrolling tests remain passing.
+
+Manual test after the user chooses to build (for example, `make run`):
+
+1. Open Settings using the controller. Navigate all categories using D-pad/stick,
+   A to select/cycle and B to return. Change/apply preferences, then relaunch to
+   confirm persistence. Invalid custom bindings should show a useful error.
+2. Connect to Xbox, open the stream menu and select Fullscreen. Confirm the native
+   window fills the display and no informational border, footer or pointer covers
+   video. Fit may retain aspect-ratio letterboxing. Verify F11/Escape, right-click,
+   and the controller menu chord can recover controls and leave fullscreen.
+3. Toggle fullscreen while in Settings and test fullscreen-on-connect on a new
+   connection. Menus must remain controller navigable and must pause game input.
+4. Verify Fit/Stretch/Zoom, live mute/unmute, deadzone, inversion and gameplay A/B
+   swap. Menu A/B must stay unchanged. Request 720p then reconnect; verify actual
+   dimensions in Diagnostics rather than assuming the request was honored.
+5. Record distinct new Guide and XRBox shortcuts, Apply and test both in gameplay
+   and fullscreen. Select/Start must stay deferred; other controls remain immediate.
+   Test focus loss/disconnect during recording and restore defaults with Apply.
+6. Check remember-sign-in Off skips automatic credential restoration on the next
+   launch; it must not delete Keychain credentials silently. Sign out still removes
+   them. Test saving failures if practical without modifying credential storage.
+
+Actual macOS fullscreen/Space behavior, physical controller capture, live audio,
+console-requested quality and user-visible layout remain manual hardware checks.
+No new Frame, battery, zero-copy or performance measurements are claimed.
