@@ -1,0 +1,30 @@
+[package]
+name = "xrbox"
+version = "0.1.2"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+xcloud-api.workspace = true
+xcloud-proto.workspace = true
+xcloud-stream.workspace = true
+xcloud-webrtc.workspace = true
+xcloud-media.workspace = true
+xcloud-gpu.workspace = true
+xcloud-input.workspace = true
+eframe.workspace = true
+egui.workspace = true
+wgpu.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+anyhow.workspace = true
+parking_lot.workspace = true
+crossbeam-channel.workspace = true
+open.workspace = true
+serde_json.workspace = true
+directories.workspace = true
+
+[target.'cfg(not(target_os = "macos"))'.dependencies]
+xcloud-media = { workspace = true, features = ["ffmpeg"] }
