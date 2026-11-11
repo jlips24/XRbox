@@ -1,0 +1,36 @@
+version: 2
+updates:
+  # One root Cargo workspace and lockfile, including the vendored library members.
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "build"
+    groups:
+      # Keep tightly coupled rendering APIs together for review.
+      graphics:
+        patterns:
+          - "eframe"
+          - "egui*"
+          - "epaint*"
+          - "emath"
+          - "ecolor"
+          - "wgpu*"
+          - "naga*"
+      webrtc:
+        patterns:
+          - "webrtc*"
+          - "rtc"
+          - "rtc-*"
+      # Other major upgrades remain individual PRs; none are ignored.
+      routine-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"

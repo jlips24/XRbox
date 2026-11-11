@@ -58,3 +58,30 @@ Manual console procedure and current limitations are in README.md. Stop for the
 user's Xbox results before XR or Steam Frame implementation. Windows and Linux
 ARM64 builds have not been executed for XRBox; do not infer success from Rust
 portability or an upstream CI workflow.
+
+## Dependency updates on GitHub
+
+`.github/dependabot.yml` schedules Cargo workspace updates for Mondays at 09:00
+America/New_York, with at most five open version-update PRs. Related graphics and
+WebRTC crates are grouped; other minor/patch updates share a routine group and
+other major updates remain separate. Groups are reviewed manually; no auto-merge
+is configured. In particular, 0.x minor updates may require API changes.
+
+Push the configuration to the GitHub repository's **default branch** to activate
+version updates. In repository Settings, enable the dependency graph, Dependabot
+alerts and Dependabot security updates if they are not already enabled. Alerts
+and security updates are separate repository settings, not enabled by this YAML.
+Security updates are not restricted to the weekly version-update schedule.
+See [GitHub's configuration documentation](https://docs.github.com/en/code-security/concepts/supply-chain-security/about-the-dependabot-yml-file).
+
+The root entry covers Cargo manifests and the shared lockfile. The pinned Rust
+toolchain and vendored OpenXCloud source revision still need manual updates;
+Dependabot does not replace that source snapshot. There are currently no GitHub
+Actions workflows to maintain. Add a `github-actions` entry if workflows are added.
+
+For dependency PRs, run `make check` and `make test`; use the broader checks from
+AGENTS.md when media/protocol dependencies change. Review default features and
+native library requirements, especially clipboard, hardware decoder and GPU import
+support. No hosted CI exists yet, so GitHub will not automatically run these local
+checks just because Dependabot is configured. Actual Dependabot execution must be
+verified on GitHub after upload; local YAML validation alone does not establish it.
