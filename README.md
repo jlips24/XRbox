@@ -64,11 +64,11 @@ Agent/contributor constraints are recorded in AGENTS.md.
 1. On Xbox, enable Remote Features and run its Remote Play connection checks.
    Put the Xbox and Mac on the same LAN; console Ethernet is preferable.
 2. Pair the Bluetooth Xbox controller with the Mac, then open XRBox.
-3. Press **Sign in with Microsoft**. **Remember sign-in securely** is enabled
-   by default; uncheck it for session-only credentials.
+3. Select **Sign in with Microsoft**. **Remember sign-in: On** is the default;
+   select that tile to turn it Off for session-only credentials.
 4. Open Microsoft sign-in, enter the displayed device code, and finish in your
    browser. XRBox never asks for your password.
-5. Consoles appear automatically after sign-in. Select **Play** beside your Xbox.
+5. Consoles appear automatically after sign-in. Select your Xbox tile to play.
 6. Verify moving video, game audio, sticks/triggers/buttons, D-pad, Menu and View
    on the dashboard or an installed game. GTA VI is not required for this test.
 7. Play for at least ten minutes. Test focus loss, controller unplug/reconnect,
@@ -78,7 +78,7 @@ Agent/contributor constraints are recorded in AGENTS.md.
    Never share credentials, device codes, or tokens.
 
 After relaunch, XRBox automatically refreshes saved credentials and discovers
-consoles; it does not start a stream until you select Play. On macOS, credentials
+consoles; it does not start a stream until you select a console tile. On macOS, credentials
 use Keychain (service `xrbox`), never a plaintext token file. If storage is locked
 or unavailable, unlock it or uncheck Remember sign-in and sign in for this session.
 Revoked or expired refresh credentials require signing in again. Sign out clears
@@ -140,4 +140,24 @@ python3 scripts/package_macos.py --debug --sign-identity 'Your existing signing 
 This does not create certificates or notarize the app. Consistent certificate
 signing supports stable app identity across updates; it does not guarantee an
 unlocked Keychain or eliminate all OS prompts. Session-only sign-in remains
-available by unchecking Remember sign-in securely.
+available by setting Remember sign-in to Off.
+
+## Controller navigation
+
+The home and connection screens use large Xbox-inspired tiles and a green focus
+outline. Use **D-pad / left stick** to move, **A** to select, and **B** to go back,
+close Diagnostics, dismiss sign-out confirmation, or cancel a pending connection.
+Sign-out has a confirmation screen. Keyboard arrows/Enter/Escape and mouse remain
+available. Microsoft authentication itself takes place in the system browser.
+
+During gameplay, press **View + Menu** together to open XRBox's stream menu. Menu
+navigation is kept local and sends neutral gameplay input while the menu is open.
+Choose **Resume game** or press B to return. All other buttons, sticks and triggers
+pass through immediately on resume; **only View and Menu** remain suppressed until
+both are released. Because the chord is recognized when both buttons are down,
+the first button can reach the console before the second is pressed.
+
+The app samples one controller source for both menu and gameplay. Idle controller
+polling is 30 Hz; active streaming retains the 125 Hz sampling rate. Idle menus
+repaint on input changes and navigation repeat rather than continuously. These are
+implementation settings, not measured latency or battery improvements.

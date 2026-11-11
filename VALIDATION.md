@@ -137,3 +137,39 @@ rebuilding. Record whether prompts recur and their exact action/item labels (do
 not share credentials). OS unlock requirements and permissions can still prompt;
 a rebuilt ad-hoc app can require approval again. Stable-identity signing and real
 refresh-token rotation remain hardware/account-dependent checks.
+
+## 0.1.5 — controller-first UI and local stream menu
+
+Implemented Xbox-inspired tile styling, spatial focus, controller action edges,
+D-pad/stick repeat, sign-out confirmation, and View+Menu stream-menu access. Menu
+input is local. On resume, only View/Menu wait for release; other controls pass
+immediately, per the user's explicit preference. A first hotkey button may reach
+the console before both buttons are down. Browser authentication remains external.
+
+Executed:
+
+- `cargo test --locked -p xrbox -p xcloud-input`: 12 application and 38 upstream
+  input tests passed. New tests cover stick thresholds, repeat timing, action
+  edges, focus/reconnect gating, directional tile selection, activation within a
+  real headless egui layout, menu-chord focus/edges, and View/Menu-only release.
+- `make check`: formatting and Clippy passed with warnings denied.
+- `make package`: built and verified the ad-hoc signed macOS 0.1.5 bundle.
+- Packaged `--smoke`: 10 GPU UI frames, successful exit. Synthetic screens cover
+  device code, welcome, console tiles, sign-out confirmation and Diagnostics.
+  Smoke uses a stub sampler and does not read credentials or connect to Xbox.
+
+Manual retest with 0.1.5:
+
+1. Pair the Xbox controller, open XRBox, use D-pad/left stick and A to select a
+   console tile. Check the green focus outline, held-direction repeat, controller
+   reconnect, and focus loss/return. Use B to cancel provisioning if needed.
+2. During gameplay, press View+Menu. Check that the stream menu opens and gameplay
+   receives neutral controls while you navigate. Check Diagnostics and close with B.
+3. Hold a stick or trigger while resuming with A/B. It should immediately reach
+   the console; only View/Menu should remain masked until both are released.
+4. Open the menu again and Disconnect. Test sign-out confirmation and B to dismiss.
+5. If signing in again, test selecting Copy and Open Microsoft sign-in using the
+   controller; browser authentication itself requires the browser's own input.
+
+Physical controller routing, console behavior, final visual usability and battery
+impact still require this user hardware test. No latency/battery results claimed.

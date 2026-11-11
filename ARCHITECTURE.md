@@ -130,3 +130,24 @@ persistent service. No token is moved into a plaintext file.
 
 The packager optionally accepts an existing signing identity, retaining ad-hoc
 signing by default. No certificates, trust policy or OS defaults are modified.
+
+## Controller-first presentation (0.1.5)
+
+`controller.rs` shares one native sampler, latest raw state and stream-menu flag
+between the session owner and UI. Sampling runs on the session thread: 33 ms when
+idle and the existing 8 ms streaming tick when active. The stream input source
+reads that cached sample instead of constructing a second physical sampler.
+Game input updates do not request extra presentation frames while menus are closed.
+
+View+Menu is edge-triggered while focused. Opening the menu makes the game sampler
+return neutral state; after closing, only View/Menu are masked until both are
+released. Other inputs resume immediately, as explicitly requested by the user.
+The first hotkey button may be forwarded before the complete chord is sampled.
+Existing focus-loss handling remains in the upstream input source.
+
+`navigation.rs` owns spatial focus over enabled tile rectangles, A/B edges, stick
+thresholds, and held-direction repeat (400 ms initial / 150 ms subsequent). Menu
+focus changes disarm held UI selections until neutral so a held A does not activate
+a new screen; this UI rule does not gate gameplay on resume. Actions use stable IDs
+so changing Copy feedback or status text does not shift selection. New screens
+focus their primary tile. Sign-out is confirmed. No Xbox protocol changes are made.

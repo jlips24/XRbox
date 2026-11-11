@@ -35,6 +35,9 @@ current validation evidence over older planning assumptions.
 - `crates/xrbox/src/main.rs`: native egui/eframe UI and GPU presentation.
 - `auth.rs`: credential-store selection and console-only token acquisition.
 - `session.rs`: bounded commands, session ownership, cancellation, input and recovery.
+- `controller.rs` and `navigation.rs`: shared physical sampling, menu/game input
+  routing, spatial focus and controller repeat. After stream-menu resume, only
+  View/Menu wait for release; other gameplay input must resume immediately.
 - `media.rs`: upstream RTP/decoder/audio wiring and stage counters.
 - `config.rs` and `diagnostics.rs`: non-secret app data and sanitized logging.
 - `vendor/openxcloud`: seven library crates pinned to the revision in
