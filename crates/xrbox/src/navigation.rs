@@ -330,4 +330,48 @@ mod tests {
         assert_eq!(clicks, 1);
         assert_eq!(nav.controls.len(), 1);
     }
+    #[test]
+    fn disabled_modal_background_cannot_be_selected() {
+        let ctx = egui::Context::default();
+        let mut nav = Navigation::default();
+        for buttons in [B::NONE, B::A] {
+            let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                nav.begin(&ctx, &sample(buttons), true, "modal", Duration::ZERO);
+                ui.disable();
+                assert!(!nav.button(ui, "background-play", "Play", true, true));
+            });
+            output.textures_delta.clear();
+            assert!(nav.controls.is_empty());
+        }
+    }
+    #[test]
+    fn keyboard_enter_selects_one_tile_and_escape_goes_back() {
+        let ctx = egui::Context::default();
+        let mut nav = Navigation::default();
+        let mut clicks = 0;
+        for key in [None, Some(egui::Key::Enter), Some(egui::Key::Escape)] {
+            let mut input = egui::RawInput::default();
+            if let Some(key) = key {
+                input.events.push(egui::Event::Key {
+                    key,
+                    physical_key: None,
+                    pressed: true,
+                    repeat: false,
+                    modifiers: egui::Modifiers::NONE,
+                });
+            }
+            let mut output = ctx.run_ui(input, |ui| {
+                let back = nav.begin(&ctx, &sample(B::NONE), true, "home", Duration::ZERO);
+                assert_eq!(back, key == Some(egui::Key::Escape));
+                if nav.button(ui, "play", "Play", true, true) {
+                    clicks += 1;
+                }
+                if nav.button(ui, "other", "Other", true, false) {
+                    clicks += 1;
+                }
+            });
+            output.textures_delta.clear();
+        }
+        assert_eq!(clicks, 1);
+    }
 }
