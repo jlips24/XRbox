@@ -115,3 +115,29 @@ topology (VPNs also use private addresses). An unavailable pair stays unknown.
 See [DEVELOPMENT.md](DEVELOPMENT.md), [ARCHITECTURE.md](ARCHITECTURE.md),
 [ROADMAP.md](ROADMAP.md), [VALIDATION.md](VALIDATION.md) and [Plan.md](Plan.md). Derived from GPL-3.0-only
 OpenXCloud; provenance and modifications are listed in [vendor/README.md](vendor/README.md).
+
+## macOS Keychain password prompts
+
+XRBox 0.1.4 keeps short-lived access, console-streaming and transfer tokens in
+memory. Only refresh-token changes are sent to the secure persistent store, and
+sign-out no longer clears the same Keychain item twice. Existing saved sign-ins
+remain compatible; old temporary values may remain in the bundle until sign-out.
+
+When the macOS prompt identifies XRBox accessing its `xrbox` credentials, choosing
+**Always Allow** grants lasting access for that app identity; **Allow** grants only
+one access. A locked login Keychain may still need unlocking. See
+[Apple's explanation](https://support.apple.com/en-euro/guide/keychain-access/kyca1243/mac).
+Our default development bundle is ad-hoc signed, so rebuilt versions can require
+approval again. Use the same app bundle when testing relaunch. No global Keychain
+permissions or security settings are changed by XRBox.
+
+If you already have a suitable code-signing identity, the packager supports it:
+
+```sh
+python3 scripts/package_macos.py --debug --sign-identity 'Your existing signing identity'
+```
+
+This does not create certificates or notarize the app. Consistent certificate
+signing supports stable app identity across updates; it does not guarantee an
+unlocked Keychain or eliminate all OS prompts. Session-only sign-in remains
+available by unchecking Remember sign-in securely.

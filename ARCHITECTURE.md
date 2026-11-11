@@ -116,3 +116,17 @@ must be explicitly enabled. Without it, egui-winit accepts CopyText commands but
 only updates an internal string; the OS clipboard is unchanged. Enable eframe's
 clipboard feature to route the existing user-initiated copy command through its
 native backend (arboard on macOS, with Wayland support resolved for Linux).
+
+## Reduce persistent credential operations (0.1.4)
+
+An application-owned TokenStore adapter delegates refresh-token storage to the
+existing cached KeyringTokenStore while keeping MSA access tokens, stream tokens
+and LPT/expiry in MemoryTokenStore. Upstream token exchange APIs are unchanged.
+Refresh rotation is saved synchronously before the exchange reports success;
+storage errors remain visible. Legacy bundles remain readable, without a migration
+that deletes credentials. Previously persisted temporary fields are untouched
+until sign-out. Sign-out clears transient and durable state, once for the current
+persistent service. No token is moved into a plaintext file.
+
+The packager optionally accepts an existing signing identity, retaining ad-hoc
+signing by default. No certificates, trust policy or OS defaults are modified.

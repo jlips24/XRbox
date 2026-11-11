@@ -116,3 +116,24 @@ read, and smoke testing does not write to the clipboard.
 Manual verification: reopen version 0.1.3, begin sign-in, click Copy code and paste
 into Microsoft's device-code field. End-to-end clipboard interaction still needs
 this manual check; the smoke test does not establish successful OS clipboard writes.
+
+## 0.1.4 — reduce Keychain operations
+
+Startup previously persisted access-token, refresh-token and home-stream-token
+updates to the same secure bundle. The new app-owned store keeps temporary tokens
+in memory and persists refresh-token updates only. Sign-out avoids clearing the
+current persistent store twice. Existing bundle contents remain readable.
+
+Executed: `make check`, `cargo test --locked -p xrbox` (6 passed), Python packager
+syntax compilation, `make package`, and packaged-app `--smoke` (10 UI frames).
+New in-memory test covers temporary-token isolation, refresh restoration/rotation,
+and durable sign-out. The optional existing-identity signing path was not tested;
+the bundle was built with the default ad-hoc signature. No saved credentials were
+read and no actual Keychain prompt count was measured.
+
+Manual retest: open 0.1.4 and approve the XRBox credential request using Always
+Allow if desired. Discover/Play, close the app, then reopen the same bundle without
+rebuilding. Record whether prompts recur and their exact action/item labels (do
+not share credentials). OS unlock requirements and permissions can still prompt;
+a rebuilt ad-hoc app can require approval again. Stable-identity signing and real
+refresh-token rotation remain hardware/account-dependent checks.

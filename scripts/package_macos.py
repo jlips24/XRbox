@@ -12,6 +12,8 @@ import sys
 root = Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser()
 parser.add_argument('--debug', action='store_true', help='Package the faster development build')
+parser.add_argument('--sign-identity', default='-',
+                    help='Existing code-signing identity; default is ad-hoc signing')
 args = parser.parse_args()
 if sys.platform != 'darwin':
     sys.exit('This packager runs on macOS only.')
@@ -48,7 +50,8 @@ with (app / 'Contents' / 'Info.plist').open('wb') as stream:
         'NSBluetoothAlwaysUsageDescription': 'Use a paired game controller for Xbox Remote Play.',
         'NSLocalNetworkUsageDescription': 'Connect directly to your Xbox for console Remote Play.',
     }, stream)
-subprocess.run(['codesign', '--force', '--sign', '-', str(app)], check=True)
+subprocess.run(['codesign', '--force', '--sign', args.sign_identity, str(app)], check=True)
 subprocess.run(['codesign', '--verify', '--deep', '--strict', str(app)], check=True)
 print(app)
-print('Ad-hoc signed development build; not notarized. No installation or system changes performed.')
+print(('Ad-hoc signed' if args.sign_identity == '-' else 'Identity-signed') +
+      ' development build; not notarized. No installation or system changes performed.')
