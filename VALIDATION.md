@@ -347,3 +347,24 @@ Manual test after the user chooses to build (for example, `make run`):
 Actual macOS fullscreen/Space behavior, physical controller capture, live audio,
 console-requested quality and user-visible layout remain manual hardware checks.
 No new Frame, battery, zero-copy or performance measurements are claimed.
+
+## 0.1.10 — compact non-overlapping header actions
+
+Replaced oversized header tiles and the 160-point container constraint with fixed
+76x44 actions using native vector glyphs and 11-point labels. Settings uses a gear,
+Diagnostics uses bars, Sign out uses an exit arrow, and the stream menu uses lines.
+Responsive layout stacks/wraps on narrow windows. Controller focus, activation,
+modal disabling and accessibility labels are preserved through shared navigation.
+
+Executed `cargo test --locked -p xrbox` (44 passed) and `make check` (formatting and
+Clippy passed with warnings denied). Headless layout tests use the app's heading
+size/spacing and assert all three action rectangles stay inside 240, 320, 480,
+520, 800 and 1280-point windows without overlap. Tests also verify one controller
+activation per press and that Diagnostics prevents background sign-out activation.
+
+The full app-test run exposed a pre-existing test temp-path collision: clock-only
+names were reused across parallel settings tests. Added a process-local atomic
+counter to those test paths; runtime settings persistence is unchanged. The final
+parallel test run passes. No app bundle rebuild or launch, credentials, or console
+session were used. Manual follow-up after the user rebuilds: hover and navigate
+all header actions at normal/narrow window sizes and confirm icon/label appearance.

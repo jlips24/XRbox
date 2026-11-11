@@ -60,6 +60,9 @@ crates/xrbox/Cargo.toml; do not infer it from old examples or an existing app bu
   auth jobs; resolution changes apply on the next connection.
 - `settings_ui.rs`: controller-navigable draft editor, chord capture and background
   saves. Apply only after a successful save; preserve cancellation/error handling.
+- `toolbar.rs`: compact vector-glyph header actions. Reserve fixed hit rectangles,
+  keep controller focus/accessibility labels, and wrap rather than overlap at
+  narrow widths. Do not reuse large content-tile sizing for header buttons.
 - `presentation.rs`: native fullscreen state and video fit geometry. Fullscreen
   gameplay hides all informational panels/margins, but must retain menu/exit paths.
 - `diagnostics.rs`: sanitized logging.

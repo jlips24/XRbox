@@ -253,3 +253,13 @@ recovery paths. Fit/stretch/zoom change only GPU draw geometry and clipping; dec
 frames remain on the existing GPU texture path. Menus/settings restore normal
 controls without changing the stream. Fullscreen and resolution remain desktop
 features here; no OpenXR/Frame efficiency claim follows from them.
+
+## Compact header actions (0.1.10)
+
+`toolbar.rs` owns the responsive header and small settings/diagnostics/sign-out
+(or stream-menu) actions. Each reserves a fixed 76x44 point hit rectangle before
+painting a vector glyph and 11-point label; it no longer uses the large content-tile
+width policy. Narrow layouts stack the brand and wrap actions instead of shrinking
+the available row underneath already-sized buttons. Vector glyphs avoid dependence
+on platform icon-font coverage. Navigation shares the existing activation/focus
+path, with accessibility button labels, tooltips and the green controller outline.
