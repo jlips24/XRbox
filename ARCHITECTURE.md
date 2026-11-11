@@ -78,9 +78,11 @@ Unavailable route information remains unknown.
 Desktop rendering consumes upstream Frame/FrameMailbox; the Xbox/session layer
 has no egui/OpenXR dependency. A future Frame backend must extend the Linux
 native frame representation and import/synchronization path for an actually
-accessible hardware decoder. Linux CPU NV12 upload is not zero-copy. First test
-the ordinary window on Frame's system screen; add a minimal OpenXR quad presenter
-only after desktop and headset streaming acceptance. Do not build XR now.
+accessible hardware decoder. Linux CPU NV12 upload is not zero-copy. The selected
+future frontend is Godot through an in-process Rust GDExtension,
+with Steam Frame Linux ARM64 and Android ARM64 APK targets. Follow Plan.md's
+minimal deployment/media prototype before a full XR UI migration; an ordinary
+system-screen run can remain a diagnostic baseline.
 
 ## Decisions and differences from Plan.md
 
@@ -263,3 +265,24 @@ width policy. Narrow layouts stack the brand and wrap actions instead of shrinki
 the available row underneath already-sized buttons. Vector glyphs avoid dependence
 on platform icon-font coverage. Navigation shares the existing activation/focus
 path, with accessibility button labels, tooltips and the green controller outline.
+
+
+## Selected headset frontend and APK target — planning decision
+
+The user selected **Godot** for XR presentation, with the Rust/OpenXCloud core
+retained through an in-process Rust GDExtension. Product targets now include both
+Steam Frame native Linux ARM64 and Android ARM64 APKs, starting with Meta Quest
+and adding other Android OpenXR headsets only after device-specific validation.
+This supersedes the earlier suggestion to choose a handwritten native quad
+presenter only if the system screen proved insufficient.
+
+Godot will own OpenXR and screen/menu presentation; Rust retains authentication,
+Remote Play, decoding, audio, input and settings. Native decoded surfaces must
+reach Godot through a tested graphics import/synchronization path; neither native
+texture APIs nor ARM64 export support prove efficient hardware playback. Android
+requires its own native library ABI and platform integration, including a planned
+MediaCodec surface path, secure TokenStore and lifecycle/input/audio adapters.
+
+These are future decisions, not current implementations. The desktop architecture
+above still describes the actual code. See Plan.md for progress, the renderer
+qualification, first Linux/APK prototype, staged acceptance and primary sources.

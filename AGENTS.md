@@ -2,9 +2,10 @@
 
 ## Product and current scope
 
-XRBox is a native Rust Xbox **console Remote Play** client, with standalone Steam
-Frame/Linux ARM64 as the eventual target. It must ship as one app without a relay
-PC, an embedded browser runtime, or separately configured services. Electron and
+XRBox is an Xbox **console Remote Play** client with a native Rust core. Headset
+product targets are Steam Frame/Linux ARM64 and Android ARM64 APKs (Meta Quest
+first, then other validated Android OpenXR headsets). It must ship as one app
+without a relay PC, an embedded browser runtime, or separately configured services. Electron and
 cloud gaming are excluded.
 
 The current milestone is reliable desktop streaming on macOS Apple Silicon.
@@ -14,8 +15,12 @@ Standalone Steam Frame, Linux ARM64 hardware decoding, XR presentation and batte
 performance remain unvalidated; full XR work is a separate milestone.
 
 Read README.md, ARCHITECTURE.md, VALIDATION.md and the relevant parts of Plan.md
-before architectural changes. Prefer implemented behavior and current validation
-evidence over older planning assumptions. Read the application version from
+before architectural changes. Godot is the selected future XR frontend, with the
+Rust streaming core embedded through an in-process GDExtension. Do not revert to a
+handwritten native OpenXR product frontend by default. The Godot project/extension,
+Android platform adapters and headset exports are not implemented yet; follow the
+prototype and hardware gates in Plan.md before a full UI migration. Prefer
+implemented behavior and current validation evidence over older planning assumptions. Read the application version from
 crates/xrbox/Cargo.toml; do not infer it from old examples or an existing app bundle.
 
 ## Respect the user's machine

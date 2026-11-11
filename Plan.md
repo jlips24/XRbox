@@ -1,29 +1,95 @@
 # XRBox implementation plan
 
-Date: November 11, 2026
+Updated: November 11, 2026. Current source: **0.1.10**.
 
-## Decision and first milestone
+## Current decisions
 
-Build a minimal native Rust Xbox console Remote Play client using OpenXCloud's reusable crates. First validate direct streaming on the Apple Silicon development Mac. Stop for the user's real Xbox test before implementing XR presentation or Steam Frame decoder integration.
+The desktop proof of concept is implemented in native Rust and the user has
+reported successful Xbox playback. **Godot is the selected XR frontend**, following
+the user's explicit decision. Keep the Rust/OpenXCloud streaming core and integrate
+it into Godot through an **in-process Rust GDExtension**. Do not rewrite Xbox
+protocols or replace the core with Godot's own WebRTC implementation.
 
-XRBox is a promising project, not a validated Steam Frame streaming solution. Desktop console compatibility and headset efficiency are separate acceptance gates.
+Ship two first-class headset targets from the shared Godot project and Rust core:
 
-Product constraints:
+1. **Steam Frame: native Linux ARM64 application.**
+2. **Android ARM64 APK: Meta Quest first, with additional Android OpenXR headsets
+   added through export presets, capability checks and per-device validation.**
 
-- One packaged application. No separately installed Node runtime, background services, relay PC, or intermediary streaming server.
-- Xbox Series X/S console Remote Play only. Microsoft authentication and signaling may use internet services; the selected media connection must be inspected to establish whether it is direct on the LAN.
-- Electron is excluded. Rust is preferred for most of the application; native bindings are acceptable where required.
-- Use Steam Frame's system virtual screen for the first headset milestone if compatible. Custom OpenXR follows successful streaming validation.
-- Target 1080p60 where supported, stable pacing, low latency, and efficient hardware decoding. These are targets, not guarantees.
-- No cloud gaming, game catalog, social features, complex environments, hand tracking, frame generation, or optional upscaling in this milestone.
+An APK is an explicit deliverable, not merely a possible fallback if Linux fails.
+Steam Frame's Android/Lepton execution path may also be evaluated, without
+substituting it silently for the Linux target. Linux ARM64 and Android ARM64 use
+separate native builds/ABIs; their shared libraries are not interchangeable.
 
-## Research baseline
+This replaces the earlier recommendation to choose a handwritten native OpenXR
+frontend or build custom XR only if necessary. Godot is chosen; **decoder backends,
+renderer/texture integration and efficiency remain measured engineering choices**.
+An ordinary system-screen run or minimal native presenter can be a diagnostic
+baseline, not a competing product frontend. Do not build two XR frontends by default.
+
+Product constraints remain:
+
+- Xbox Series X/S **console Remote Play**, one active stream. No cloud gaming.
+- One installed application per device. No relay PC, Node/Electron/browser media
+  runtime, external streaming server or separately managed service.
+- Microsoft account authentication/signaling may use internet services. Inspect
+  the selected media route; a private ICE address alone does not prove direct LAN.
+- Target 1080p60 where supported, stable pacing, low latency, hardware decoding,
+  minimal unnecessary copies and low CPU/power overhead. These are targets.
+- Gamepad-first menus and Bluetooth Xbox controller gameplay. No motion-controller
+  gameplay, hand tracking, social features, game catalogs or complex environments.
+- Optional passthrough only after runtime support is verified. Start with one
+  configurable cinema screen and a simple background; no image enhancement passes.
+- Never change the user's PATH, global toolchain, default apps or system settings.
+  Keep SDK/toolchain paths explicit or command-local. Do not install tools,
+  access saved credentials, launch real sessions or publish builds automatically.
+
+## Progress and evidence
+
+| Area | Current state | Remaining acceptance |
+| --- | --- | --- |
+| Native desktop streaming | Rust client, home-only auth/discovery/negotiation, VideoToolbox/Metal video, Opus audio, controller input and cleanup implemented; user reports desktop playback works | Sustained reliability, selected route and performance evidence remain separate checks |
+| Authentication UX | Secure default restoration, refresh-only persistence, session-only option, sign-out, clear device code and native Copy action | Recent credential-store behavior still has manual tests in VALIDATION.md |
+| Reliability and diagnostics | Reproduced jitter-buffer freeze fixed; assembled/decoded/presented counters, stall recovery/timeouts, route classification and sanitized logs implemented | No new end-to-end latency, power, Frame or Android results |
+| Controller/UI | Deferred singles and chord hotkeys, configurable Guide/menu bindings, recording/reset, neutral menu routing and immediate unrelated inputs on resume | Physical timing and custom mappings need user retest |
+| Fullscreen/settings | Native fullscreen, clean video-only presentation, fit/stretch/zoom, requested resolution, mute, deadzone/inversion/A-B swap and atomic non-secret settings persistence implemented | Native window transitions and live settings need hardware validation |
+| Header layout | Compact vector glyphs/small labels, responsive non-overlapping actions and focus-scroll fix implemented | Final appearance on the user's display |
+| Repository/tooling | Cargo lock/toolchain pins, seven vendored libraries, GPL notices, Makefile, docs, macOS packaging and daily Dependabot config committed | Hosted CI and actual Dependabot execution not established by local configuration |
+| Godot XR | Frontend decision accepted; integration not implemented | GDExtension, XR scene, native texture integration and on-device tests |
+| Steam Frame Linux ARM64 | Target selected; not built or tested | Deployment/runtime, hardware decoder, GPU import, input/audio/storage and power |
+| Android APK / Meta / other headsets | Target added to this plan; no APK built or tested | Android native dependencies/adapters, export/signing and device acceptance |
+
+Latest executed application checks: **44 app tests passed**, formatting and
+Clippy passed with warnings denied (0.1.10). The 0.1.9 work also exercised the
+broader API/auth, input and session suites; OS-Keychain integration remains an
+explicitly ignored/manual test. See VALIDATION.md for exact runs and limitations.
+Earlier upstream audit counts below are not XRBox test counts.
+
+Desktop additions by milestone:
+
+- 0.1.1: home-session integration fixes, video-jitter freeze recovery and stall
+  diagnostics; user subsequently reported playback working.
+- 0.1.2–0.1.4: authentication restoration, native clipboard support and fewer
+  unnecessary Keychain writes; optional existing signing identity for packaging.
+- 0.1.5–0.1.7: controller-first UI and deferred shortcut recognition. Defaults:
+  Select/View+Start/Menu sends remote Guide; adding LB+RB selects XRBox menu.
+  All bindings resolve when the first Select/Start pressed is released; combined
+  gestures do not leak individual Select/Start presses. Other controls stay live.
+- 0.1.8–0.1.10: fixed hover/focus scrolling, fullscreen/settings/custom hotkeys and
+  compact header actions. Default chord tests cover 24 press x 24 release orders;
+  newer tests cover configuration, native command/layout output and UI activation.
+
+Source version, built executable and packaged app may differ. `make build` updates
+an executable; `make package` updates dist/XRBox.app. Do not imply that a source
+change updated the bundle. Recent tasks intentionally skipped packaging/launching.
+
+## Historical research baseline
 
 Pin OpenXCloud revision `982d2a058c51b5f1285bba90f485bd599a3c2bc0` rather than a moving branch:
 
 https://github.com/shyim/openxcloud/tree/982d2a058c51b5f1285bba90f485bd599a3c2bc0
 
-The unmodified revision was checked in `/private/tmp/xrbox-openxcloud-audit`. This temporary directory and its logs are audit conveniences, not required project dependencies.
+These results describe the original, unmodified upstream audit. They are not current XRBox or headset results. The temporary audit checkout is not a project dependency; current provenance and patches are in vendor/README.md.
 
 Executed on the Apple Silicon Mac:
 
@@ -56,188 +122,271 @@ Reference implementations:
 
 PSBox remains a native protocol reference and fallback. Its inspected desktop media path also reads hardware-decoded frames into CPU memory, so switching would not by itself solve Frame efficiency. xbox-xcloud-player requires browser media APIs; it is not the primary architecture given the decision to exclude Electron.
 
-## Architecture
+## Architecture: implemented desktop and selected XR target
 
-### Runtime and technology choices
+### Implemented desktop
 
-XRBox is a single native Rust process. Use eframe/egui for the desktop window and minimal controls, wgpu for video presentation, Tokio for asynchronous authentication/signaling, OpenXCloud's webrtc-rs transport for the peer connection, VideoToolbox for the first macOS decoder, Opus/cpal for audio, and the existing gilrs-backed input component for the Bluetooth controller. There is no embedded browser, local HTTP server, IPC media bridge, or separately managed helper process.
-
-The system browser is used only for Microsoft sign-in. It does not receive or render Xbox media. Authentication/signaling connect to Microsoft services; the WebRTC media and controller connection runs between XRBox and the console when a direct route is negotiated.
+One Rust executable uses egui/eframe for the desktop window, wgpu for presentation,
+Tokio for auth/signaling, OpenXCloud's WebRTC/channel stack, VideoToolbox hardware
+decoding on macOS, Opus/cpal audio and a shared native controller sampler. The
+system browser is used only for supported Microsoft device-code authentication.
 
 ```mermaid
 flowchart LR
-    UI[Native egui interface] --> HOST[XRBox session owner]
-    HOST --> AUTH[OpenXCloud authentication and console API]
-    AUTH <-->|HTTPS authentication and signaling| MS[Microsoft services]
-    HOST --> RTC[OpenXCloud WebRTC and Xbox channels]
-    XBOX[Xbox console] <-->|WebRTC media and data channels| RTC
-    RTC --> JITTER[RTP reassembly and jitter handling]
-    JITTER --> VDEC[VideoToolbox video decoder]
-    VDEC --> MAIL[Latest decoded frame mailbox]
+    UI[Desktop egui frontend] --> SESSION[Rust session owner]
+    SESSION --> AUTH[Microsoft auth and console discovery]
+    AUTH <-->|HTTPS auth and signaling| MS[Microsoft services]
+    SESSION --> RTC[OpenXCloud WebRTC and Xbox channels]
+    XBOX[Xbox console] <-->|Media and input| RTC
+    RTC --> PIPE[RTP reassembly and native decoding]
+    PIPE --> MAIL[Latest decoded frame mailbox]
     MAIL --> GPU[Metal import and wgpu presentation]
     GPU --> UI
-    JITTER --> ADEC[Opus decoder and PCM ring buffer]
-    ADEC --> AUDIO[cpal audio output]
-    PAD[Bluetooth Xbox controller] --> INPUT[gilrs sampling and Xbox input queue]
+    PIPE --> AUDIO[Opus and native audio output]
+    PAD[Native gamepad sample] --> INPUT[Shared shortcut and input routing]
     INPUT --> RTC
 ```
 
-This is the selected desktop architecture. Linux ARM64 hardware decoding and the future OpenXR graphics backend remain explicitly gated on device capabilities; they are not solved by substituting Vulkan for Metal in this diagram.
+All seven library crates are vendored together at the audited revision, preserving
+one package identity and the upstream layout. The original Git-dependency/partial
+Cargo patch proposal was superseded; Cargo.lock and vendor/README.md describe the
+actual build and narrow patches. No cloud-oriented xcloud-app crate is included.
 
-### Code boundaries and upstream reuse
+| Current module | Responsibility |
+| --- | --- |
+| main.rs | Desktop composition root, egui UI and wgpu objects |
+| auth.rs | Token-store choice, refresh-only persistence and home credentials |
+| session.rs | Bounded commands, cancellable auth/connect jobs, one session and teardown |
+| media.rs | Upstream RTP/decoder/audio wiring, mailbox and counters |
+| controller.rs | One sampler, menu/game routing, deferred/configurable shortcuts |
+| navigation.rs / toolbar.rs | Controller focus/repeat, compact desktop actions |
+| config.rs / settings_ui.rs | Validated non-secret settings, draft/capture UI and background saves |
+| presentation.rs | Native fullscreen state and fit/stretch/zoom geometry |
+| diagnostics.rs | Controlled, sanitized logs and visible measurement limits |
 
-Use one application crate initially, with the following concrete module responsibilities. These are ownership boundaries inside one executable, not separate services or speculative framework crates.
+The owner runs a Tokio runtime on a dedicated thread. It cancels and awaits old
+jobs before replacing attempts, rather than implementing the previously proposed
+watch channel/generation-ID scheme. Shared snapshots and bounded commands carry
+control state; media stays in its mailbox/ring. Sampling uses the owner loop, not
+a separate new sampling worker: 33 ms idle and 8 ms active. Configuration changes
+do not cancel authentication or erase the in-progress device code.
 
-| XRBox module | Owns | Existing implementation reused |
+Current integration still passes egui contexts to some session/media paths for
+repaint notifications. It is **not yet an engine-independent library**. Remove
+that UI coupling while extracting the reusable core for the real Godot prototype;
+retain the desktop client as a regression harness. Do not claim a bridge already
+exists or add speculative abstraction crates before the extraction is needed.
+
+### Selected Godot + Rust architecture
+
+```mermaid
+flowchart LR
+    GODOT[Godot XR scene and controller-navigable UI] <-->|Commands and sanitized state| EXT[Rust GDExtension]
+    EXT --> CORE[Rust auth, session, input and media core]
+    CORE <-->|Remote Play| XBOX[Xbox console]
+    CORE --> DEC[Platform hardware decoder]
+    DEC --> SURFACE[GPU-native decoded surfaces]
+    SURFACE --> BRIDGE[Native texture import and synchronization]
+    BRIDGE --> GODOT
+    GODOT --> XR[OpenXR runtime and compositor]
+    CORE --> AUDIO[Platform audio backend]
+```
+
+- **Godot owns presentation:** OpenXR session/lifecycle, screen placement/size,
+  recentering, spatial menus, supported composition layers and optional passthrough.
+  Keep the first scene minimal. Do not run a competing Rust OpenXR session.
+- **Rust owns streaming:** Microsoft authentication, console discovery, home-only
+  negotiation, WebRTC/channels, H.264/Opus integration, controller routing, hotkeys,
+  settings models, diagnostics and bounded cleanup.
+- **GDExtension is in-process:** build a native library for each target and package
+  it with the Godot application. Use godot-rust bindings after checking/pinning a
+  compatible Godot/binding version. A narrow Android/JNI plugin is acceptable for
+  platform APIs; it is not a runtime server or separate application.
+- **Control bridge:** typed commands and sanitized snapshots/events. Do not put
+  credentials, raw SDP/ICE or video/PCM arrays into script properties or JSON.
+  Worker callbacks notify Godot safely; scene/render APIs run on their required
+  threads. Rust remains the single owner of session and teardown state.
+- **Media bridge:** exchange retained native surface/texture resources with explicit
+  readiness/completion synchronization and lifetime rules. Godot must not receive
+  CPU pixel arrays every frame. A GPU conversion/copy can be acceptable; efficient
+  texture access and stable pacing must be demonstrated, not assumed.
+- **UI migration:** rebuild XR menus with Godot controls using the same settings,
+  actions and core state. Keep deferred Select/Start, custom chords, A-select/B-back,
+  recording validation, focus/disconnect neutralization and immediate non-shortcut
+  inputs on resume. Keep the desktop frontend until the XR path is validated.
+
+Godot's **Mobile renderer is the starting candidate**, not an unconditional choice
+for every headset. Evaluate Android Compatibility/OpenGL where device/loader or
+codec-surface integration requires it; Godot's Android XR documentation currently
+also warns about Mobile/Vulkan configurations. Pin the tested renderer per export
+target after proving the media path. Engine choice is settled; backend selection
+must not force avoidable CPU readback or unsupported runtime behavior.
+
+Use a quad composition layer for the cinema screen where the target runtime and
+Godot path support it; measure a mesh-screen fallback if needed. Composition layers
+are not automatically cheaper on every runtime. Reuse video textures when possible
+and update menu content on demand, while obeying the runtime's XR frame loop and
+pose requirements. Do not blindly cap the headset loop to the video's 60 FPS.
+
+### GPU interoperability gate
+
+Neither a Godot native-texture API nor a wgpu texture handle proves interoperable
+playback. Verify GPU device ownership, formats/modifiers, external memory/import,
+color conversion, fences/semaphores, queue ownership and frame retention until GPU
+completion. Do not assume VkImage handles from different devices are interchangeable.
+
+The current macOS path preserves VideoToolbox IOSurfaces through Metal/wgpu. The
+Linux path currently uses FFmpeg-backed decoding with CPU-backed frame/upload
+limitations. Android currently falls into non-macOS FFmpeg selection in XRBox; that
+is **not an Android MediaCodec implementation**. Replace/refactor platform selection
+only as confirmed target backends are implemented, preserving the decoder/frame
+interfaces and compressed-frame recovery rather than rewriting Xbox transport.
+
+### Targets, packaging and platform adapters
+
+| Target | Planned artifact | Platform work / acceptance |
 | --- | --- | --- |
-| `app` | eframe entry point, screens, user actions, repaint requests, main-thread graphics objects | egui/eframe and `xcloud-gpu` |
-| `auth` | Device-code lifecycle, secure credential-store selection, refresh/sign-out, console discovery, explicit xhome credentials | `xcloud-api`, its MicrosoftAuthService, TokenStore and HTTP transport |
-| `session` | Single active session, startup/cancellation/reconnect, status, generation IDs, shutdown | `xcloud-stream` SignalingOrchestrator and `xcloud-webrtc` |
-| `media` | Decoder construction, RTP pipeline wiring, latest-frame handoff, audio output, media counters | `xcloud-stream` NativeMediaPipeline/DecodeThread, `xcloud-media`, `xcloud-gpu` |
-| `input` | Controller selection, active sampling, focus state, neutralization and rumble dispatch | `xcloud-input`, `xcloud-proto` input queue and channel formats |
-| `config` | Non-secret persisted settings and defaults | Small serde configuration; no credential fields |
-| `diagnostics` | Redacted tracing, stage timestamps, process metrics and exportable session snapshot | Upstream stats snapshots plus app counters |
+| macOS Apple Silicon | Existing native desktop executable/.app; optional Godot development harness | Preserve current streaming behavior and hardware decode; macOS Godot testing alone does not prove headset compatibility |
+| Steam Frame Linux ARM64 | Godot Linux ARM64 export + matching Rust native extension | Validate Valve runtime/deployment, accessible hardware decoder, native GPU import, audio/input/credential storage and power |
+| Meta Quest | Signed Android arm64-v8a APK + aarch64-linux-android Rust extension | Validate OpenXR loader/vendor setup, MediaCodec surface path, Android lifecycle/input/audio/storage and real Remote Play |
+| Other Android OpenXR headsets | Shared source with generic or device/vendor APK export presets as needed | Confirm runtime/extensions and hardware behavior per model; do not advertise universal headset support |
 
-Do not use `xcloud-app` as a library. Its composition root selects cloud credentials and its StreamController launches cloud titles. Build a smaller XRBox composition root around the lower-level orchestrator and media interfaces. Avoid copying cloud catalog, artwork, recommendations, and library controllers.
+APK work includes:
 
-The initial repository layout is a root Cargo workspace, `crates/xrbox/src` containing these modules, `scripts` containing build/package checks, and `vendor` containing only upstream crates that actually require patches. `ARCHITECTURE.md` will describe the implemented version of this design and any deviations.
+1. Pin compatible Godot/export templates, Rust bindings, vendor plugin/loaders,
+   Android SDK/NDK, JDK/Gradle and native dependencies. Linux and Android libraries
+   are separate builds even though both use ARM64. Document explicit tool paths;
+   do not modify global PATH/toolchains or silently install prerequisites.
+2. Export a working debug APK first and install through the supported developer
+   workflow. Keep debug/release signing separate; never commit signing keys,
+   passwords or machine-specific SDK paths. Store publication is a later decision,
+   not authorization to create accounts or publish releases now.
+3. Start with Android MediaCodec hardware H.264 decoding to a Surface. Investigate
+   Surface/native-buffer import into the chosen Godot renderer (for example an
+   AHardwareBuffer/Vulkan or EGL path only where supported). Confirm the actual
+   decoder and synchronization. CPU readback is a diagnostic fallback, not proof
+   of the efficient production pipeline.
+4. Audit Android compilation of current native dependencies, especially input,
+   keyring, audio, Opus and media crates. Do not assume desktop gilrs/Secret Service
+   or an existing FFmpeg dependency is an Android-ready implementation. Add narrow
+   adapters or feature selection where required.
+5. Keep one input owner. Feed platform/Godot or native Android controller events
+   into the Rust raw-state/shortcut path; do not sample independently in both
+   engines or tie packet timing accidentally to scene rendering. Bluetooth pairing
+   stays with the OS. Physical Xbox/Meta/system buttons remain OS-owned.
+6. Keep audio owned by the core using a tested native backend or narrow platform
+   adapter. Avoid a duplicate Godot audio pipeline and extra PCM queues. Validate
+   headset output, mute/unmute, focus loss, suspend/resume and device removal.
+7. Implement TokenStore using Android Keystore-protected encryption for persisted
+   refresh credentials in app-private storage, or use a clearly labeled memory-only
+   session until that exists. Keystore protects keys; do not pretend it directly
+   stores arbitrary bearer tokens. No plaintext token files or repeated temporary
+   token persistence. Preserve supported device-code/browser sign-in, including
+   entering the code on another device if the headset browser is unsuitable.
+8. Handle app pause, headset removal/sleep, OpenXR focus changes, browser switching,
+   process recreation and network loss. Release controls immediately; cancel or
+   resume work explicitly without replaying stale auth/session/input events.
+9. Use only required network/runtime permissions and inspect network/security
+   behavior. Do not require root, modify system hotkeys, bypass authentication or
+   add a PC/phone to the runtime media path. A phone used for device-code sign-in
+   is not a streaming relay.
 
-Use one pinned OpenXCloud source revision for all crates. When patching a crate, preserve its package identity and upstream-relative dependency behavior: replace workspace-inherited metadata and dependencies with explicit values or pinned Git dependencies where necessary so a vendored crate does not accidentally inherit the XRBox workspace. Verify with `cargo metadata --locked` and `cargo tree` that each OpenXCloud package resolves to exactly one intended source/version. Document every vendored diff in `vendor/README.md`.
+Use shared OpenXR features where available and select vendor extensions at runtime.
+Meta passthrough/foveation capabilities do not establish support on Steam Frame or
+other Android devices. Enable passthrough only when a tested extension path exists;
+keep a usable plain-background mode everywhere.
 
-Expected patches are confined to home-only authentication/OAuth polling in `xcloud-api` and the home provisioning/connection-success behavior in `xcloud-stream`. Extend `xcloud-webrtc` only if selected-route information cannot be obtained through its current stats interface. Do not fork the decoder or renderer for the desktop proof of concept unless a demonstrated failure requires it.
+## Remaining milestones and acceptance gates
 
-### Control flow, state, and concurrency
+### 1. Close recent desktop regressions — implemented, user retests pending
 
-The main UI thread owns the window, wgpu device/queue, frame importer, and drawing. It sends typed commands to one session owner task on the application Tokio runtime. The session owner owns authentication and the active session resources; it emits status events and a read-only diagnostics snapshot. No blocking credential-store operations, network calls, decoder joins, or peer-close waits execute in the UI update callback.
+Preserve the working desktop stream. Use the manual procedures in VALIDATION.md
+for recent auth, fullscreen, settings, custom hotkeys and compact toolbar changes.
+Do not equate tests, a connected signaling state or received packets with usable
+video/audio/input. Inspect actual selected routes and sustained reconnect behavior.
+No additional app packaging/launch is required merely to update this plan.
 
-Commands are `SignIn`, `CancelSignIn`, `DiscoverConsoles`, `Connect { server_id }`, `Disconnect`, `SignOut`, and `Shutdown`. Commands do not carry raw tokens through the UI. Use a bounded command channel with explicit handling of a full/closed channel. Use a watch channel for the latest connection/diagnostic state and bounded discrete events for notifications; video and PCM never travel through UI event messages.
+### 2. Extract the core and build the smallest Godot XR prototype
 
-The session owner assigns a monotonically increasing generation to every sign-in/connect attempt. Status events and media callbacks are accepted only for the current generation. A new connection cannot start while the previous session is still being torn down. Keep upstream's dedicated WebRTC worker and decode thread; add one controller sampling worker and use cpal's audio callback. Reuse upstream scheduling rather than running a second competing input flush loop.
+When implementation resumes, extract only the core modules needed by a real
+GDExtension. Replace egui repaint coupling with engine-neutral notifications; keep
+protocol ownership, settings and regression tests intact. Choose/pin the engine,
+Rust bindings and export templates, then build one minimal XR scene with a
+repositionable screen and controller-navigable test UI. Start with synthetic content
+and a functioning native bridge, not a speculative full application scaffold.
 
-Connection sequence:
+Acceptance: supported OpenXR initialization, native extension loading and clean
+shutdown on Steam Frame Linux ARM64 and a Meta Quest Android debug APK. Record
+actual OS/runtime/device/build versions. These targets can be brought up in either
+order; the APK must remain an explicit deliverable. Mac editor success is not
+headset or Android success. Do not migrate the full desktop UI yet.
 
-1. Restore or refresh secure credentials, or finish device-code sign-in. Obtain xhome credentials and configure a console-specific API client.
-2. Discover consoles and accept a selection from that result. Create a home session using the selected server ID.
-3. Observe provisioning states. On ReadyToConnect, obtain the supported console-transfer token and send the existing `/connect` authentication request; wait for Provisioned. Also accept a direct transition to Provisioned. Apply finite stage deadlines and cancellation.
-4. Use the upstream transport and SDP/ICE processors to negotiate media and Xbox data channels. Complete the existing channel authorization/handshake before enabling input.
-5. Start the media pipeline and keepalive under the session owner. Report Streaming only when the peer is connected and a decoded frame has arrived. Report first audio output and presentation independently.
-6. On failure or disconnect, neutralize input, cancel tasks/retries, stop keepalive, close the peer, clear media queues, release output resources, and attempt session deletion. Emit Disconnected after local teardown; report server cleanup failures without keeping the process alive indefinitely.
+### 3. Prove native decode-to-Godot presentation on each platform
 
-Keep the existing upstream retry policy for transient signaling/network errors within its finite attempt limit. Authentication rejection requires refresh or sign-in; it must not become an unbounded retry. Each retry gets isolated media/session state, and the UI shows the attempt rather than claiming success.
+Use local synthetic H.264 clips with known resolution/FPS to isolate hardware
+codec access and native texture interchange from Xbox/network issues. Implement
+one confirmed backend at a time, preserving bounded queues and latest-frame
+presentation. Test color, stride/formats, synchronization, dropped frames, repeated
+resolution changes, buffer release and device/app lifecycle recovery.
 
-### Video, audio, and presentation boundary
+Acceptance: named hardware decoder, documented native-surface path, measured CPU/
+GPU work and stable paced presentation, no accidental per-frame CPU readback/upload
+bridge, and no accumulated frames/resources. Record any unavoidable copies honestly.
+If a particular Godot renderer/import path fails, investigate another compatible
+backend within the chosen Godot frontend before reopening architecture decisions.
 
-WebRTC delivers encoded RTP into NativeMediaPipeline. The upstream jitter/reassembly layer emits complete H.264 access units to DecodeThread and decodes Opus into PCM. Use the existing VideoDecoder/Frame/FrameMailbox interfaces instead of inventing another media abstraction.
+### 4. Integrate real Remote Play and migrate the essential XR menus
 
-On macOS, preserve IOSurface-backed CVPixelBuffers from VideoToolbox, import their planes through the existing Metal/wgpu path, and perform the required color conversion on the GPU. Draw the converted texture letterboxed in the native window with optional UI overlays. Bypass FSR, MetalFX, VSR, and all additional enhancement passes. Retain native buffers until GPU use completes; never convert to CPU NV12 merely to cross an application module boundary.
+Expose supported sign-in/discovery/connect/disconnect/settings through the bridge.
+Keep refresh tokens in platform secure storage and media/input in the native core.
+Port only required menus: sign-in/code/copy, console tiles, stream menu, display/
+XR settings and diagnostics. Preserve controller-first navigation and configurable
+hotkeys. Add screen size/distance/placement/recenter and optional supported passthrough.
 
-Use latest-frame delivery rather than an accumulating render queue. Preserve upstream compressed-frame recovery when decoder input drops. Feed PCM into the upstream bounded audio ring buffer; the audio callback must not allocate, perform network I/O, acquire application state locks, or block on video. Surface underruns/overruns through counters.
+Acceptance per target: real Xbox video/audio/controller input, correct route
+classification, fullscreen/cinema presentation, focus and hotkey behavior, settings
+persistence, bounded disconnect/reconnect and headset suspend/resume. Have the user
+run hardware/account tests; stop at that boundary rather than inventing results.
 
-The session and protocol modules know nothing about egui, desktop windows, or OpenXR. The desktop presenter consumes the existing frame mailbox and emits presentation timing. A later OpenXR presenter will consume the same session/media output, although Linux native-buffer representation and graphics import will need a platform-specific extension. Do not add a generic Presenter trait or an XR stub until a second presenter is implemented.
+### 5. APK compatibility, packaging and efficiency
 
-For Frame, first try this native app as an ordinary window on the system virtual screen. If custom XR is subsequently justified, use a minimal OpenXR quad composition layer and keep Xbox/media ownership unchanged. Select wgpu interoperability versus a Vulkan-specific presenter only after proving the actual decoder surface import and synchronization path; shared textures cannot be assumed to cross those APIs automatically.
+Produce reproducible Linux ARM64 packages and signed Android APKs with all required
+native libraries. Validate Meta first, then add actual other-headset test results
+before claiming support. A generic APK may be possible for supported runtimes,
+but keep vendor/device presets available; do not promise one APK works everywhere.
+Expand dependency automation to Godot/plugin/Android build components once present.
+No GitHub Actions workflow currently exists; add meaningful build/tests when those
+targets are implemented, without claiming unexecuted CI success.
 
-### Security, packaging, and architecture gates
+Measure matched, unplugged headset trials: idle baseline, local representative
+video and real Xbox playback. Hold firmware, brightness, volume, refresh rate,
+stream quality, network and thermal starting state constant. Record decoder,
+CPU/GPU load, dropped frames, frame pacing, available latency/power/temperature and
+memory counters. Evaluate passthrough separately. Run on the actual target headset;
+desktop metrics and Godot support documentation cannot predict battery life.
 
-All media and input stay in-process. Tokens remain in the authentication/session layer and the OS credential store, with an explicit session-only option when secure persistence is unavailable. Non-secret settings, logs, and window state use an XRBox application-data directory. Sanitize upstream error strings before they reach logs or exports.
+Keep the 60 FPS stream target independent of headset refresh. Avoid unnecessary
+physics, lighting, shadows, post-processing, upscaling, animated rooms and continual
+menu rendering. Optimize based on measurements; do not silently lower quality.
 
-The first distributable is a macOS .app containing the native executable and required non-system libraries. The user's interaction is open app, sign in, select console, connect. Steam Frame later receives a native Linux ARM64 package through the supported deployment/runtime path; no runtime package installation or service enabling is part of the product flow.
+## Next action after this planning update
 
-Desktop acceptance proves console protocol integration and usable native playback. Frame acceptance separately requires an accessible hardware decoder, suitable GPU-resident surface interchange, working audio/input/credential behavior, and measured power consumption. If the protocol gate fails, evaluate PSBox reuse. If only Frame decoding fails, investigate another decoder backend or Android/Lepton before replacing the Xbox protocol core. These are different failure boundaries.
+Finish user acceptance of recent desktop changes, then implement a narrowly scoped
+**Godot + Rust native-extension XR/deployment prototype**, including a **Meta Quest
+Android ARM64 APK** and **Steam Frame Linux ARM64** bring-up. Prove hardware video
+presentation before a full UI migration or environment work. No Godot project,
+GDExtension, APK, Frame build or new benchmark is created by this documentation task.
 
-## Phase 1: Minimal desktop implementation
+## Primary platform references
 
-### Repository and dependency strategy
-
-Create a Cargo workspace with a single XRBox application crate. Consume the required OpenXCloud crates as Git dependencies pinned to the audited revision. Reuse its API, protocol, WebRTC, media, GPU, streaming, and input components; do not depend on its cloud-oriented application crate or copy its catalog UI.
-
-Keep any required upstream session changes in a small, documented vendored patch of the affected crate, resolved through Cargo's patch mechanism. Record the original revision and patch rationale. Do not introduce an undocumented private fork or rewrite the transport. Prefer upstream contributions later, after console validation.
-
-Use modules within the application crate for authentication/discovery, session orchestration, media presentation/audio, controller input, configuration, and diagnostics. Add no XR crate or placeholder renderer yet.
-
-Commit Cargo.lock and rust-toolchain.toml. Provide README.md, ARCHITECTURE.md, DEVELOPMENT.md, ROADMAP.md, .gitignore, LICENSE, and third-party notices. Preserve InitialPrompt.md and this plan. Ignore credentials, local configuration, logs, build output, and generated video fixtures.
-
-### User flow and authentication
-
-Provide a small native egui/wgpu interface: Sign in, console list, Connect, stream view, Disconnect, Sign out, and an optional diagnostics panel. Disable upscaling and additional image processing by default.
-
-Reuse MicrosoftAuthService's supported device-code flow. Show the verification URL and code, with a button to open the system browser. Never collect passwords in XRBox. Respect expiry, cancellation, authorization denial, and OAuth polling intervals; handle slow_down correctly using existing request/exchange primitives if the upstream polling helper is insufficient.
-
-Use the existing TokenStore interface with an XRBox-specific credential-store namespace. Store persistent secrets in the OS credential store. If secure persistence is unavailable, provide a clearly labeled session-only sign-in; never silently write plaintext tokens or ask the user to enable a service. Sign out cancels active work and clears XRBox credentials.
-
-Acquire and select xhome credentials explicitly. Do not fall back to cloud credentials or request cloud offerings for the console-only flow. Make only narrowly scoped changes to expose home-only token acquisition where upstream currently bundles cloud requests.
-
-Discover consoles through get_consoles and use the selected server ID at runtime. No credentials, region hosts, or console IDs are hardcoded. Handle no consoles, unavailable consoles, expired sessions, network failures, and rejected credentials visibly.
-
-### Session, media, and input
-
-Reuse OpenXCloud's lower-level session, WebRTC, channel, and media components. Patch the home sequence to handle ReadyToConnect authentication and subsequent provisioning using the inspected Greenlight/player sequence as the reference. Support cancellation and bounded waits at every stage.
-
-Connect only with StreamKind::Home and xhome host/token credentials. Maintain one stream. Keep Xbox SDP/ICE handling, packet framing, audio decoding, and controller serialization upstream-owned wherever possible.
-
-Define app status as separate stages: authenticating, discovering, provisioning, connecting, awaiting media, streaming, disconnecting, and failed. Enter streaming only after actual peer connectivity and decoded video arrival. Report missing audio separately; a silent game is not an audio failure by itself.
-
-On macOS reuse VideoToolbox decoding and the existing Metal/wgpu importer. Play Opus through the existing audio output. Use the native gamepad backend and existing Xbox mappings; neutralize input on focus loss, controller removal, and disconnect.
-
-Use bounded media queues and latest-frame presentation. Drop obsolete presentation frames without breaking codec reference handling. Keep controller polling active only while required; stop idle timers and expensive diagnostics when disconnected.
-
-Disconnect and application exit must cancel authentication/provisioning/retry work, neutralize input, stop keepalives, close the peer, release decoder/audio/GPU resources, clear stale frames, and attempt server-session cleanup within a bounded shutdown window. Late callbacks from an old session must not affect a new connection.
-
-### Diagnostics
-
-Provide redacted structured logs with connection stages, sanitized errors, decoder identity/fallback, negotiated codec, dimensions, decoded/presented FPS, packet loss, RTT where available, queue/decode/presentation timing, dropped frames, and process CPU/memory use.
-
-Inspect the selected media candidate pair to distinguish LAN/direct, relay, and unknown routes. Do not infer the route from the session type alone. Avoid logging raw tokens, authorization headers, device codes, SDP, ICE addresses, or full authentication response bodies. Upstream error-body summaries need sanitization at the logging boundary.
-
-Label unavailable measurements explicitly. Local decode timing is not end-to-end input-to-display latency, and desktop measurements do not predict Frame battery performance.
-
-## Phase 2: Automated validation and packaging
-
-Run upstream checks relevant to any patched crate and application tests using fake HTTP/transport boundaries. Cover:
-
-- Device-code initiation, pending/slow_down/denied/expired responses, cancellation, missing credentials, refresh, credential-store errors, and sign out.
-- Explicit home credential selection and absence of cloud-session requests.
-- Console discovery, empty results, server errors, and invalid selection.
-- Home ReadyToConnect authentication, provisioning completion, negotiation failures, deadlines, cancellation, and reconnect.
-- No false streaming success without actual connectivity and decoded media.
-- Controller buttons, axes, triggers, D-pad, focus loss, unplug, and neutral release.
-- Disconnect during each startup stage, resource cleanup, and rejection of stale callbacks.
-- Diagnostic redaction and missing-metric handling.
-
-Use upstream's synthetic H.264 fixture to verify the media path independently of Xbox. Run a UI smoke check and the applicable format, Clippy, build, and test commands. Preserve execution results without claiming real console compatibility.
-
-Expose reproducible development commands based on `cargo build --locked -p xrbox`, `cargo test --locked`, and `cargo run --locked -p xrbox`. Document platform-native prerequisites and ensure the package name matches these commands.
-
-Produce a macOS .app containing its required non-system libraries, with no runtime downloads or helper-service installation. Inspect bundled library references and document any signing/notarization limitations. Windows is secondary for this milestone; do not claim it is tested unless executed there.
-
-## Phase 3: User's Xbox test and mandatory stop
-
-Deliver exact instructions with the built client:
-
-1. Enable Xbox Remote Features, confirm the console passes its remote-play checks, and place the development machine and console on the same LAN. Prefer console Ethernet where practical.
-2. Pair the Xbox controller with the development machine and open XRBox.
-3. Complete Microsoft device-code sign-in using the account associated with the console.
-4. Select the console and connect. Use the dashboard or any installed game; GTA VI is not required for validation.
-5. Confirm moving video, audible game audio, correct controls, and the reported media route. Record resolution, FPS, decoder identity, drops, and timing metrics.
-6. Play for at least ten minutes. Test controller removal/reconnection, focus loss, disconnect/reconnect, application exit, and relaunch. Check persistent or session-only authentication behavior.
-7. Return sanitized diagnostics and observed failures. Do not share tokens or account data.
-
-Desktop acceptance requires a real console session with usable video/audio/input and clean disconnect/reconnect. If this fails, fix the observed issue before expanding scope. Consider PSBox's native core only if evidence shows substantial incompatibilities in OpenXCloud that are more costly than switching. Do not silently substitute cloud streaming.
-
-STOP here for feedback. Do not implement the full XR application before the desktop Remote Play proof of concept is validated.
-
-## Later milestones: Steam Frame and efficiency
-
-After desktop acceptance, investigate native Linux ARM64 deployment through Valve's SteamOS Devkit Client and Steam Linux Runtime 3.0 ARM64. Package all necessary application libraries; do not assume x86 packages or the upstream Debian package are suitable.
-
-First perform a focused Frame capability test: enumerate usable decoder interfaces/codecs, decoded surface formats, GPU import/synchronization support, audio devices, Bluetooth controller access, credential-store availability, and system-screen behavior. Identify the actual decoder implementation; Vulkan rendering support does not imply Vulkan Video support.
-
-Extend the existing decoder/frame interfaces only for a confirmed backend. Preserve GPU-resident frames through presentation where supported, avoiding CPU readback and upload. A GPU copy or color-conversion pass is acceptable when needed; do not promise absolute zero-copy.
-
-Compare system-screen playback with a minimal OpenXR quad composition layer only after efficient headset media playback works. Enumerate runtime extensions before implementing passthrough. Prefer the simplest measured presentation path; a full Godot environment is unnecessary for a flat virtual screen.
-
-Battery evaluation must use matched, unplugged, repeated on-headset trials: baseline without streaming, local representative video, then live Xbox streaming. Hold firmware, brightness, volume, headset refresh, stream settings, network, and thermal starting conditions constant. Record discharge power/energy where exposed, CPU/GPU load, decoder identity, frame delivery, latency, and temperature. Use Valve performance tools and available Linux battery telemetry; report unavailable counters honestly.
-
-Keep 60 FPS streaming as the quality target. Test headset refresh rates separately for power, cadence, comfort, and latency. Evaluate passthrough independently. Disable unnecessary upscaling, frame generation, animated environments, and continuously rendered diagnostics. Do not reduce stream quality automatically without a visible user setting.
-
-Choose the final Frame decoder and presentation architecture from measured results. No battery-life, zero-copy, Linux ARM64, passthrough, or end-to-end latency claims are established by the desktop milestone.
+- [Valve: Godot on Steam Frame](https://partner.steamgames.com/doc/steamhardware/steamframe/engines/godot)
+- [Godot XR setup and renderer guidance](https://docs.godotengine.org/en/stable/tutorials/xr/setting_up_xr.html)
+- [Godot OpenXR composition layers](https://docs.godotengine.org/en/stable/tutorials/xr/openxr_composition_layers.html)
+- [Godot native texture import](https://docs.godotengine.org/en/stable/classes/class_renderingserver.html#class-renderingserver-method-texture-create-from-native-handle)
+- [Godot Linux exports](https://docs.godotengine.org/en/stable/tutorials/export/exporting_for_linux.html)
+- [Godot Android XR deployment and vendor presets](https://docs.godotengine.org/en/stable/tutorials/xr/deploying_to_android.html)
+- [godot-rust Android native-extension builds](https://godot-rust.github.io/book/toolchain/export-android.html)
+- [Godot OpenXR Vendors: Meta](https://godotvr.github.io/godot_openxr_vendors/manual/meta/index.html)
+- [Android MediaCodec](https://developer.android.com/reference/android/media/MediaCodec)
+- [Android controller input](https://developer.android.com/games/sdk/game-controller/controller-input)
+- [Android Keystore](https://developer.android.com/privacy-and-security/keystore)
