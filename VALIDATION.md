@@ -99,3 +99,20 @@ Sign out, reopen and confirm sign-in is required. Test session-only sign-in with
 Remember unchecked. Keychain access may prompt; storage failures should be visible.
 Actual Keychain restoration, clipboard interaction and the redesigned layout's
 usability await this user test. Steam Frame/battery performance remains untested.
+
+## 0.1.3 — enable native clipboard backend
+
+Root cause of the reported Copy code failure: eframe default features were disabled
+without explicitly opting into `clipboard`. egui-winit therefore kept copied text
+only in its internal fallback buffer. Enabled the native backend and updated the
+lockfile (including Linux Wayland clipboard dependencies).
+
+Executed: `make check`, `cargo test --locked -p xrbox` (5 passed), `make package`,
+and packaged-app `--smoke` (10 rendered UI frames, successful exit). Inspected
+`cargo tree --locked -p xrbox -e features -i egui-winit`: clipboard and arboard are
+enabled through eframe. No real credentials or existing clipboard contents were
+read, and smoke testing does not write to the clipboard.
+
+Manual verification: reopen version 0.1.3, begin sign-in, click Copy code and paste
+into Microsoft's device-code field. End-to-end clipboard interaction still needs
+this manual check; the smoke test does not establish successful OS clipboard writes.

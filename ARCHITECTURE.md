@@ -108,3 +108,11 @@ The upstream jitter buffer now drains expired entries before rejecting a new
 timestamp when its bounded queue is full. UI diagnostics distinguish assembled,
 decoded and presented frames. The upstream drop counter counts incomplete frames,
 so XRBox labels it accordingly instead of claiming it is lost network packets.
+
+## Native clipboard integration (0.1.3)
+
+The eframe dependency disables default features, so native `clipboard` support
+must be explicitly enabled. Without it, egui-winit accepts CopyText commands but
+only updates an internal string; the OS clipboard is unchanged. Enable eframe's
+clipboard feature to route the existing user-initiated copy command through its
+native backend (arboard on macOS, with Wayland support resolved for Linux).
