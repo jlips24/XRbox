@@ -202,8 +202,10 @@ pub fn button_names(bits: u16) -> String {
 mod tests {
     use super::*;
     fn temp() -> PathBuf {
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        let unique = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         std::env::temp_dir().join(format!(
-            "xrbox-settings-{}-{}",
+            "xrbox-settings-{}-{}-{unique}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
