@@ -167,6 +167,7 @@ async fn run(
     let mut auth_persistent = false;
     let mut active: Option<Active> = None;
     let mut job: Option<tokio::task::JoinHandle<anyhow::Result<Outcome>>> = None;
+    let input_clock = Instant::now();
     let mut ticker = tokio::time::interval(Duration::from_millis(8));
     ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     loop {
@@ -336,10 +337,10 @@ async fn run(
             }
             _ = menu_ticker.tick(), if active.is_none() => {
                 controller.set_menu(false);
-                controller.poll(&mut sampler, false, focused.load(Ordering::Relaxed), &ctx);
+                controller.poll(&mut sampler, false, focused.load(Ordering::Relaxed), input_clock.elapsed(), &ctx);
             }
             _ = ticker.tick(), if active.is_some() => {
-                controller.poll(&mut sampler, true, focused.load(Ordering::Relaxed), &ctx);
+                controller.poll(&mut sampler, true, focused.load(Ordering::Relaxed), input_clock.elapsed(), &ctx);
                 let a = active.as_mut().expect("guarded active");
                 let mut terminal = false;
                 while let Ok(event) = a.events.try_recv() {

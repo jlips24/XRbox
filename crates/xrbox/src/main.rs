@@ -220,7 +220,7 @@ impl eframe::App for App {
                 ui.strong(if menu_visible {
                     "A  Select     B  Back     D-pad / Left stick  Navigate"
                 } else {
-                    "View + Menu  Open XRBox menu"
+                    "Select + Start  Xbox Guide    |    + LB + RB  XRBox menu"
                 });
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     ui.weak(if pad.connected {
@@ -254,6 +254,7 @@ impl eframe::App for App {
                     } else if snapshot.active {
                         ui.heading("Stream menu");
                         ui.label("Gameplay input is paused while this menu is open.");
+                        ui.weak("View/Select + Menu/Start sends Xbox Guide after release.");
                         ui.add_space(20.0);
                         if self.navigation.button(ui, "resume", "Resume game", true, true) { self.session.controller.set_menu(false); }
                         if self.navigation.button(ui, "disconnect", "Disconnect from Xbox", true, false) { self.session.send(Command::Disconnect); }
