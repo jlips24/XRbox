@@ -254,7 +254,7 @@ impl eframe::App for App {
                     } else if snapshot.active {
                         ui.heading("Stream menu");
                         ui.label("Gameplay input is paused while this menu is open.");
-                        ui.weak("View/Select + Menu/Start sends Xbox Guide after release.");
+                        ui.weak("Shortcuts activate when the first Select/Start button is released.");
                         ui.add_space(20.0);
                         if self.navigation.button(ui, "resume", "Resume game", true, true) { self.session.controller.set_menu(false); }
                         if self.navigation.button(ui, "disconnect", "Disconnect from Xbox", true, false) { self.session.send(Command::Disconnect); }
