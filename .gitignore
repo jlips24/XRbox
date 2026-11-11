@@ -1,0 +1,15 @@
+/target/
+/dist/
+*.log
+.env*
+*.tokens.json
+.DS_Store
+/vendor/openxcloud/fixtures/*.h264
+
+# Local tooling and editor state
+__pycache__/
+*.py[cod]
+.idea/
+.vscode/
+*.swp
+*.swo
