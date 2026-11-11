@@ -4,7 +4,9 @@ mod controller;
 mod diagnostics;
 mod media;
 mod navigation;
+mod presentation;
 mod session;
+mod settings_ui;
 
 use session::{Command, Session};
 use std::sync::atomic::Ordering;
@@ -15,6 +17,10 @@ struct App {
     texture: xcloud_gpu::VideoTexture,
     render: eframe::egui_wgpu::RenderState,
     persistent: bool,
+    settings: config::Settings,
+    editor: settings_ui::Editor,
+    display: presentation::Display,
+    was_active: bool,
     navigation: navigation::Navigation,
     confirm_signout: bool,
     launched: std::time::Instant,
@@ -51,14 +57,27 @@ impl App {
             style.visuals.selection.bg_fill = egui::Color32::from_rgb(35, 100, 62);
             style.visuals.panel_fill = egui::Color32::from_rgb(16, 20, 23);
         });
+        let mut editor = settings_ui::Editor::default();
+        let settings = if smoke {
+            config::Settings::default()
+        } else {
+            match config::data_dir().map(|dir| config::Settings::load_at(&dir)) {
+                Some(Ok(settings)) => settings,
+                _ => {
+                    editor.message = "Settings could not be loaded; defaults are in use. Apply will replace the settings file.".into();
+                    config::Settings::default()
+                }
+            }
+        };
         let session = Session::new(cc.egui_ctx.clone(), !smoke);
+        session.send(Command::Configure(settings.clone()));
         if smoke {
             // Synthetic only: exercise code layout without reading credentials or contacting Microsoft.
             session.state.lock().code = Some((
                 "0O1I-TEST".into(),
                 "https://microsoft.com/devicelogin".into(),
             ));
-        } else {
+        } else if settings.remember_signin {
             session.send(Command::Restore);
         }
         Self {
@@ -66,7 +85,11 @@ impl App {
             gpu,
             texture: Default::default(),
             render,
-            persistent: true,
+            persistent: settings.remember_signin,
+            settings,
+            editor,
+            display: Default::default(),
+            was_active: false,
             navigation: Default::default(),
             confirm_signout: false,
             launched: std::time::Instant::now(),
@@ -88,7 +111,37 @@ impl eframe::App for App {
         self.session
             .focused
             .store(ctx.input(|i| i.focused), Ordering::Relaxed);
+        if let Some(settings) = self.editor.poll() {
+            self.persistent = settings.remember_signin;
+            self.session.send(Command::Configure(settings.clone()));
+            self.settings = settings;
+        }
+        self.display.observe(ctx.input(|i| i.viewport().fullscreen));
+        if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::F11)) {
+            self.display.request(!self.display.fullscreen, ctx);
+        }
         let snapshot = self.session.state.lock().clone();
+        if snapshot.active && !self.was_active && self.settings.fullscreen_on_connect && !self.smoke
+        {
+            self.display.request(true, ctx);
+        }
+        self.was_active = snapshot.active;
+        if snapshot.active && (self.editor.open || self.diagnostics_open || self.confirm_signout) {
+            self.session.controller.set_menu(true);
+        }
+        if snapshot.active
+            && !self.session.controller.menu()
+            && ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape))
+        {
+            if self.display.fullscreen {
+                self.display.request(false, ctx);
+            } else {
+                self.session.controller.set_menu(true);
+            }
+        }
+        if snapshot.active && ctx.input(|i| i.pointer.secondary_clicked()) {
+            self.session.controller.set_menu(true);
+        }
         let reader = self.session.video.lock().clone();
         if reader.is_none() {
             self.texture.free(&mut self.render.renderer.write());
@@ -137,9 +190,17 @@ impl eframe::App for App {
         let pad = self.session.controller.sample();
         let menu_open = self.session.controller.menu();
         let menu_visible = !snapshot.active || menu_open;
+        let clean = self.display.clean(
+            snapshot.active,
+            menu_open,
+            self.editor.open || self.diagnostics_open || self.confirm_signout,
+        );
+        ctx.send_viewport_cmd(egui::ViewportCommand::CursorVisible(!clean));
         let screen = format!(
             "{}-{}-{}",
-            if self.confirm_signout {
+            if self.editor.open {
+                "settings"
+            } else if self.confirm_signout {
                 "signout"
             } else if snapshot.active {
                 if menu_open { "stream-menu" } else { "playing" }
@@ -153,15 +214,25 @@ impl eframe::App for App {
             snapshot.busy,
             self.diagnostics_open
         );
+        let screen = if self.editor.open {
+            self.editor.screen()
+        } else {
+            screen
+        };
+        let capturing = self.editor.capturing();
         let back = self.navigation.begin(
             ctx,
             &pad,
-            menu_visible && ctx.input(|i| i.focused),
+            menu_visible && !capturing && ctx.input(|i| i.focused),
             &screen,
             self.launched.elapsed(),
         );
-        if back {
-            if self.diagnostics_open {
+        let capture_escape =
+            capturing && ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape));
+        if back || capture_escape {
+            if self.editor.open {
+                self.editor.back();
+            } else if self.diagnostics_open {
                 self.diagnostics_open = false;
             } else if self.confirm_signout {
                 self.confirm_signout = false;
@@ -174,80 +245,110 @@ impl eframe::App for App {
         if self.diagnostics_open {
             self.navigation.focus("diagnostics");
         }
-        egui::Panel::top("controls").show(root, |ui| {
-            ui.add_space(10.0);
-            ui.horizontal(|ui| {
-                ui.heading(
-                    egui::RichText::new("XRBox").color(egui::Color32::from_rgb(130, 235, 150)),
-                );
-                ui.weak(" /  CONSOLE REMOTE PLAY");
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    ui.set_max_width(160.0);
-                    if !menu_visible {
-                        if ui.button("Stream menu").clicked() {
-                            self.session.controller.set_menu(true);
+        if !clean {
+            egui::Panel::top("controls").show(root, |ui| {
+                ui.add_space(10.0);
+                ui.horizontal(|ui| {
+                    ui.heading(
+                        egui::RichText::new("XRBox").color(egui::Color32::from_rgb(130, 235, 150)),
+                    );
+                    ui.weak(" /  CONSOLE REMOTE PLAY");
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        ui.set_max_width(160.0);
+                        if !menu_visible {
+                            if ui.button("Stream menu").clicked() {
+                                self.session.controller.set_menu(true);
+                            }
+                        } else if !self.editor.open && !self.confirm_signout {
+                            if self.navigation.button(
+                                ui,
+                                "settings",
+                                "Settings",
+                                !self.diagnostics_open,
+                                false,
+                            ) {
+                                self.editor.show(&self.settings);
+                                self.editor.draft.remember_signin = self.persistent;
+                                if snapshot.active {
+                                    self.session.controller.set_menu(true);
+                                }
+                            }
+                            if self
+                                .navigation
+                                .button(ui, "diagnostics", "Diagnostics", true, false)
+                            {
+                                self.diagnostics_open = !self.diagnostics_open;
+                            }
+                            if self.navigation.button(
+                                ui,
+                                "signout",
+                                "Sign out",
+                                !self.confirm_signout && !self.diagnostics_open,
+                                false,
+                            ) {
+                                self.confirm_signout = true;
+                            }
                         }
-                    } else {
-                        if self
-                            .navigation
-                            .button(ui, "diagnostics", "Diagnostics", true, false)
-                        {
-                            self.diagnostics_open = !self.diagnostics_open;
-                        }
-                        if self.navigation.button(
-                            ui,
-                            "signout",
-                            "Sign out",
-                            !self.confirm_signout && !self.diagnostics_open,
-                            false,
-                        ) {
-                            self.confirm_signout = true;
-                        }
-                    }
-                });
-            });
-            ui.horizontal(|ui| {
-                if snapshot.busy {
-                    ui.spinner();
-                }
-                ui.label(&snapshot.status);
-            });
-            ui.add_space(10.0);
-        });
-        egui::Panel::bottom("controller_hints").show(root, |ui| {
-            ui.add_space(8.0);
-            ui.horizontal(|ui| {
-                ui.strong(if menu_visible {
-                    "A  Select     B  Back     D-pad / Left stick  Navigate"
-                } else {
-                    "Select + Start  Xbox Guide    |    + LB + RB  XRBox menu"
-                });
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    ui.weak(if pad.connected {
-                        &pad.name
-                    } else {
-                        "Pair a controller · keyboard and mouse also supported"
                     });
                 });
+                ui.horizontal(|ui| {
+                    if snapshot.busy {
+                        ui.spinner();
+                    }
+                    ui.label(&snapshot.status);
+                });
+                ui.add_space(10.0);
             });
-            ui.weak(concat!(
-                "XRBox ",
-                env!("CARGO_PKG_VERSION"),
-                " · Console Remote Play"
-            ));
-            ui.add_space(8.0);
-        });
-        egui::CentralPanel::default().show(root, |ui| {
+            egui::Panel::bottom("controller_hints").show(root, |ui| {
+                ui.add_space(8.0);
+                ui.horizontal(|ui| {
+                    ui.strong(if menu_visible {
+                        "A  Select     B  Back     D-pad / Left stick  Navigate"
+                    } else {
+                        "F11  Fullscreen    Escape / Right-click  Menu"
+                    });
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        ui.weak(if pad.connected {
+                            &pad.name
+                        } else {
+                            "Pair a controller · keyboard and mouse also supported"
+                        });
+                    });
+                });
+                if !menu_visible {
+                    ui.weak(format!(
+                        "Guide: {}   |   XRBox: {}",
+                        config::button_names(self.settings.hotkeys.guide),
+                        config::button_names(self.settings.hotkeys.menu)
+                    ));
+                }
+                ui.weak(concat!(
+                    "XRBox ",
+                    env!("CARGO_PKG_VERSION"),
+                    " · Console Remote Play"
+                ));
+                ui.add_space(8.0);
+            });
+        }
+        presentation::panel(clean).show(root, |ui| {
             if self.diagnostics_open { ui.disable(); }
             if snapshot.active && !menu_open {
-                self.texture.draw(ui.painter(), ui.available_rect_before_wrap(), self.dimensions.0, self.dimensions.1);
+                let available = ui.available_rect_before_wrap();
+                if let Some(id) = self.texture.id() {
+                    ui.painter().with_clip_rect(available).image(id, presentation::video_rect(available, self.dimensions, self.settings.video_fit),
+                        egui::Rect::from_min_max(egui::pos2(0.0,0.0), egui::pos2(1.0,1.0)), egui::Color32::WHITE);
+                }
                 return;
             }
             egui::ScrollArea::vertical().show(ui, |ui| {
                 ui.add_space(28.0);
                 ui.vertical_centered(|ui| {
                     ui.set_max_width(680.0);
-                    if self.confirm_signout {
+                    if self.editor.open {
+                        if self.editor.ui(ui, &mut self.navigation, &pad, self.display.fullscreen) {
+                            self.display.request(!self.display.fullscreen, ctx);
+                        }
+                    } else if self.confirm_signout {
                         ui.heading("Sign out of XRBox?");
                         ui.label("Your saved sign-in will be removed. An active stream will disconnect.");
                         ui.add_space(20.0);
@@ -261,6 +362,11 @@ impl eframe::App for App {
                         ui.label("Gameplay input is paused while this menu is open.");
                         ui.weak("Shortcuts activate when the first Select/Start button is released.");
                         ui.add_space(20.0);
+                        if self.navigation.button(ui, "fullscreen-stream", if self.display.fullscreen { "Leave fullscreen" } else { "Fullscreen" }, true, false) {
+                            self.display.request(!self.display.fullscreen, ctx);
+                            self.session.controller.set_menu(false);
+                        }
+                        if self.navigation.button(ui, "stream-settings", "Settings", true, false) { self.editor.show(&self.settings); }
                         if self.navigation.button(ui, "resume", "Resume game", true, true) { self.session.controller.set_menu(false); }
                         if self.navigation.button(ui, "disconnect", "Disconnect from Xbox", true, false) { self.session.send(Command::Disconnect); }
                     } else if let Some((code, url)) = &snapshot.code {
@@ -392,7 +498,7 @@ impl eframe::App for App {
             }
             if self.smoke_frames == 8 {
                 self.confirm_signout = false;
-                self.diagnostics_open = true;
+                self.editor.show(&self.settings);
             }
             if self.smoke_frames == 10 {
                 println!("XRBox smoke: rendered 10 UI frames");
@@ -402,6 +508,7 @@ impl eframe::App for App {
         }
     }
     fn on_exit(&mut self) {
+        self.editor.finish();
         self.session.shutdown();
     }
 }

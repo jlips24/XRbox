@@ -208,6 +208,7 @@ impl Navigation {
         if clicked {
             self.focus(id);
             self.select = false;
+            ui.ctx().request_repaint();
         }
         clicked
     }
