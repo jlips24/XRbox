@@ -40,7 +40,20 @@ it; no Godot engine objects or UI dependencies belong in the core. Bridge and
 scene changes should also run `make xr-check`. Host tests use synthetic state;
 do not run ignored OS-credential or physical-audio tests without authorization.
 
-Full upstream checks require FFmpeg/libx264 with headers, CMake and pkg-config:
+`make test-all` runs every automated suite sequentially: all Rust workspace
+crates/targets/features, Python `test_*.py` helpers, headless Godot frontend tests,
+and the synthetic GPU render smoke. It requires pinned Godot, a working desktop
+GPU/windowing session, FFmpeg/libx264 with headers, CMake and pkg-config. The render
+smoke briefly opens a window and writes ignored `.tools/godot-preview.png`; it
+uses dummy audio and disables XR/live sessions. On a headless build server, provide
+a suitable GPU/display environment rather than silently skipping this stage.
+
+Use `make test-rust-all`, `make test-python`, `make xr-check` or `make xr-render`
+for individual suites. Ignored credential/physical-audio tests stay opt-in; real
+Xbox, Quest/Frame, Android runtime and battery checks remain manual. `test-all`
+does not build/install an APK or operate devices.
+
+Full checks:
 
 ```sh
 make test-all

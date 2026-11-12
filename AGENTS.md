@@ -115,7 +115,11 @@ make check-all
 ```
 
 The full targets generate an ignored synthetic video fixture and require developer
-FFmpeg with libx264/headers, CMake and pkg-config. Some tests bind localhost or
+FFmpeg with libx264/headers, CMake and pkg-config. `make test-all` also runs Python
+helper tests, headless Godot checks and a short synthetic GPU render window; it
+requires Godot and a functioning desktop GPU/display session. It never runs
+ignored credential/audio-device tests or live headset/console acceptance.
+`make test-rust-all` is the Rust-only full suite. Some tests bind localhost or
 require GPU access; distinguish sandbox restrictions from application failures.
 Do not disable assertions or weaken tests just to obtain passing results.
 

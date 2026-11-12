@@ -32,7 +32,7 @@ def run(command, capture=False):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['build', 'check', 'run'])
+    parser.add_argument('action', choices=['build', 'check', 'render', 'run'])
     parser.add_argument('--target', choices=TARGETS)
     parser.add_argument('--release', action='store_true')
     parser.add_argument('--desktop', action='store_true', help='Preview without OpenXR')
@@ -90,6 +90,8 @@ def main():
     if args.action == 'check':
         run(common + ['--headless', '--xr-mode', 'off', '--import'], capture=True)
         run(common + ['--headless', '--xr-mode', 'off', '--script', 'res://tests/smoke.gd', '--', '--test'], capture=True)
+    elif args.action == 'render':
+        run(common + ['--xr-mode', 'off', '--script', 'res://tests/render.gd', '--', '--test'], capture=True)
     else:
         command = common + (['--xr-mode', 'off', '--', '--desktop'] if args.desktop else [])
         run(command)
