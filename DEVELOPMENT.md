@@ -54,10 +54,10 @@ currently show partial stream measurements; RTT defaults are not presented as
 measured values. Route labels are nominated-pair observations, not proof of LAN
 topology; no selected route is claimed until a real session is tested.
 
-Manual console procedure and current limitations are in README.md. Stop for the
-user's Xbox results before XR or Steam Frame implementation. Windows and Linux
-ARM64 builds have not been executed for XRBox; do not infer success from Rust
-portability or an upstream CI workflow.
+Manual console procedure and current limitations are in README.md. The Godot foundation is documented in [xr/README.md](xr/README.md). Linux ARM64
+and Android ARM64 extension type checks are not linked builds or device tests.
+Windows/headset streaming remains unvalidated; do not infer compatibility from
+Rust portability or an upstream CI workflow.
 
 ## Dependency updates on GitHub
 
@@ -133,3 +133,10 @@ next connection. No system settings or default applications are modified.
 The existing app bundle is not updated by source edits. When you choose to build,
 use the Makefile tasks above. Native fullscreen transitions, physical controller
 capture and real stream/audio behavior still need manual verification.
+
+## Godot frontend
+
+See [xr/README.md](xr/README.md) for Linux-first builds, the local Mac preview,
+headless engine checks, controller controls and export prerequisites. `make xr-check`
+uses the optional Godot executable (GODOT override) and leaves desktop build/run
+targets unchanged. No live auth or Xbox session is started by the XR prototype.

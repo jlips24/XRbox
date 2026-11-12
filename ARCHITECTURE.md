@@ -80,7 +80,7 @@ Desktop rendering consumes upstream Frame/FrameMailbox; the Xbox/session layer
 has no egui/OpenXR dependency. A future Frame backend must extend the Linux
 native frame representation and import/synchronization path for an actually
 accessible hardware decoder. Linux CPU NV12 upload is not zero-copy. The selected
-future frontend is Godot through an in-process Rust GDExtension,
+XR frontend is Godot through an in-process Rust GDExtension,
 with Steam Frame Linux ARM64 and Android ARM64 APK targets. Follow Plan.md's
 minimal deployment/media prototype before a full XR UI migration; an ordinary
 system-screen run can remain a diagnostic baseline.
@@ -284,9 +284,8 @@ texture APIs nor ARM64 export support prove efficient hardware playback. Android
 requires its own native library ABI and platform integration, including a planned
 MediaCodec surface path, secure TokenStore and lifecycle/input/audio adapters.
 
-These are future decisions, not current implementations. The desktop architecture
-above still describes the actual code. See Plan.md for progress, the renderer
-qualification, first Linux/APK prototype, staged acceptance and primary sources.
+The Godot bring-up implementation is described below; native video integration
+and device exports remain future work. See XR_PLAN.md for the hardware gates.
 
 ## Engine-independent core extraction
 
@@ -297,3 +296,21 @@ protocol ownership, bounded queues and credential behavior are unchanged. Core
 code has no egui/wgpu dependency. Without `desktop-session`, the crate has no
 third-party dependencies; this permits Android extension bring-up without falsely
 claiming its desktop decoder/input/storage adapters work on Android.
+
+## Godot frontend bring-up
+
+`crates/xrbox-godot` is a real cdylib with a RefCounted `XrboxRuntime` class
+reporting core version and native OS/architecture. `xr/` provides a minimal Godot
+4.7.2 scene with XROrigin3D/XRCamera3D, a static synthetic screen, a SubViewport
+menu, bounded screen controls and level recentering. Godot owns OpenXR; failure
+falls back to an explicitly labeled desktop preview. Menu rendering stops while
+hidden. D-pad/A/B and keyboard navigation are handled in the scene. Explicit A/B
+actions compensate for engine defaults; no physical Guide mapping is added.
+
+The extension links only the dependency-free core surface for bring-up: it does
+not start a session, expose auth or upload decoded frames. This avoids pulling
+desktop FFmpeg/input/storage backends into Android. The desktop harness already
+uses the extracted session core; live Godot integration follows native hardware
+decode/import qualification. Linux and Android library mappings use separate
+ABIs. A Linux ARM64 export preset exists but has not produced a validated export.
+Flatpak and APK packaging remain unimplemented. See xr/README.md for commands.

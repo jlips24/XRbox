@@ -8,7 +8,8 @@ first, then other validated Android OpenXR headsets). It must ship as one app
 without a relay PC, an embedded browser runtime, or separately configured services. Electron and
 cloud gaming are excluded.
 
-The current milestone is reliable desktop streaming on macOS Apple Silicon.
+Preserve reliable desktop streaming on macOS Apple Silicon while bringing up
+the Godot prototype on Linux first.
 The user has reported desktop playback working. Recent authentication, controller
 shortcut and UI changes still need the manual checks recorded in VALIDATION.md.
 Standalone Steam Frame, Linux ARM64 hardware decoding, XR presentation and battery
@@ -17,9 +18,14 @@ performance remain unvalidated; full XR work is a separate milestone.
 Read README.md, ARCHITECTURE.md, VALIDATION.md and the relevant parts of Plan.md
 before architectural changes. Godot is the selected future XR frontend, with the
 Rust streaming core embedded through an in-process GDExtension. Do not revert to a
-handwritten native OpenXR product frontend by default. The Godot project/extension,
-Android platform adapters and headset exports are not implemented yet; follow the
-prototype and hardware gates in Plan.md before a full UI migration. Prefer
+handwritten native OpenXR product frontend by default. The Godot synthetic
+scene/native extension now live in `xr/` and
+`crates/xrbox-godot`. Desktop services are extracted into `xrbox-core` behind
+`desktop-session`; the extension deliberately excludes that feature. Linux is
+the first deployment target; Android remains a separate ABI. Follow XR_PLAN.md
+and xr/README.md: no live Godot media, linked headset exports, Android platform
+adapters or Flatpak bundle have been validated. Do not migrate the full UI before
+the device/decoder gates. Prefer
 implemented behavior and current validation evidence over older planning assumptions. Read the application version from
 crates/xrbox/Cargo.toml; do not infer it from old examples or an existing app bundle.
 
@@ -44,6 +50,9 @@ crates/xrbox/Cargo.toml; do not infer it from old examples or an existing app bu
 
 ## Code boundaries
 
+- `xr/`: Godot scene/input prototype and synthetic engine tests.
+- `crates/xrbox-godot`: in-process extension; no engine calls from workers or
+  speculative streaming commands. Keep Android free of desktop dependencies.
 - `crates/xrbox/src/main.rs`: native egui/eframe UI and GPU presentation.
 - `crates/xrbox-core/src/auth.rs`: credential-store selection and console-only token acquisition.
 - `crates/xrbox-core/src/session.rs`: bounded commands, session ownership, cancellation, input and recovery.
@@ -156,3 +165,14 @@ direct LAN routing, zero-copy or battery improvements when supported by relevant
 hardware observations. Private ICE addresses alone do not prove LAN topology.
 After preparing a hardware-dependent fix, provide an identifiable build and exact
 retest steps, then stop for the user's results. Do not fabricate benchmarks.
+
+## Godot checks
+
+`make xr-check` builds/stages the host extension and runs headless Godot tests.
+`make xr-preview` runs the synthetic scene without XR; `make xr-run` attempts XR.
+Use GODOT as a command-local executable path; an authorized project-local Mac
+download may live under ignored .tools/. Never install tools automatically.
+Godot 4.7.2 and godot-rust 0.5.5/API 4.7 are pinned. A cross-target cargo check
+is not a linked library, exported app or device test. No auth/session startup
+occurs in this frontend. Preserve the desktop harness and test its extracted
+core through `make test` / `make check` when touching shared logic.

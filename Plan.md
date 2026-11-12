@@ -59,12 +59,13 @@ Product constraints remain:
 | Fullscreen/settings | Native fullscreen, clean video-only presentation, fit/stretch/zoom, requested resolution, mute, deadzone/inversion/A-B swap and atomic non-secret settings persistence implemented | Native window transitions and live settings need hardware validation |
 | Header layout | Compact vector glyphs/small labels, responsive non-overlapping actions and focus-scroll fix implemented | Final appearance on the user's display |
 | Repository/tooling | Cargo lock/toolchain pins, seven vendored libraries, GPL notices, Makefile, docs, macOS packaging and daily Dependabot config committed | Hosted CI and actual Dependabot execution not established by local configuration |
-| Godot XR | Frontend decision accepted; integration not implemented | GDExtension, XR scene, native texture integration and on-device tests |
-| Steam Frame Linux ARM64 | Target selected; not built or tested | Deployment/runtime, hardware decoder, GPU import, input/audio/storage and power |
-| Android APK / Meta / other headsets | Target added to this plan; no APK built or tested | Android native dependencies/adapters, export/signing and device acceptance |
+| Godot XR | Shared core extracted; native version/target bridge and synthetic scene tested on macOS | Linux-first native deployment, hardware video import, live integration and headset tests |
+| Steam Frame Linux ARM64 | Extension passes ARM64 cargo check; export preset added, no linked/deployed build | Deployment/runtime, hardware decoder, GPU import, input/audio/storage and power |
+| Android APK / Meta / other headsets | Extension passes Android ARM64 cargo check without desktop media dependencies; no APK | Android native dependencies/adapters, export/signing and device acceptance |
 
-Latest executed application checks: **44 app tests passed**, formatting and
-Clippy passed with warnings denied (0.1.10). The 0.1.9 work also exercised the
+After extraction, the app checks are split into **18 desktop tests and 27 core
+tests**, all passing (0.1.10). Godot headless scene/input tests also pass;
+formatting and strict Clippy are checked. See xr/README.md for the prototype. The 0.1.9 work also exercised the
 broader API/auth, input and session suites; OS-Keychain integration remains an
 explicitly ignored/manual test. See VALIDATION.md for exact runs and limitations.
 Earlier upstream audit counts below are not XRBox test counts.
@@ -312,9 +313,10 @@ No additional app packaging/launch is required merely to update this plan.
 
 ### 2. Extract the core and build the smallest Godot XR prototype
 
-When implementation resumes, extract only the core modules needed by a real
-GDExtension. Replace egui repaint coupling with engine-neutral notifications; keep
-protocol ownership, settings and regression tests intact. Choose/pin the engine,
+Core extraction and engine-neutral notifications are implemented; the desktop
+frontend consumes that core. The native Godot bridge and synthetic scene load
+and pass tests on macOS. Linux is the first device deployment target. Preserve
+protocol ownership, settings and regression tests. Choose/pin the engine,
 Rust bindings and export templates, then build one minimal XR scene with a
 repositionable screen and controller-navigable test UI. Start with synthetic content
 and a functioning native bridge, not a speculative full application scaffold.
@@ -373,13 +375,14 @@ Keep the 60 FPS stream target independent of headset refresh. Avoid unnecessary
 physics, lighting, shadows, post-processing, upscaling, animated rooms and continual
 menu rendering. Optimize based on measurements; do not silently lower quality.
 
-## Next action after this planning update
+## Next implementation gate
 
-Finish user acceptance of recent desktop changes, then implement a narrowly scoped
-**Godot + Rust native-extension XR/deployment prototype**, including a **Meta Quest
-Android ARM64 APK** and **Steam Frame Linux ARM64** bring-up. Prove hardware video
-presentation before a full UI migration or environment work. No Godot project,
-GDExtension, APK, Frame build or new benchmark is created by this documentation task.
+The core extraction and host Godot foundation are implemented. Link/export and
+deploy the synthetic scene on **Steam Frame Linux ARM64 first**, then qualify the
+Linux Flatpak sandbox and native hardware decode/import path. Keep the **Meta Quest
+Android ARM64 APK** deliverable visible through its separate toolchain/adapters.
+Prove target XR and hardware video before migrating the full UI or connecting
+real Xbox media. Desktop manual regression acceptance remains a separate check.
 
 ## Primary platform references
 

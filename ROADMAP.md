@@ -9,11 +9,11 @@ Two headset deliverables are required: **Steam Frame Linux ARM64** and an
    user reports playback working. Current source is 0.1.10; recent auth, fullscreen,
    settings, hotkey and compact-header changes still need the manual checks in
    VALIDATION.md. Preserve the working desktop client as a regression harness.
-2. **Godot/native-extension bring-up:** extract only the reusable Rust core needed
-   by the prototype, remove egui notification coupling, pin compatible engine /
-   binding / plugin / SDK versions, and load a minimal XR screen on Steam Frame
+2. **Godot/native-extension bring-up (in progress):** shared core extraction,
+   engine-neutral notifications and the synthetic Godot/native bridge are tested
+   on macOS. Linux/Android ARM64 cargo checks pass. Next, deploy a minimal XR screen on Steam Frame
    Linux ARM64 and a Meta Quest Android debug APK. Either device can be brought up
-   first; an APK is a first-class deliverable, not just a fallback. No full UI
+   first; Linux is the current priority, and APK remains a first-class deliverable. No full UI
    rewrite before this works on actual devices.
 3. **Hardware video presentation:** prove local synthetic H.264 decoding into
    Godot-native GPU textures with explicit synchronization/lifetime management.
@@ -33,5 +33,5 @@ Two headset deliverables are required: **Steam Frame Linux ARM64** and an
 
 No cloud gaming, relay PC, social features, catalogs, motion-controller gameplay,
 complex environments, frame generation or upscaling in the first XR milestone.
-No Godot, Android APK, Frame hardware compatibility or battery results are claimed
-by the desktop tests. This planning update does not implement those components.
+Mac Godot checks and cross-target type checks do not establish Android APK,
+Frame hardware compatibility, native media presentation or battery behavior.

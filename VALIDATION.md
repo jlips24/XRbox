@@ -368,3 +368,55 @@ counter to those test paths; runtime settings persistence is unchanged. The fina
 parallel test run passes. No app bundle rebuild or launch, credentials, or console
 session were used. Manual follow-up after the user rebuilds: hover and navigate
 all header actions at normal/narrow window sizes and confirm icon/label appearance.
+
+## Godot foundation — November 11, 2026, source 0.1.10
+
+Extracted auth/settings/controller/session/media/diagnostics into xrbox-core. The
+unchanged desktop flow consumes its desktop-session feature; Notify replaces egui
+contexts in workers. Added a native godot-rust extension and synthetic cinema scene.
+No saved credentials, live authentication, physical audio test or Xbox was used.
+The existing desktop .app was not rebuilt/replaced/launched.
+
+Executed on macOS Apple Silicon:
+
+- Rust regression command: cargo test --locked -q -p xrbox -p xrbox-core
+  -p xcloud-api -p xcloud-stream -p xcloud-input -- --test-threads=1.
+  **235 passed, zero failed, one ignored** (Keychain integration). Counts are
+  18 desktop, 27 core, 108 API, 38 input and 44 stream tests.
+- Strict Clippy for xrbox, xrbox-core and xrbox-godot, all targets: passed.
+  Workspace formatting check: passed.
+- Project-local Godot 4.7.2 stable archive: SHA512 checked against official release
+  sums. Version reports 4.7.2.stable.official.ed1daf0bf. godot-rust 0.5.5/API 4.7
+  builds and loads with default safeguards. No PATH/default-toolchain changes.
+- make xr-check: passed native build, engine import and headless scene/input tests.
+  Tests exercise the real extension class, native version/target calls, scene
+  recreation, geometry bounds/aspect/recenter, menu/focus and hidden redraw state.
+  Actual InputEventJoypadButton A/B/D-pad and keyboard events verify engine action
+  mappings. Added explicit application-local A/B events after these tests exposed
+  that Godot's current defaults omit them; final tests pass.
+- Optional tests/render.gd GPU smoke: passed with audio Dummy and XR disabled;
+  captured/inspected the synthetic scene. This Mac run used Metal / Forward+ on
+  Apple M1 Max, not Linux Mobile/Vulkan. No headset output is inferred.
+- cargo check --locked -p xrbox-godot --target aarch64-unknown-linux-gnu: passed.
+- cargo check --locked -p xrbox-godot --target aarch64-linux-android: passed.
+  Android normal dependency graph contains no xcloud media/session libraries,
+  FFmpeg, cpal, gilrs, Keyring, egui or wgpu. Desktop services remain feature-gated.
+
+Sandbox-only failures were kept separate: six API tests could not bind localhost;
+the full suite passed with localhost allowed. Initial Godot import could not write
+editor/cache files or access system CA facilities in the sandbox; the final
+self-contained local engine run passed with platform access allowed. No assertions
+were weakened. A godot-rust derive-generated Clippy warning was resolved with an
+explicit class constructor rather than disabling the lint.
+
+Only Rust target standard-library caches were added for cross-target checks.
+There is no Linux ARM64 cross-linker/sysroot here. Docker was unavailable and was
+not started. Cross-target checks do not link a library, export an application,
+verify native ABI loading or prove device compatibility. No Linux executable/PCK,
+Flatpak, APK or headset-native decoder/GPU path was produced or tested.
+
+Next manual gate: follow xr/README.md on a Linux ARM64 development environment and
+Steam Frame. Confirm native extension load, stereo/head tracking, world-locked
+placement, screen controls, controller menu/focus and clean exit. Linux is first;
+Android APK/device bring-up remains required later. Native synthetic hardware
+H.264 decode/import must pass before connecting real Xbox media to Godot.

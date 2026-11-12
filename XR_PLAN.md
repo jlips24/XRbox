@@ -5,8 +5,23 @@ Updated: November 11, 2026. Planning baseline: desktop source **0.1.10**.
 This is the execution plan for the selected Godot frontend. [Plan.md](Plan.md)
 remains the overall product/progress plan; [ARCHITECTURE.md](ARCHITECTURE.md)
 describes the implemented desktop code. Everything below is proposed unless
-explicitly marked as current. This document does not create a Godot project,
-compile an extension, install SDKs, build an APK or validate a headset.
+explicitly marked as current. The original plan created no runtime components; the progress section below
+records subsequent implementation. Headset and APK validation remain pending.
+
+## Implementation progress — Linux first
+
+Implemented in this iteration: engine-neutral Notify and shared xrbox-core consumed
+by the desktop app; godot-rust 0.5.5/API 4.7 extension; Godot 4.7.2 synthetic cinema
+scene with controller/keyboard menus, bounded screen controls and recentering.
+The extension reports native/core identity without starting auth or media.
+See [xr/README.md](xr/README.md) for runnable commands and manual Linux checks.
+
+M1 extraction is complete. M0/M2 are partial: engine/extension load and scene tests
+pass on macOS; Linux ARM64 and Android ARM64 cargo checks pass. Neither check links
+or launches a target library. A Linux ARM64 export preset exists, but no Linux
+export, Flatpak or APK is built/validated. Linux cross-linker/sysroot and target
+runtime access remain prerequisites; Docker was unavailable and was not started.
+Native media, secure Android adapters and headset/battery tests remain pending.
 
 ## 1. Decisions and first deliverables
 
@@ -37,13 +52,14 @@ content until that path works; real Xbox/account testing is a separate gate.
 
 Current desktop source has user-reported working console streaming, secure sign-in,
 controller navigation, configurable deferred hotkeys, settings and fullscreen.
-Latest app tests: 44 passed; formatting and Clippy passed. This does not establish
+Latest extracted checks: 18 desktop + 27 core tests passed; Godot headless
+scene/input tests passed. Formatting and strict Clippy passed. This does not establish
 Linux ARM64, Android, Godot, XR, GPU-sharing or battery compatibility.
 
-Extraction must address these actual code couplings:
+Remaining extraction/platform considerations (notification extraction is done):
 
-- session.rs, media.rs and controller.rs currently receive egui contexts for
-  notifications. Replace those with engine-neutral callbacks/snapshots.
+- session.rs, media.rs and controller.rs now use engine-neutral Notify callbacks
+  and existing snapshots in xrbox-core. The desktop adapter supplies egui repaints.
 - NativeMediaPipeline and existing decoder/mailbox abstractions should be reused;
   media.rs currently selects VideoToolbox on macOS and FFmpeg otherwise. Android
   does not yet have a MediaCodec backend.
@@ -53,18 +69,19 @@ Extraction must address these actual code couplings:
   tested Godot/native-event adapter, not assumed gilrs support.
 - Current keyring, audio and native Opus dependencies need target-compilation
   audits. Android secure token storage is not implemented.
-- The source is one app crate plus seven pinned vendored libraries. There is no
-  Godot project, native extension, Android build template or hosted CI yet.
+- The source now includes desktop, core and Godot-extension crates, seven vendored
+  libraries and the xr/ project. Android templates and hosted CI are not present.
 
 ### Version qualification before pinning
 
 Use released versions, matching engine/export templates and exact dependency pins.
-The following are **research candidates, not an installed or tested combination**:
+Godot 4.7.2 and bindings 0.5.5/API 4.7 are now pinned and tested together on
+macOS. Other entries still require target qualification; no vendor plugin is installed:
 
 | Component | Candidate / rule | Must verify in milestone 0 |
 | --- | --- | --- |
-| Godot | 4.7.2-stable, listed in the official archive on the planning date | Required OpenXR/native-texture APIs, target exports and selected binding API compatibility |
-| godot-rust / godot crate | 0.5.5, the current documented crate when inspected | Supported Godot API level, required public methods, Rust/toolchain compatibility and Android/Linux loading |
+| Godot | 4.7.2-stable pinned; macOS load tested | Required OpenXR/native-texture APIs, target exports and selected binding API compatibility |
+| godot-rust / godot crate | 0.5.5 pinned with api-4-7; macOS load tested | Supported Godot API level, required public methods, Rust/toolchain compatibility and Android/Linux loading |
 | OpenXR Vendors plugin | 5.1.0-stable candidate; release notes require Godot 4.6+ | Appropriate assets/features for the pinned engine and each device; no duplicate loaders |
 | Rust | Existing project pin 1.99.1 | Native dependency compilation for chosen Android/Linux targets; never change the global default |
 | Android toolchain | JDK/SDK/NDK/Gradle versions required by the selected Godot release | Read that release's build requirements, pin them and verify native link/export |
@@ -73,8 +90,8 @@ The following are **research candidates, not an installed or tested combination*
 If this combination does not load cleanly, choose and document a compatible
 released combination before adding features. Do not guess an api-4-x feature,
 copy an obsolete NDK example, depend on moving Git branches, or enable unsafe/private
-binding APIs simply to suppress errors. Record exact versions and archive hashes
-in a small build manifest when implementation starts. A version table in this
+binding APIs simply to suppress errors. The initial pins and Mac archive hash are recorded in xr/toolchain.json;
+add qualified platform toolchains there as implementation proceeds. A version table in this
 plan is not a replacement for actual lockfiles or successful exports.
 
 ## 3. Ownership and data flow
@@ -329,8 +346,9 @@ Proposed presets: FrameLinuxArm64Debug/Release, MetaQuestDebug/Release, and a ge
 AndroidOpenXRDebug profile for additional-device experiments. Only add presets when
 their build path exists. A generic APK does not establish universal device support.
 
-Proposed Make targets (not present/runnable yet): core-test, godot-check,
-xr-linux-arm64, xr-apk-meta and xr-export-check. Preserve existing desktop targets;
+Implemented Make targets are xr-build, xr-check, xr-run and xr-preview.
+Target/profile arguments for xr-build select native libraries; Linux/Android
+export automation is not implemented. Other suggested target names below remain proposals. Preserve existing desktop targets;
 do not change make build into an implicit app install/export. Document the target,
 artifact path and expected device for every new task. Keep source, debug and release
 artifacts clearly identifiable; test release exports when measuring performance.
@@ -463,7 +481,7 @@ an automatic reason to abandon the chosen Godot frontend or replace Xbox protoco
 - [ ] Authentication/storage/audio/lifecycle adapters have meaningful automated tests.
 - [ ] Credentials stay native and secure; only UI-required user codes cross to display.
 - [ ] Artifacts include required native libraries/notices and separate signing inputs.
-- [ ] Hardware limitations and remaining live-console tests are explicit.
+- [x] Hardware limitations and remaining live-console tests are explicit.
 
 ## Primary references checked for this plan
 
