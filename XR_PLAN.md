@@ -335,6 +335,50 @@ do not change make build into an implicit app install/export. Document the targe
 artifact path and expected device for every new task. Keep source, debug and release
 artifacts clearly identifiable; test release exports when measuring performance.
 
+### Linux release packaging: Flatpak
+
+Target **Flatpak as the preferred Linux release format**, including a native
+**aarch64** build for Steam Frame. Package the Godot export, matching Rust
+GDExtension and required native libraries together. Keep an unpackaged Linux
+export for bring-up and comparison; the Flatpak must pass the same XR/media gates.
+Android continues to ship as an APK from the shared project.
+
+Start by qualifying a supported org.freedesktop.Platform/SDK branch with aarch64
+availability, compatible graphics extensions and the required native dependencies.
+Pin the runtime branch and source inputs in a flatpak-builder manifest when this
+build path exists. Include desktop/AppStream metadata, icons and GPL notices.
+Choose a stable application ID before release so settings and credentials retain
+consistent identities. An x86_64 package is a separate optional build, not an ARM64
+compatibility layer. No manifest or Flatpak artifact exists yet.
+
+The sandbox acceptance checklist is:
+
+- Direct Xbox networking with explicit network sharing; authentication URL opening
+  through the desktop portal. No helper outside the sandbox or streaming relay.
+- GPU/render-node and decoder access, compatible driver libraries, native texture
+  import and synchronization. Compare synthetic media inside/outside the sandbox.
+- Host OpenXR runtime discovery, its native client libraries and required IPC paths
+  on the actual Frame runtime. Do not bundle a second compositor or assume that
+  granting GPU access makes a host XR runtime reachable.
+- Audio output, controller input/disconnect and secure credential access with
+  narrowly scoped permissions. Confirm which Flatpak version/input permission and
+  Secret Service or portal path the chosen backends actually need.
+- App-private non-secret settings/logs and working browser/focus/resume behavior.
+  Avoid blanket host filesystem, session/system bus or all-device access as defaults.
+
+Flatpak documentation verifies configurable sandbox access, not Steam Frame XR
+compatibility. The actual loader/runtime, decoder and controller paths are device
+qualification blockers. Test Flatpak early alongside the minimal Linux extension
+export, before investing in release automation. Compare frame pacing and power
+against the unpackaged build; packaging alone establishes neither a penalty nor
+an efficiency improvement.
+
+First produce a locally testable .flatpak bundle. Flathub submission is a later,
+explicit publication step requiring current metadata, build and permission review;
+Flatpak packaging does not automatically imply Flathub acceptance. Retain the
+unpackaged diagnostic export if a sandbox issue needs investigation, and report
+any blocker before treating the Linux release target as complete.
+
 ## 9. Milestones, small changes and stop boundaries
 
 | Step | Concrete change/deliverable | Required evidence before moving on |
@@ -436,3 +480,7 @@ an automatic reason to abandon the chosen Godot frontend or replace Xbox protoco
 - [Android MediaCodec](https://developer.android.com/reference/android/media/MediaCodec)
 - [Android controller input](https://developer.android.com/games/sdk/game-controller/controller-input)
 - [Android Keystore](https://developer.android.com/privacy-and-security/keystore)
+
+- [Flatpak sandbox permissions](https://docs.flatpak.org/en/latest/sandbox-permissions.html)
+- [Flatpak runtimes](https://docs.flatpak.org/en/latest/available-runtimes.html)
+- [Flatpak command reference](https://docs.flatpak.org/en/latest/flatpak-command-reference.html)

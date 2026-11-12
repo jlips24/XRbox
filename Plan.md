@@ -15,7 +15,8 @@ protocols or replace the core with Godot's own WebRTC implementation.
 
 Ship two first-class headset targets from the shared Godot project and Rust core:
 
-1. **Steam Frame: native Linux ARM64 application.**
+1. **Steam Frame: native Linux ARM64 application, with Flatpak as the preferred
+   release format after sandbox/XR/media qualification.**
 2. **Android ARM64 APK: Meta Quest first, with additional Android OpenXR headsets
    added through export presets, capability checks and per-device validation.**
 
@@ -250,7 +251,7 @@ interfaces and compressed-frame recovery rather than rewriting Xbox transport.
 | Target | Planned artifact | Platform work / acceptance |
 | --- | --- | --- |
 | macOS Apple Silicon | Existing native desktop executable/.app; optional Godot development harness | Preserve current streaming behavior and hardware decode; macOS Godot testing alone does not prove headset compatibility |
-| Steam Frame Linux ARM64 | Godot Linux ARM64 export + matching Rust native extension | Validate Valve runtime/deployment, accessible hardware decoder, native GPU import, audio/input/credential storage and power |
+| Steam Frame Linux ARM64 | Flatpak containing Godot Linux ARM64 export + matching Rust native extension; unpackaged export for diagnostics | Validate sandbox/runtime integration, Valve deployment, accessible hardware decoder, native GPU import, audio/input/credential storage and power |
 | Meta Quest | Signed Android arm64-v8a APK + aarch64-linux-android Rust extension | Validate OpenXR loader/vendor setup, MediaCodec surface path, Android lifecycle/input/audio/storage and real Remote Play |
 | Other Android OpenXR headsets | Shared source with generic or device/vendor APK export presets as needed | Confirm runtime/extensions and hardware behavior per model; do not advertise universal headset support |
 
