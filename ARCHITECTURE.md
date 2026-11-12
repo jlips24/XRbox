@@ -313,4 +313,8 @@ desktop FFmpeg/input/storage backends into Android. The desktop harness already
 uses the extracted session core; live Godot integration follows native hardware
 decode/import qualification. Linux and Android library mappings use separate
 ABIs. A Linux ARM64 export preset exists but has not produced a validated export.
-Flatpak and APK packaging remain unimplemented. See xr/README.md for commands.
+A debug Quest 3S APK (0.1.10-xr.1) now builds with the pinned Meta addon and local
+Android SDK/NDK. Signature, ARM64 ELF and alignment/manifest checks pass; native
+loading and XR/input on the headset remain unverified. Android uses a Compatibility
+renderer override; Linux retains Mobile. Flatpak remains unimplemented. See
+xr/README.md and xr/ANDROID.md for commands and the manual test gate.

@@ -61,7 +61,7 @@ Product constraints remain:
 | Repository/tooling | Cargo lock/toolchain pins, seven vendored libraries, GPL notices, Makefile, docs, macOS packaging and daily Dependabot config committed | Hosted CI and actual Dependabot execution not established by local configuration |
 | Godot XR | Shared core extracted; native version/target bridge and synthetic scene tested on macOS | Linux-first native deployment, hardware video import, live integration and headset tests |
 | Steam Frame Linux ARM64 | Extension passes ARM64 cargo check; export preset added, no linked/deployed build | Deployment/runtime, hardware decoder, GPU import, input/audio/storage and power |
-| Android APK / Meta / other headsets | Extension passes Android ARM64 cargo check without desktop media dependencies; no APK | Android native dependencies/adapters, export/signing and device acceptance |
+| Android APK / Meta / other headsets | Quest 3S 0.1.10-xr.1 debug APK builds with pinned toolchain/Meta addon; signature, ARM64 and alignment checks pass | Manual Quest native loading/XR/controller test; live media/auth adapters and other-device support |
 
 After extraction, the app checks are split into **18 desktop tests and 27 core
 tests**, all passing (0.1.10). Godot headless scene/input tests also pass;
@@ -378,8 +378,9 @@ menu rendering. Optimize based on measurements; do not silently lower quality.
 ## Next implementation gate
 
 The core extraction and host Godot foundation are implemented. Link/export and
-deploy the synthetic scene on **Steam Frame Linux ARM64 first**, then qualify the
-Linux Flatpak sandbox and native hardware decode/import path. Keep the **Meta Quest
+test the synthetic **Meta Quest 3S debug APK** while Steam Frame is shipping.
+Then deploy the Linux ARM64 scene and qualify its Flatpak sandbox/native hardware
+decode/import path. Keep the **Meta Quest
 Android ARM64 APK** deliverable visible through its separate toolchain/adapters.
 Prove target XR and hardware video before migrating the full UI or connecting
 real Xbox media. Desktop manual regression acceptance remains a separate check.

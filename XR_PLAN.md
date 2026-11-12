@@ -17,11 +17,15 @@ The extension reports native/core identity without starting auth or media.
 See [xr/README.md](xr/README.md) for runnable commands and manual Linux checks.
 
 M1 extraction is complete. M0/M2 are partial: engine/extension load and scene tests
-pass on macOS; Linux ARM64 and Android ARM64 cargo checks pass. Neither check links
-or launches a target library. A Linux ARM64 export preset exists, but no Linux
-export, Flatpak or APK is built/validated. Linux cross-linker/sysroot and target
+pass on macOS; Linux ARM64 and Android ARM64 cargo checks pass. The Android extension now also links through NDK 29 and is packaged in a
+debug-signed Quest 3S APK (0.1.10-xr.1), with static manifest/signature/ABI/alignment
+checks passing. A Linux ARM64 export preset exists, but no linked Linux export
+or Flatpak is built/validated. No target library has been launched on a headset. Linux cross-linker/sysroot and target
 runtime access remain prerequisites; Docker was unavailable and was not started.
 Native media, secure Android adapters and headset/battery tests remain pending.
+The user has a Meta Quest 3S available while Steam Frame is shipping, so the next
+manual device gate is Quest 3S; Linux remains a product/deployment target.
+See [xr/ANDROID.md](xr/ANDROID.md) for APK build and installation instructions.
 
 ## 1. Decisions and first deliverables
 
@@ -70,13 +74,17 @@ Remaining extraction/platform considerations (notification extraction is done):
 - Current keyring, audio and native Opus dependencies need target-compilation
   audits. Android secure token storage is not implemented.
 - The source now includes desktop, core and Godot-extension crates, seven vendored
-  libraries and the xr/ project. Android templates and hosted CI are not present.
+  libraries and the xr/ project. The Android build template is now generated from the pinned engine under ignored
+  xr/android; hosted CI is not present.
 
 ### Version qualification before pinning
 
 Use released versions, matching engine/export templates and exact dependency pins.
 Godot 4.7.2 and bindings 0.5.5/API 4.7 are now pinned and tested together on
-macOS. Other entries still require target qualification; no vendor plugin is installed:
+macOS. OpenXR Vendors 5.1.0 is now staged from its checksum-pinned release for the
+Meta export. Android build tools follow the actual 4.7.2 template: SDK 36,
+Build-Tools 36.1.0, NDK 29.0.14206865, Gradle 8.11.1, AGP 8.6.1, Java 17.
+These are build-tested, while target execution remains unverified:
 
 | Component | Candidate / rule | Must verify in milestone 0 |
 | --- | --- | --- |

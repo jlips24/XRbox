@@ -420,3 +420,49 @@ Steam Frame. Confirm native extension load, stereo/head tracking, world-locked
 placement, screen controls, controller menu/focus and clean exit. Linux is first;
 Android APK/device bring-up remains required later. Native synthetic hardware
 H.264 decode/import must pass before connecting real Xbox media to Godot.
+
+## Quest 3S development APK — 0.1.10-xr.1
+
+Built the shared Godot synthetic prototype as an ARM64 Android debug APK on macOS
+Apple Silicon. Native extension links with Android NDK 29.0.14206865/API 29; Godot
+4.7.2 uses OpenXR Vendors 5.1.0-stable with the Meta exporter enabled for quest3 and
+quest3s. The engine's actual android_source.zip specifies SDK/target 36, Build-Tools
+36.1.0, Gradle 8.11.1, AGP 8.6.1 and Java 17. These supersede older stable-doc
+examples for this build. Linux keeps Mobile; Android selects Compatibility.
+
+Executed:
+
+- `make xr-apk`: passed 4 Python packaging regression tests, host/Android native
+  builds, Godot export, local debug signing and artifact verification.
+- `make xr-apk-check`: verifies the existing artifact without building/deploying.
+- Godot headless scene/input/lifecycle tests: passed with the staged upstream addon.
+  Added tracked-startup placement and menu bounds tests. Initial recenter waits
+  for tracking, then remains world-locked as later head poses change.
+- APK signature v2: verified, one signer. ZIP 16 KiB alignment: verified.
+- All five packaged shared libraries are AArch64 ELF64 with 16 KiB PT_LOAD alignment.
+  There is one libopenxr_loader.so, plus Godot, vendor addon, Rust bridge and libc++.
+  Native DT_NEEDED entries resolve to packaged libc++ or Android system libraries;
+  no developer desktop-library dependency is present. This does not prove runtime
+  loading on Quest.
+- Manifest: org.xrbox.prototype, version code 11001, version 0.1.10-xr.1,
+  min SDK 29 / target SDK 36, quest3|quest3s metadata, immersive OpenXR/Meta VR
+  launch categories. No Internet, microphone or camera permission is requested.
+- Packaging checks reject malformed/wrong-ABI/unaligned ELF, missing libraries,
+  signing keys/tests/desktop binaries, and tampered/escaping vendor archives.
+- Godot/vendor/MPL/project notices are included under assets/legal; public release
+  license/source-bundle review is still outstanding.
+
+Artifact: dist/xr/android/XRBox-0.1.10-xr.1-quest-debug.apk, **93,519,098 bytes**.
+SHA256: **4b0b61378f13c88b8ad3185dbf62abfc1e71d9986d0385c53e53cf7a69be7b48**.
+The sidecar records the checksum of the actual local artifact; rebuilding can
+change ZIP/signing bytes. APKs, downloaded tools/addons, signing keys, SDK paths
+and generated Gradle output remain ignored. No global PATH, Java/Rust default,
+SDK install location or global Godot editor preference was changed. Godot's device
+polling is disabled for this preset; no headset was installed or launched.
+
+Manual boundary: [xr/ANDROID.md](xr/ANDROID.md). User can test on Meta Quest 3S
+while Steam Frame is shipping. Pair a Bluetooth Xbox controller; Touch-controller
+UI is not implemented. Check headset/native initialization, stereo/head tracking,
+initial placement/recenter, controller navigation, focus/suspend/return and quit.
+No real headset, Xbox account/console, audio, MediaCodec, passthrough, battery or
+stream latency result is claimed. This APK is a synthetic frontend prototype.

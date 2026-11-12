@@ -140,3 +140,8 @@ See [xr/README.md](xr/README.md) for Linux-first builds, the local Mac preview,
 headless engine checks, controller controls and export prerequisites. `make xr-check`
 uses the optional Godot executable (GODOT override) and leaves desktop build/run
 targets unchanged. No live auth or Xbox session is started by the XR prototype.
+
+The Meta Quest 3S development APK is built with `make xr-apk`; `make xr-apk-check`
+verifies it without device access. See [xr/ANDROID.md](xr/ANDROID.md) for project-local
+prerequisites, signed artifact location and manual install/acceptance. No global
+SDK/editor defaults are changed, and the build never installs on a headset.

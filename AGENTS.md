@@ -23,8 +23,9 @@ scene/native extension now live in `xr/` and
 `crates/xrbox-godot`. Desktop services are extracted into `xrbox-core` behind
 `desktop-session`; the extension deliberately excludes that feature. Linux is
 the first deployment target; Android remains a separate ABI. Follow XR_PLAN.md
-and xr/README.md: no live Godot media, linked headset exports, Android platform
-adapters or Flatpak bundle have been validated. Do not migrate the full UI before
+and xr/README.md: no live Godot media, headset execution, Android media/auth
+adapters or Flatpak bundle have been validated. A Quest 3S debug APK now builds
+and passes package checks; installation and XR/controller acceptance are manual. Do not migrate the full UI before
 the device/decoder gates. Prefer
 implemented behavior and current validation evidence over older planning assumptions. Read the application version from
 crates/xrbox/Cargo.toml; do not infer it from old examples or an existing app bundle.
@@ -176,3 +177,12 @@ Godot 4.7.2 and godot-rust 0.5.5/API 4.7 are pinned. A cross-target cargo check
 is not a linked library, exported app or device test. No auth/session startup
 occurs in this frontend. Preserve the desktop harness and test its extracted
 core through `make test` / `make check` when touching shared logic.
+
+`make xr-apk` builds/signs/verifies the Quest 3S prototype using a project-local
+SDK/NDK and self-contained Godot. `make xr-apk-check` verifies an existing artifact.
+The helper must never edit global Godot settings, install SDK tools automatically,
+poll/install/launch on headsets or use a production signing key. The preset is not
+runnable in the editor to disable device polling. Preserve local debug keys in
+ignored .tools; never commit them or APKs. Read xr/ANDROID.md for tool pins and the
+manual device gate. Android has its own Compatibility renderer override; do not
+change Linux rendering defaults to accommodate the Android test.

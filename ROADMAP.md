@@ -11,7 +11,8 @@ Two headset deliverables are required: **Steam Frame Linux ARM64** and an
    VALIDATION.md. Preserve the working desktop client as a regression harness.
 2. **Godot/native-extension bring-up (in progress):** shared core extraction,
    engine-neutral notifications and the synthetic Godot/native bridge are tested
-   on macOS. Linux/Android ARM64 cargo checks pass. Next, deploy a minimal XR screen on Steam Frame
+   on macOS. Linux/Android ARM64 cargo checks pass; a debug Quest 3S APK now builds and
+   passes static package checks. Test Quest 3S while Frame is shipping, then deploy on Steam Frame
    Linux ARM64 and a Meta Quest Android debug APK. Either device can be brought up
    first; Linux is the current priority, and APK remains a first-class deliverable. No full UI
    rewrite before this works on actual devices.
