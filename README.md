@@ -111,7 +111,8 @@ make test-all    # all Rust, Python, headless Godot and GPU smoke tests
 make xr-apk      # build/sign/verify Android APK; does not install it
 ```
 
-`make test-all` needs the full native toolchain, pinned Godot and a functioning
+`make test-all` saves full logs under ignored `.tools/test-results/` and prints a
+compact final summary. It needs the full native toolchain, pinned Godot and a functioning
 GPU/display session. Its render smoke briefly opens a window. Hardware-only and
 explicitly ignored credential/audio-device checks remain manual. Run `make help`
 for individual test and build targets.

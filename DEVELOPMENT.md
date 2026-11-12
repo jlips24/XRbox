@@ -92,3 +92,14 @@ native library requirements, especially Godot/JNI compatibility, hardware decode
 support. No hosted CI exists yet, so GitHub will not automatically run these local
 checks just because Dependabot is configured. Actual Dependabot execution must be
 verified on GitHub after upload; local YAML validation alone does not establish it.
+
+## Test output
+
+`make test-all` captures each suite's full stdout/stderr in a unique ignored
+`.tools/test-results/` directory and prints progress plus a final PASS/FAIL table
+with durations and failure-log paths. Other suites still run after a failure;
+the command exits nonzero if any suite fails. Ctrl-C reports the interrupted and
+unrun suites. Individual suite targets retain their normal verbose output.
+Logs are kept across runs; remove old result directories manually when no longer
+needed. The runner does not authorize accounts or operate devices. The synthetic
+GPU smoke still briefly opens a window. Exit status, not log text, determines success.

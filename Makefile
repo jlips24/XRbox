@@ -2,6 +2,9 @@
 
 CARGO ?= cargo
 PYTHON ?= python3
+# Indirection prevents GNU Make treating the Python runner as a recursive recipe
+# that must execute even under make -n. Child makes still inherit tool overrides.
+TEST_MAKE ?= $(MAKE)
 ARGS ?=
 VIDEO_FIXTURE := vendor/openxcloud/fixtures/testsrc_1080p60.h264
 
@@ -39,12 +42,9 @@ run: xr-preview
 test:
 	$(CARGO) test --locked -p xrbox-core -p xrbox-godot -p xcloud-api -p xcloud-stream -p xcloud-input --features xrbox-core/session -- --test-threads=1
 
-# Keep stages sequential, including under make -j: Godot import/staging share files.
+# Runner keeps stages sequential and captures stdout/stderr without terminal truncation.
 test-all:
-	$(MAKE) test-rust-all
-	$(MAKE) test-python
-	$(MAKE) xr-check
-	$(MAKE) xr-render
+	@$(PYTHON) scripts/test_all.py --make "$(TEST_MAKE)"
 
 test-python:
 	$(PYTHON) -m unittest discover -s scripts -p 'test_*.py'

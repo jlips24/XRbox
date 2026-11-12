@@ -181,3 +181,14 @@ runnable in the editor to disable device polling. Preserve local debug keys in
 ignored .tools; never commit them or APKs. Read xr/ANDROID.md for tool pins and the
 manual device gate. Android has its own Compatibility renderer override; do not
 change Linux rendering defaults to accommodate the Android test.
+
+## Test output
+
+`make test-all` captures each suite's full stdout/stderr in a unique ignored
+`.tools/test-results/` directory and prints progress plus a final PASS/FAIL table
+with durations and failure-log paths. Other suites still run after a failure;
+the command exits nonzero if any suite fails. Ctrl-C reports the interrupted and
+unrun suites. Individual suite targets retain their normal verbose output.
+Logs are kept across runs; remove old result directories manually when no longer
+needed. The runner does not authorize accounts or operate devices. The synthetic
+GPU smoke still briefly opens a window. Exit status, not log text, determines success.
