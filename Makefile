@@ -26,7 +26,9 @@ help:
 	  'make xr-build        Build/stage the Godot native extension (ARGS for target/profile)' \
 	  'make xr-check        Build extension and run headless Godot regression checks' \
 	  'make xr-run          Run the XR foundation with OpenXR (no Xbox media yet)' \
-	  'make xr-preview      Run the synthetic scene without OpenXR'
+	  'make xr-preview      Run the synthetic scene without OpenXR' \
+	  'make xr-apk          Build/sign/verify the Quest 3S development APK' \
+	  'make xr-apk-check    Verify an existing development APK (no device access)'
 
 build:
 	$(CARGO) build --locked -p xrbox
@@ -87,3 +89,11 @@ xr-run: xr-build
 
 xr-preview: xr-build
 	$(PYTHON) scripts/godot.py run --desktop
+
+.PHONY: xr-apk xr-apk-check
+xr-apk:
+	$(PYTHON) -m unittest discover -s scripts -p test_package_android.py
+	$(PYTHON) scripts/package_android.py
+
+xr-apk-check:
+	$(PYTHON) scripts/package_android.py --verify-only

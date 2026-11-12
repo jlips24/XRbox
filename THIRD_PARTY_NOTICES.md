@@ -53,3 +53,10 @@ Preserve the MPL notices/source obligations for binding files and modifications;
 XRBox code remains GPL-3.0-only. No binding source modifications are included here.
 Cargo.lock records transitive versions; review their actual license files with the
 exported artifact before distribution. No Godot binary/export is committed.
+
+The Meta Android prototype additionally stages the unmodified OpenXR Vendors
+5.1.0-stable addon (MIT) from its checksum-pinned release archive. Its vendor SDK
+and loader notices retain their own terms, including the Meta/Oculus SDK notices;
+they are not relicensed as GPL. The debug APK includes these notices alongside
+Godot's LICENSE/COPYRIGHT and MPL-2.0 text under assets/legal/. This development
+build has not received a complete public-distribution license/source audit.

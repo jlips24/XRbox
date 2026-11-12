@@ -14,7 +14,8 @@ level recentering, focus recovery and hidden-menu redraw suppression.
 
 Pinned tools: Godot **4.7.2 stable**, godot-rust **0.5.5** using API **4.7**,
 project Rust **1.99.1**. See toolchain.json and Cargo.lock. Godot/export templates
-must match. No vendor plugin or Android SDK/NDK combination has been qualified.
+must match. The Android debug export now uses OpenXR Vendors 5.1.0-stable
+and the toolchain recorded in toolchain.json; Quest device testing is pending.
 
 On this development Mac the authorized download is project-local:
 `.tools/godot/Godot.app/Contents/MacOS/Godot`. The download was verified against the
@@ -92,21 +93,22 @@ Flatpak remains the preferred Linux release package. Its manifest/bundle and
 host OpenXR IPC/driver/decoder/controller/credential permissions are not yet
 implemented or qualified. Compare unpackaged and sandboxed bring-up early.
 
-## Android boundary
+## Android / Quest 3S debug APK
 
-The same extension has an android.arm64 library mapping, and its current Rust-only
-dependency graph can be checked independently:
+A debug-signed ARM64 APK is now built and statically verified. See
+[ANDROID.md](ANDROID.md) for exact Quest 3S installation/retest steps and build
+prerequisites. Android uses the shared scene with a Compatibility renderer
+override; Linux retains its Mobile renderer setting.
 
 ```sh
-cargo check --locked -p xrbox-godot --target aarch64-linux-android
+make xr-apk         # build/sign/verify, no device install
+make xr-apk-check   # verify the existing APK
 ```
 
-A linked Android build additionally needs the qualified NDK/linker; APK export
-needs pinned Godot Android templates, SDK/JDK/Gradle and the device OpenXR setup.
-There is no Android export preset/APK yet. Desktop session dependencies are opt-in
-and excluded from this extension, so FFmpeg, gilrs, cpal and Keyring are not
-silently treated as Android implementations. Android MediaCodec surfaces, audio,
-secure credentials and lifecycle adapters remain separate future work.
+This APK still contains only synthetic content and the native identity bridge.
+Desktop session dependencies remain excluded. No Xbox authentication, streaming,
+MediaCodec/audio or Android credential adapter is connected. An APK signature
+or ARM64 ELF check is not proof of successful Android native loading or XR output.
 
 ## Validation scope
 
@@ -117,6 +119,7 @@ surfaces. tests/render.gd is an optional short GPU smoke that saves an ignored
 .tools/godot-preview.png when run with --audio-driver Dummy, --xr-mode off and
 user argument --test. It is excluded from release exports.
 
-No Linux/Android executable launch, APK, Flatpak, headset XR presentation, hardware
-video, real controller, audio or battery result is established by these tests.
+The Android debug APK builds and passes package checks. No Linux/Android
+executable launch, Flatpak, headset XR presentation, hardware video, real
+controller, audio or battery result is established by these tests.
 See ../XR_PLAN.md and ../VALIDATION.md for progress and evidence.

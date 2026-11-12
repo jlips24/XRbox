@@ -7,6 +7,44 @@
     "url": "https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_macos.universal.zip",
     "sha512": "38aa16e5bba2083941fc5b3e54be0089bd4cc35e32415f5b9fd9a8a6a7b9818255d44532ea8ef94b5aef56c4b407c2d634fa4f657e4ebe681ebbf59b7bac69ca"
   },
-  "android_sdk_ndk": null,
-  "openxr_vendors_plugin": null
+  "android_sdk_ndk": {
+    "command_line_tools": "19.0",
+    "build_tools": "36.1.0",
+    "compile_sdk": 36,
+    "target_sdk": 36,
+    "ndk": "29.0.14206865",
+    "rust_link_api": 29,
+    "java_major": 17,
+    "platform_tools_tested": "37.0.1",
+    "gradle": "8.11.1",
+    "android_gradle_plugin": "8.6.1"
+  },
+  "openxr_vendors_plugin": {
+    "version": "5.1.0-stable",
+    "url": "https://github.com/GodotVR/godot_openxr_vendors/releases/download/5.1.0-stable/godotopenxrvendorsaddon.zip",
+    "sha256": "6a838dbdf4115549e4511ebee0da9a5dcc8f9f6258d4cc2f2ee57a907a3e2911"
+  },
+  "export_templates": {
+    "version": "4.7.2.stable",
+    "url": "https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_export_templates.tpz",
+    "sha512": "ca4d71c4d7b81dfc15d1a98baa07534aa95b03fdda78a0075b06672e1648d2e5f40980c9adc28d23e1b92e732ee7bf3461997aa804af74ec2fcd7a93ccb84079"
+  },
+  "android_notices": {
+    "Godot-LICENSE.txt": {
+      "url": "https://raw.githubusercontent.com/godotengine/godot/4.7.2-stable/LICENSE.txt",
+      "sha256": "b0435e3b3e4e55238f05f4b306f30524a1b2e20147810d436eaa554fa6855c80"
+    },
+    "Godot-COPYRIGHT.txt": {
+      "url": "https://raw.githubusercontent.com/godotengine/godot/4.7.2-stable/COPYRIGHT.txt",
+      "sha256": "cb1980c88089573bcacd7221d777c689bb8bbd778799f24c27fca0fe5f774d6d"
+    },
+    "OpenXR-Vendors-LICENSE.txt": {
+      "url": "https://raw.githubusercontent.com/GodotVR/godot_openxr_vendors/5.1.0-stable/LICENSE",
+      "sha256": "6133abb9ee2e3752675df201d5a5c0942a0762558b35d2471ebfae72cad82b61"
+    },
+    "MPL-2.0.txt": {
+      "url": "https://www.mozilla.org/media/MPL/2.0/index.txt",
+      "sha256": "3f3d9e0024b1921b067d6f7f88deb4a60cbe7a78e76c64e3f1d7fc3b779b9d04"
+    }
+  }
 }

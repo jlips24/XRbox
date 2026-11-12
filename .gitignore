@@ -24,3 +24,6 @@ __pycache__/
 *.apk
 *.aab
 *.flatpak
+# Pinned upstream OpenXR addon staged by the Android dependency task
+/xr/addons/godotopenxrvendors/
+/xr/legal/
