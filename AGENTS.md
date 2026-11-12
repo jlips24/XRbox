@@ -1,8 +1,8 @@
-# XRBox agent instructions
+# XRbox agent instructions
 
 ## Product and current scope
 
-XRBox is an Xbox **console Remote Play** client with a native Rust core. Headset
+XRbox is an Xbox **console Remote Play** client with a native Rust core. Headset
 product targets are Steam Frame/Linux ARM64 and Android ARM64 APKs (Meta Quest
 first, then other validated Android OpenXR headsets). It must ship as one app
 without a relay PC, an embedded browser runtime, or separately configured services. Electron and
@@ -65,7 +65,7 @@ Godot configuration; old desktop documentation is historical.
   Select/View and Start/Menu are deferred bindings: never forward their raw
   button-down events. Resolve the most specific completed binding when the first
   Select/Start pressed is released. Default shortcuts are the pair for Guide and
-  the pair+LB+RB for XRBox; preserve validated user-configured mappings across
+  the pair+LB+RB for XRbox; preserve validated user-configured mappings across
   cancellation. Singles use the same deferred recognizer and protocol pulse path. Physical Guide
   stays reserved to the host and is not forwarded. Preserve bounded input queues
   and cancellation on focus loss/disconnect; do not enable system-gesture capture.

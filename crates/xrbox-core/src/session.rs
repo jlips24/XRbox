@@ -438,7 +438,7 @@ async fn run_sampler(
                     state.lock().route=match route {
                                     Ok(Ok(Some(SelectedRoute::PrivateAddressPeer)))=>"Direct peer at private/link-local address (LAN candidate; VPNs may also use private addresses)",
                                     Ok(Ok(Some(SelectedRoute::DirectNonPrivatePeer)))=>"Direct peer at non-private address (not verified as LAN)",
-                                    Ok(Ok(Some(SelectedRoute::Relay)))=> {terminal=true; "Relay detected; stopping because XRBox requires direct console streaming"},
+                                    Ok(Ok(Some(SelectedRoute::Relay)))=> {terminal=true; "Relay detected; stopping because XRbox requires direct console streaming"},
                                     _=>"Selected route unavailable",
                                 }.into();
                     if terminal {

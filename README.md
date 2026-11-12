@@ -51,7 +51,7 @@ controller. Touch/hand controls and full XR settings are not implemented.
 Follow [xr/ANDROID.md](xr/ANDROID.md) for prerequisites, installation, sign-in and
 exact video/audio/controller/lifecycle acceptance steps. Do not infer playback
 from network or decode counters. Physical Guide remains host-reserved; Select +
-Start sends virtual Guide, and Select + Start + LB + RB opens XRBox's menu. The
+Start sends virtual Guide, and Select + Start + LB + RB opens XRbox's menu. The
 shortcut resolves when the first Select/Start pressed is released.
 
 Only refresh credentials persist in the OS secure store; temporary tokens remain

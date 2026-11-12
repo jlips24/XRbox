@@ -15,7 +15,7 @@ import urllib.request
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-APK_NAME = 'XRBox-0.1.10-xr.2-quest-debug.apk'
+APK_NAME = 'XRbox-0.1.10-xr.2-quest-debug.apk'
 
 
 def digest(path, algorithm='sha256'):
@@ -175,7 +175,7 @@ def main():
         if not key.exists():
             run([java / 'bin/keytool', '-genkeypair', '-keystore', key, '-storepass', 'android',
                  '-keypass', 'android', '-alias', 'androiddebugkey', '-dname',
-                 'CN=Android Debug,O=XRBox,C=US', '-validity', '10000', '-keyalg', 'RSA', '-keysize', '2048'], env)
+                 'CN=Android Debug,O=XRbox,C=US', '-validity', '10000', '-keyalg', 'RSA', '-keysize', '2048'], env)
         env.update(GODOT_ANDROID_KEYSTORE_DEBUG_PATH=str(key), GODOT_ANDROID_KEYSTORE_DEBUG_USER='androiddebugkey',
                    GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD='android')
         # The editor must also be able to load the host GDExtension during export.

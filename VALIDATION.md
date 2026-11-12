@@ -58,7 +58,7 @@ a command-local CARGO_TARGET_DIR reused the temporary audit build directory.
 
 ## Results
 
-- Native XRBox desktop build: passed.
+- Native XRbox desktop build: passed.
 - Full workspace, all targets/features, serial tests: **516 passed, zero failed,
   two ignored**. Ignored tests require OS-keychain access or physical audio output.
 - Targeted WebRTC/application tests after extending selected-route observation to
@@ -103,7 +103,7 @@ Frame ARM64 execution, decoder access, passthrough, custom XR, battery life,
 input-to-display latency and CPU/memory instrumentation remain unverified or
 unimplemented. No benchmark or real Xbox streaming success is claimed.
 
-## Freeze investigation — XRBox 0.1.1
+## Freeze investigation — XRbox 0.1.1
 
 A user-run console session produced sustained video traffic while the upstream
 submitted-frame rate fell to zero. Controller detection eventually became true.
@@ -123,7 +123,7 @@ capacity-guard refinement, 189 protocol/application tests passed. Strict Clippy
 and package/signature checks passed. Version 0.1.1 adds per-stage frame counters,
 decoder-error/queue-drop/keyframe diagnostics, rate-limited stall recovery, and a
 15-second decoded-video stall stop. The user must quit the old app and reopen
-dist/XRBox.app; the running console session was not terminated automatically.
+dist/XRbox.app; the running console session was not terminated automatically.
 
 ## 0.1.2 — secure restoration and connection UI
 
@@ -136,7 +136,7 @@ Executed for 0.1.2:
 - `cargo test --locked -p xrbox`: 5 tests passed. New tests use fake HTTP and
   in-memory credentials to verify empty-store restoration makes no requests and
   revoked saved credentials attempt refresh and produce sanitized errors.
-- `make package`: built and ad-hoc signed `dist/XRBox.app`, version 0.1.2.
+- `make package`: built and ad-hoc signed `dist/XRbox.app`, version 0.1.2.
 - Packaged app `--smoke`: rendered 10 native GPU UI frames and exited successfully.
   It exercises a synthetic device-code screen (`0O1I-TEST`) and the welcome screen;
   no real credentials, clipboard writes, Microsoft requests or Xbox session occur.
@@ -180,7 +180,7 @@ and durable sign-out. The optional existing-identity signing path was not tested
 the bundle was built with the default ad-hoc signature. No saved credentials were
 read and no actual Keychain prompt count was measured.
 
-Manual retest: open 0.1.4 and approve the XRBox credential request using Always
+Manual retest: open 0.1.4 and approve the XRbox credential request using Always
 Allow if desired. Discover/Play, close the app, then reopen the same bundle without
 rebuilding. Record whether prompts recur and their exact action/item labels (do
 not share credentials). OS unlock requirements and permissions can still prompt;
@@ -209,7 +209,7 @@ Executed:
 
 Manual retest with 0.1.5:
 
-1. Pair the Xbox controller, open XRBox, use D-pad/left stick and A to select a
+1. Pair the Xbox controller, open XRbox, use D-pad/left stick and A to select a
    console tile. Check the green focus outline, held-direction repeat, controller
    reconnect, and focus loss/return. Use B to cancel provisioning if needed.
 2. During gameplay, press View+Menu. Check that the stream menu opens and gameplay
@@ -226,7 +226,7 @@ impact still require this user hardware test. No latency/battery results claimed
 ## 0.1.6 — virtual Xbox Guide and overlapping shortcuts
 
 Implemented the user's clarified mapping: Select/View+Start/Menu sends remote
-Xbox/Guide; adding LB+RB opens XRBox instead. Guide commits on chord release as a
+Xbox/Guide; adding LB+RB opens XRbox instead. Guide commits on chord release as a
 120 ms protocol-button pulse. Physical Guide input is not forwarded and no host
 system gesture capture, input synthesis or OS settings changes are made. This
 supersedes 0.1.5's two-button app-menu shortcut.
@@ -241,7 +241,7 @@ Executed:
   without credentials, controller sampling, host shortcut changes or Xbox access.
 
 New regression coverage: all 24 press orders for the four-button chord, slow
-bumper additions, no smaller-chord action when opening XRBox, held/repeated
+bumper additions, no smaller-chord action when opening XRbox, held/repeated
 shortcuts, exact Guide pulse expiration, partial release, focus loss, disconnect,
 idle/menu cancellation, physical Guide filtering, immediate normal inputs and
 View/Menu-only release gating. A shared-controller test feeds the real upstream
@@ -255,7 +255,7 @@ Manual console retest:
    The Xbox Guide should open once; no host Guide button is pressed by this action.
 2. Hold Select+Start for several seconds: no Guide until release, then a short
    press (not remote long-press behavior). Try releasing either button first.
-3. Hold Select+Start and add LB/RB, also trying bumpers first. XRBox's menu should
+3. Hold Select+Start and add LB/RB, also trying bumpers first. XRbox's menu should
    open without opening the console's Guide. Release the shortcut and resume.
 4. While resuming, hold another button, stick or trigger. It should pass through
    immediately; only Select/Start wait for release. LB/RB are not gated on resume.
@@ -265,13 +265,13 @@ Manual console retest:
 
 Real console response to the Guide pulse and platform-specific host interception
 still require hardware validation. Pressing the physical Xbox button may still
-open the host overlay; ignoring it in XRBox cannot prevent that OS behavior.
+open the host overlay; ignoring it in XRbox cannot prevent that OS behavior.
 
 ## 0.1.7 — defer single Select/Start through the shortcut recognizer
 
 The reported leakage in 0.1.6 was real: it forwarded the first Select/Start press
 before recognizing a combination. Singles are now entries in the same ordered
-binding table as Guide and XRBox menu. Raw Select/Start are always masked. The
+binding table as Guide and XRbox menu. Raw Select/Start are always masked. The
 first Select/Start pressed owns the gesture; its release commits the most specific
 completed binding observed while held. Releasing other chord members first does
 not dispatch or downgrade it. The app-menu shortcut now also fires on that release.
@@ -292,7 +292,7 @@ Guide press/release orders, all 24 x 24 press/release permutations of the app
 shortcut, priority retention after partial release, distinct rapid taps, queue
 bounds, queued-action cancellation, focus/disconnect/idle/menu reset, ordinary
 controls passing immediately and physical Guide filtering. Shared-controller tests
-inspect actual upstream-encoded packets for singles, Guide and XRBox menu. Bumper
+inspect actual upstream-encoded packets for singles, Guide and XRbox menu. Bumper
 passthrough is explicitly asserted; Select/Start must be absent from combined
 shortcut packets. These checks would reject 0.1.6's raw single-button behavior.
 
@@ -303,9 +303,9 @@ Manual retest with 0.1.7:
 2. Press Select then Start, release Start first: no Guide until Select releases.
    Reverse the press order and verify that Start's release owns that gesture.
    Neither case should send individual Select or Start presses.
-3. Add LB/RB while holding the pair, release the initiating Select/Start: XRBox's
+3. Add LB/RB while holding the pair, release the initiating Select/Start: XRbox's
    menu should open once without console Guide or individual Select/Start actions.
-   Try releasing bumpers/secondary button first; it must still choose XRBox.
+   Try releasing bumpers/secondary button first; it must still choose XRbox.
 4. Resume while holding other controls: those pass immediately; Select/Start
    remain suppressed until released. Focus loss/disconnect must cancel pending
    actions without replay on return.
@@ -386,7 +386,7 @@ Manual test after the user chooses to build (for example, `make run`):
 4. Verify Fit/Stretch/Zoom, live mute/unmute, deadzone, inversion and gameplay A/B
    swap. Menu A/B must stay unchanged. Request 720p then reconnect; verify actual
    dimensions in Diagnostics rather than assuming the request was honored.
-5. Record distinct new Guide and XRBox shortcuts, Apply and test both in gameplay
+5. Record distinct new Guide and XRbox shortcuts, Apply and test both in gameplay
    and fullscreen. Select/Start must stay deferred; other controls remain immediate.
    Test focus loss/disconnect during recording and restore defaults with Apply.
 6. Check remember-sign-in Off skips automatic credential restoration on the next
@@ -501,7 +501,7 @@ Executed:
 - Godot/vendor/MPL/project notices are included under assets/legal; public release
   license/source-bundle review is still outstanding.
 
-Artifact: dist/xr/android/XRBox-0.1.10-xr.1-quest-debug.apk, **93,519,098 bytes**.
+Artifact: dist/xr/android/XRbox-0.1.10-xr.1-quest-debug.apk, **93,519,098 bytes**.
 SHA256: **4b0b61378f13c88b8ad3185dbf62abfc1e71d9986d0385c53e53cf7a69be7b48**.
 The sidecar records the checksum of the actual local artifact; rebuilding can
 change ZIP/signing bytes. APKs, downloaded tools/addons, signing keys, SDK paths

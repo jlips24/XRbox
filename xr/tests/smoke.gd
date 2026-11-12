@@ -97,7 +97,7 @@ func run_tests() -> void:
 	verify(not scene.runtime.call("connect_console", -1), "Invalid selection is rejected without a session")
 	var live_ui = load("res://scripts/live_ui.gd").new(scene, false)
 	live_ui.state = {"consoles": PackedStringArray(["Test 1", "Test 2", "Test 3", "Test 4", "Test 5"])}
-	scene.status_label.text = "XRBox 0.1.10-xr.2 · " + "Network operation failed; check console and retry. ".repeat(3) + "\nAssembled 100 · Decoded 90 · GPU imports 90\nAudio playing · route unknown\nCodec test · status 1"
+	scene.status_label.text = "XRbox 0.1.10-xr.2 · " + "Network operation failed; check console and retry. ".repeat(3) + "\nAssembled 100 · Decoded 90 · GPU imports 90\nAudio playing · route unknown\nCodec test · status 1"
 	for page in ["home", "consoles", "display", "signout"]:
 		live_ui.page = page
 		live_ui._rebuild()
@@ -132,5 +132,5 @@ func run_tests() -> void:
 	verify(second.runtime != null, "Native object recreation")
 	second.queue_free()
 	await process_frame
-	print("XRBox Godot smoke: %s" % ("PASS" if failures == 0 else "FAIL (%d)" % failures))
+	print("XRbox Godot smoke: %s" % ("PASS" if failures == 0 else "FAIL (%d)" % failures))
 	quit(0 if failures == 0 else 1)

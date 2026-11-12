@@ -1,4 +1,4 @@
-# XRBox Godot XR build plan
+# XRbox Godot XR build plan
 
 ## Product scope update — November 12, 2026
 

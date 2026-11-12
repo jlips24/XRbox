@@ -67,7 +67,7 @@ func tick(delta: float) -> void:
 	if state.get("gpu_error", false):
 		scene.status_label.text = "Android GPU image import failed. Disconnect and retry."
 	else:
-		scene.status_label.text = "XRBox %s · %s\nAssembled %d · Decoded %d · Errors %d · GPU imports %d\nAudio %s · drops %d · route %s\nCodec %s · status %d" % [
+		scene.status_label.text = "XRbox %s · %s\nAssembled %d · Decoded %d · Errors %d · GPU imports %d\nAudio %s · drops %d · route %s\nCodec %s · status %d" % [
 			ProjectSettings.get_setting("application/config/version"), state.get("status", ""), state.get("assembled", 0), state.get("decoded", 0), state.get("decoder_errors", 0),
 			state.get("gpu_imports", 0), "playing" if state.get("audio", false) else "waiting", state.get("audio_drops", 0), state.get("route", "unknown"), state.get("codec", "unknown"), state.get("codec_status", 0)]
 	if active and scene.menu_open != state.get("menu", true):

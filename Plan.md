@@ -1,4 +1,4 @@
-# XRBox implementation plan
+# XRbox implementation plan
 
 ## Product scope update — November 12, 2026
 
@@ -90,7 +90,7 @@ tests**, all passing (0.1.10). Godot headless scene/input tests also pass;
 formatting and strict Clippy are checked. See xr/README.md for the prototype. The 0.1.9 work also exercised the
 broader API/auth, input and session suites; OS-Keychain integration remains an
 explicitly ignored/manual test. See VALIDATION.md for exact runs and limitations.
-Earlier upstream audit counts below are not XRBox test counts.
+Earlier upstream audit counts below are not XRbox test counts.
 
 Desktop additions by milestone:
 
@@ -99,7 +99,7 @@ Desktop additions by milestone:
 - 0.1.2–0.1.4: authentication restoration, native clipboard support and fewer
   unnecessary Keychain writes; optional existing signing identity for packaging.
 - 0.1.5–0.1.7: controller-first UI and deferred shortcut recognition. Defaults:
-  Select/View+Start/Menu sends remote Guide; adding LB+RB selects XRBox menu.
+  Select/View+Start/Menu sends remote Guide; adding LB+RB selects XRbox menu.
   All bindings resolve when the first Select/Start pressed is released; combined
   gestures do not leak individual Select/Start presses. Other controls stay live.
 - 0.1.8–0.1.10: fixed hover/focus scrolling, fullscreen/settings/custom hotkeys and
@@ -107,7 +107,7 @@ Desktop additions by milestone:
   newer tests cover configuration, native command/layout output and UI activation.
 
 Source version, built executable and packaged app may differ. `make build` updates
-an executable; `make package` updates dist/XRBox.app. Do not imply that a source
+an executable; `make package` updates dist/XRbox.app. Do not imply that a source
 change updated the bundle. Recent tasks intentionally skipped packaging/launching.
 
 ## Historical research baseline
@@ -116,7 +116,7 @@ Pin OpenXCloud revision `982d2a058c51b5f1285bba90f485bd599a3c2bc0` rather than a
 
 https://github.com/shyim/openxcloud/tree/982d2a058c51b5f1285bba90f485bd599a3c2bc0
 
-These results describe the original, unmodified upstream audit. They are not current XRBox or headset results. The temporary audit checkout is not a project dependency; current provenance and patches are in vendor/README.md.
+These results describe the original, unmodified upstream audit. They are not current XRbox or headset results. The temporary audit checkout is not a project dependency; current provenance and patches are in vendor/README.md.
 
 Executed on the Apple Silicon Mac:
 
@@ -134,10 +134,10 @@ Important source findings:
 - Authentication, console discovery, home-session request construction, WebRTC, Xbox data channels, Opus audio, controller input, and decoder interfaces exist in Rust crates.
 - The desktop application launches cloud streams and prefers cloud credentials. It is not a ready-made console Remote Play frontend.
 - The orchestrator performs the ReadyToConnect token exchange only in its cloud branch. Its home branch must be reconciled with the console sequence demonstrated by Greenlight and xbox-xcloud-player.
-- The orchestrator can report Connected after the peer connection wait expires without an actual connection. XRBox must not use that status alone as proof of playback.
+- The orchestrator can report Connected after the peer connection wait expires without an actual connection. XRbox must not use that status alone as proof of playback.
 - Linux supports an FFmpeg VA-API path with CPU readback. Native frame types and GPU import support GPU-resident frames on macOS, but Linux uses CPU-backed NV12 and texture uploads.
 - Linux persistent credentials use Secret Service through the keyring dependency. Availability on Frame is unverified.
-- Upstream pins Rust 1.99.1, includes Cargo.lock, and declares GPL-3.0-only. Preserve license notices and use GPL-3.0-only for derived XRBox code, subject to a complete dependency and provenance review before distribution.
+- Upstream pins Rust 1.99.1, includes Cargo.lock, and declares GPL-3.0-only. Preserve license notices and use GPL-3.0-only for derived XRbox code, subject to a complete dependency and provenance review before distribution.
 
 Reference implementations:
 
@@ -264,7 +264,7 @@ completion. Do not assume VkImage handles from different devices are interchange
 
 The current macOS path preserves VideoToolbox IOSurfaces through Metal/wgpu. The
 Linux path currently uses FFmpeg-backed decoding with CPU-backed frame/upload
-limitations. Android currently falls into non-macOS FFmpeg selection in XRBox; that
+limitations. Android currently falls into non-macOS FFmpeg selection in XRbox; that
 is **not an Android MediaCodec implementation**. Replace/refactor platform selection
 only as confirmed target backends are implemented, preserving the decoder/frame
 interfaces and compressed-frame recovery rather than rewriting Xbox transport.

@@ -2,7 +2,7 @@
 config_version=5
 
 [application]
-config/name="XRBox XR Prototype"
+config/name="XRbox XR Prototype"
 config/icon="res://icon.svg"
 config/version="0.1.10-xr.2"
 run/main_scene="res://scenes/main.tscn"

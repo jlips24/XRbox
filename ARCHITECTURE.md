@@ -1,4 +1,4 @@
-# XRBox architecture
+# XRbox architecture
 
 The sole product frontend is Godot/OpenXR, embedding Rust in one process. Keep
 one repository with explicit boundaries; no separate core release/versioning or

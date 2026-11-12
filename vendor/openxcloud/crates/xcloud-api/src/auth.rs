@@ -395,7 +395,7 @@ impl MicrosoftAuthService {
             .await
     }
 
-    /// XRBox: console-only token acquisition, without requesting cloud offerings.
+    /// XRbox: console-only token acquisition, without requesting cloud offerings.
     pub async fn exchange_for_home_tokens(&self, access: &str) -> Result<StreamTokens> {
         let user = self.get_xbox_user_token(access).await?;
         let xsts = self.get_xsts_token(&user.token, GSSV_RELYING_PARTY).await?;

@@ -27,7 +27,7 @@ func _ready() -> void:
 	_configure_input()
 	# ClassDB avoids a parser failure that hides the actionable missing-native-library error.
 	if not ClassDB.class_exists("XrboxRuntime"):
-		push_error("XRBox native extension missing. Run make xr-build before launching.")
+		push_error("XRbox native extension missing. Run make xr-build before launching.")
 		get_tree().quit(1)
 		return
 	runtime = ClassDB.instantiate("XrboxRuntime")
@@ -48,7 +48,7 @@ func _ready() -> void:
 				if xr_interface.has_signal(signal_name): xr_interface.connect(signal_name, _xr_focus_lost)
 			if xr_interface.has_signal("session_focussed"): xr_interface.connect("session_focussed", _xr_focus_returned)
 	# OpenXR failure is visible and still permits an explicitly labeled desktop preview.
-	status_label.text = "XRBox %s · core %s\n%s\n%s\nSynthetic screen only · Xbox media integration pending" % [
+	status_label.text = "XRbox %s · core %s\n%s\n%s\nSynthetic screen only · Xbox media integration pending" % [
 		ProjectSettings.get_setting("application/config/version"),
 		runtime.call("core_version"), runtime.call("native_target"),
 		"OpenXR active" if xr_running else "Desktop preview · no XR presentation verified"]
@@ -117,7 +117,7 @@ func _create_menu() -> void:
 	column.add_theme_constant_override("separation", 12)
 	margin.add_child(column)
 	var heading := Label.new()
-	heading.text = "XRBox · XR foundation"
+	heading.text = "XRbox · XR foundation"
 	heading.add_theme_font_size_override("font_size", 34)
 	column.add_child(heading)
 	status_label = Label.new()

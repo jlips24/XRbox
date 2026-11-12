@@ -16,20 +16,20 @@ on a headset or against a console**. No PC or relay service is part of runtime.
    implemented. Install manually from the repository root:
 
    ```sh
-   adb install -r dist/xr/android/XRBox-0.1.10-xr.2-quest-debug.apk
+   adb install -r dist/xr/android/XRbox-0.1.10-xr.2-quest-debug.apk
    ```
 
-3. Launch **XRBox XR Prototype** from **Unknown Sources**. Confirm build xr.2,
+3. Launch **XRbox XR Prototype** from **Unknown Sources**. Confirm build xr.2,
    android/aarch64 and **OpenXR active**; confirm stereo and head tracking.
 4. Select **Sign in**, copy the displayed code or enter it on another device at
    the displayed Microsoft verification URL. The browser action is optional;
-   return to XRBox after approval. Never share codes or tokens in a bug report.
+   return to XRbox after approval. Never share codes or tokens in a bug report.
    Remember sign-in defaults on; choose session-only before starting if desired.
 5. Select your discovered console, then connect. Console lists paginate when
    needed. Confirm the picture actually moves, audio is audible, and stick,
    D-pad, face-button and trigger input reaches the console.
 6. Select/View and Start/Menu are deferred until the first is released. Their
-   pair sends virtual Guide; pair + LB + RB opens XRBox's menu. Check that the
+   pair sends virtual Guide; pair + LB + RB opens XRbox's menu. Check that the
    pair does not also press the individual buttons. Physical Guide stays reserved
    to the headset. B remains gameplay input while streaming; use the chord for
    the local menu. Resume should restore held gameplay input immediately while

@@ -1,4 +1,4 @@
-# XRBox Godot foundation
+# XRbox Godot foundation
 
 Linux first; one shared Godot project with separate native Linux and Android ABIs.
 Android now has an implemented live Remote Play path; device acceptance is pending.
