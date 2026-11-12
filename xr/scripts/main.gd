@@ -21,6 +21,7 @@ var anchor: Transform3D = Transform3D.IDENTITY
 var menu_combo_armed: bool = true
 var focused: bool = true
 var initial_placement_pending: bool = false
+var live: RefCounted
 
 func _ready() -> void:
 	_configure_input()
@@ -43,6 +44,9 @@ func _ready() -> void:
 		if xr_interface != null and xr_interface.initialize():
 			xr_running = true
 			get_viewport().use_xr = true
+			for signal_name in ["session_visible", "session_stopping"]:
+				if xr_interface.has_signal(signal_name): xr_interface.connect(signal_name, _xr_focus_lost)
+			if xr_interface.has_signal("session_focussed"): xr_interface.connect("session_focussed", _xr_focus_returned)
 	# OpenXR failure is visible and still permits an explicitly labeled desktop preview.
 	status_label.text = "XRBox %s · core %s\n%s\n%s\nSynthetic screen only · Xbox media integration pending" % [
 		ProjectSettings.get_setting("application/config/version"),
@@ -52,8 +56,16 @@ func _ready() -> void:
 	initial_placement_pending = xr_running
 	set_process(initial_placement_pending)
 	set_menu_open(true)
+	if runtime.call("streaming_supported") and not args.has("--test"):
+		live = load("res://scripts/live_ui.gd").new(self)
+		if live.start():
+			set_process(true)
+		else:
+			live = null
+			status_label.text = "Android services failed to initialize; check app logs"
 
 func _process(_delta: float) -> void:
+	if live != null: live.tick(_delta)
 	_place_when_tracked(xr_interface != null and xr_interface.get_tracking_status() == XRInterface.XR_NORMAL_TRACKING)
 
 func _place_when_tracked(tracking_valid: bool) -> void:
@@ -62,7 +74,7 @@ func _place_when_tracked(tracking_valid: bool) -> void:
 	if initial_placement_pending and tracking_valid:
 		recenter()
 		initial_placement_pending = false
-		set_process(false)
+		set_process(live != null)
 
 func _configure_input() -> void:
 	# Godot 4.7 desktop defaults omit A/B from accept/cancel. Add explicit
@@ -109,6 +121,7 @@ func _create_menu() -> void:
 	heading.add_theme_font_size_override("font_size", 34)
 	column.add_child(heading)
 	status_label = Label.new()
+	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	status_label.add_theme_font_size_override("font_size", 22)
 	column.add_child(status_label)
 	metrics_label = Label.new()
@@ -139,6 +152,7 @@ func _create_menu() -> void:
 func _add_button(parent: Node, text: String, action: Callable) -> void:
 	var button := Button.new()
 	button.text = text
+	button.clip_text = true
 	button.custom_minimum_size.y = 60
 	button.add_theme_font_size_override("font_size", 26)
 	button.pressed.connect(action)
@@ -158,6 +172,7 @@ func _apply_screen() -> void:
 
 func set_menu_open(open: bool) -> void:
 	menu_open = open
+	if runtime != null: runtime.call("set_menu", open)
 	menu_surface.visible = open
 	# Freeze the menu texture while hidden; video/XR submissions remain independent.
 	menu_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS if open else SubViewport.UPDATE_DISABLED
@@ -169,9 +184,14 @@ func _select_focus(index: int) -> void:
 	buttons[focus_index].grab_focus()
 
 func _input(event: InputEvent) -> void:
+	if live != null:
+		live._sample_pad()
+		if live.state.get("active", false) and not menu_open:
+			if event is InputEventKey and event.is_action_pressed("ui_cancel"): set_menu_open(true)
+			return
 	if not focused:
 		return
-	if event is InputEventJoypadButton:
+	if live == null and event is InputEventJoypadButton:
 		var pad := event.device
 		var chord := Input.is_joy_button_pressed(pad, JOY_BUTTON_BACK) and Input.is_joy_button_pressed(pad, JOY_BUTTON_START) and Input.is_joy_button_pressed(pad, JOY_BUTTON_LEFT_SHOULDER) and Input.is_joy_button_pressed(pad, JOY_BUTTON_RIGHT_SHOULDER)
 		if chord and menu_combo_armed:
@@ -189,16 +209,32 @@ func _input(event: InputEvent) -> void:
 		elif event.is_action_pressed("ui_accept"):
 			buttons[focus_index].pressed.emit()
 
+func _xr_focus_lost() -> void:
+	focused = false
+	if runtime != null:
+		runtime.call("set_focused", false)
+		if live != null and live.state.get("active", false): runtime.call("disconnect_stream")
+
+func _xr_focus_returned() -> void:
+	focused = true
+	if runtime != null: runtime.call("set_focused", true)
+	set_menu_open(true)
+
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_APPLICATION_PAUSED:
 		focused = false
+		if runtime != null: runtime.call("set_focused", false)
+		if live != null and live.state.get("active", false): runtime.call("disconnect_stream")
 		menu_combo_armed = false
 	elif what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_APPLICATION_RESUMED:
 		focused = true
+		if runtime != null: runtime.call("set_focused", true)
 		if menu_surface != null:
 			set_menu_open(true)
 
 func _exit_tree() -> void:
+	if live != null: live.dispose()
+	if runtime != null: runtime.call("shutdown")
 	if xr_running and xr_interface != null:
 		get_viewport().use_xr = false
 		xr_interface.uninitialize()

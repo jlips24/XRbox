@@ -15,7 +15,7 @@ import urllib.request
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-APK_NAME = 'XRBox-0.1.10-xr.1-quest-debug.apk'
+APK_NAME = 'XRBox-0.1.10-xr.2-quest-debug.apk'
 
 
 def digest(path, algorithm='sha256'):
@@ -180,12 +180,21 @@ def main():
                    GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD='android')
         # The editor must also be able to load the host GDExtension during export.
         run([sys.executable, ROOT / 'scripts/godot.py', 'build'], env)
-        run([sys.executable, ROOT / 'scripts/godot.py', 'build', '--target', 'aarch64-linux-android'], env)
+        android_env = dict(env,
+            CMAKE_TOOLCHAIN_FILE=str(ndk / 'build/cmake/android.toolchain.cmake'),
+            ANDROID_ABI='arm64-v8a', ANDROID_PLATFORM='android-29', ANDROID_NDK_HOME=str(ndk),
+            CC_aarch64_linux_android=str(toolbin / 'aarch64-linux-android29-clang'),
+            CXX_aarch64_linux_android=str(toolbin / 'aarch64-linux-android29-clang++'),
+            AR_aarch64_linux_android=str(toolbin / 'llvm-ar'))
+        run([sys.executable, ROOT / 'scripts/godot.py', 'build', '--target', 'aarch64-linux-android'], android_env)
         run([toolbin / 'llvm-strip', '--strip-debug', ROOT / 'xr/native/android-arm64/debug/libxrbox_godot.so'], env)
         legal = ROOT / 'xr/legal'
         legal.mkdir(exist_ok=True)
         for filename in ['LICENSE', 'THIRD_PARTY_NOTICES.md']:
             shutil.copy2(ROOT / filename, legal / (filename + '.txt'))
+        shutil.copy2(ROOT / 'xr/fonts/Hack-Regular.txt', legal / 'Hack-LICENSE.txt')
+        for source in (ROOT / 'xr/licenses').glob('*.txt'):
+            shutil.copy2(source, legal / source.name)
         for filename, source in pins['android_notices'].items():
             cache = ROOT / '.tools/android/downloads' / filename
             if not cache.is_file():
@@ -197,28 +206,52 @@ def main():
         for source in (ROOT / 'xr/addons/godotopenxrvendors').rglob('LICENSE*'):
             shutil.copy2(source, legal / (source.parent.name + '-' + source.name + '.txt'))
         apk.parent.mkdir(parents=True, exist_ok=True)
+        build = ROOT / 'xr/android/build'
+        if not (build / '.build_version').is_file():
+            templates = ROOT / '.tools/godot/editor_data/export_templates/4.7.2.stable'
+            with zipfile.ZipFile(templates / 'android_source.zip') as archive:
+                archive.extractall(build)
+            (build / '.build_version').write_text('4.7.2.stable\n')
+        if (build / '.build_version').read_text().strip() != pins['export_templates']['version']:
+            raise ValueError('Generated Android template version differs from pinned engine; review before replacing it')
+        java_root = build / 'build/src/main/java'
+        shutil.copytree(ROOT / 'xr/android-src', java_root, dirs_exist_ok=True)
+        activity = java_root / 'com/godot/game/GodotApp.java'
+        content = activity.read_text()
+        bootstrap = 'org.xrbox.AndroidServices.initialize(getApplicationContext());'
+        if bootstrap not in content:
+            hook = 'super.onCreate(savedInstanceState);'
+            if content.count(hook) != 1:
+                raise ValueError('Unexpected Godot activity template; inspect Android bootstrap hook')
+            activity.write_text(content.replace(hook, hook + '\n\t\t' + bootstrap))
         command = [godot, '--headless', '--xr-mode', 'off', '--audio-driver', 'Dummy', '--path', ROOT / 'xr',
                    '--log-file', ROOT / '.tools/android/godot-export.log']
         if not (ROOT / 'xr/android/build/.build_version').is_file():
             command.append('--install-android-build-template')
         run(command + ['--export-debug', 'Meta Quest Debug', apk], env, capture=True)
     libraries = validate_native(apk)
+    with zipfile.ZipFile(apk) as archive:
+        dex_files = [name for name in archive.namelist() if re.fullmatch(r'classes\d*\.dex', name)]
+        if not any(b'Lorg/xrbox/AndroidServices;' in archive.read(name) for name in dex_files):
+            raise ValueError('Android Java bootstrap missing from APK')
+        if b'Java_org_xrbox_AndroidServices_initializeNative' not in archive.read('lib/arm64-v8a/libxrbox_godot.so'):
+            raise ValueError('JNI bootstrap entry point missing from ARM64 library')
     run([tools / 'apksigner', 'verify', '--verbose', apk], env)
     run([tools / 'zipalign', '-c', '-P', '16', '4', apk], env)
     manifest = run([tools / 'aapt2', 'dump', 'xmltree', apk, '--file', 'AndroidManifest.xml'], env, capture=True)
-    for required in ['org.xrbox.prototype', 'quest3|quest3s', 'com.oculus.intent.category.VR',
-                     'org.khronos.openxr.intent.category.IMMERSIVE_HMD', '0.1.10-xr.1']:
+    for required in ['org.xrbox.prototype', 'android.permission.INTERNET', 'quest3|quest3s', 'com.oculus.intent.category.VR',
+                     'org.khronos.openxr.intent.category.IMMERSIVE_HMD', '0.1.10-xr.2']:
         if required not in manifest:
             raise ValueError('Missing APK manifest entry: ' + required)
     if any(permission in manifest for permission in ['android.permission.CAMERA', 'android.permission.RECORD_AUDIO',
-                                                     'android.permission.INTERNET']):
-        raise ValueError('Prototype requests an unnecessary camera/microphone/network permission')
+                                                     'android.permission.ACCESS_FINE_LOCATION']):
+        raise ValueError('Streaming app requests an unnecessary sensor/location permission')
     checksum = digest(apk)
     apk.with_suffix('.apk.sha256').write_text(checksum + '  ' + apk.name + '\n')
     print('Verified development APK:', apk)
     print('Bytes:', apk.stat().st_size, 'SHA256:', checksum)
     print('ARM64 libraries with 16 KiB load alignment:', len(libraries))
-    print('Install and XR/controller testing on Quest 3S remain manual. No streaming is implemented here.')
+    print('Real Xbox auth/video/audio/input on Quest 3S require manual hardware testing.')
 
 
 if __name__ == '__main__':

@@ -60,3 +60,10 @@ and loader notices retain their own terms, including the Meta/Oculus SDK notices
 they are not relicensed as GPL. The debug APK includes these notices alongside
 Godot's LICENSE/COPYRIGHT and MPL-2.0 text under assets/legal/. This development
 build has not received a complete public-distribution license/source audit.
+
+The live Android build additionally links the locked native Opus build and includes
+its COPYING notice as assets/legal/Opus-COPYING.txt. The device-code font is
+Hack-Regular from epaint_default_fonts 0.37.0; its complete license/copyright text
+is preserved in xr/fonts/Hack-Regular.txt and assets/legal/Hack-LICENSE.txt.
+Android HTTPS uses the locked webpki-roots Mozilla trust anchors with standard
+Rustls certificate/hostname verification; no certificate validation is bypassed.

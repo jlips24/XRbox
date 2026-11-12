@@ -93,6 +93,36 @@ func run_tests() -> void:
 	verify(scene.focus_index == before, "Unfocused input must be ignored")
 	scene._notification(Node.NOTIFICATION_APPLICATION_FOCUS_IN)
 	verify(scene.menu_open and scene.focus_index == 0, "Focus recovery returns to menu")
+	verify(not scene.runtime.call("start_client", false), "Host test must not start Android services or read credentials")
+	verify(not scene.runtime.call("connect_console", -1), "Invalid selection is rejected without a session")
+	var live_ui = load("res://scripts/live_ui.gd").new(scene, false)
+	live_ui.state = {"consoles": PackedStringArray(["Test 1", "Test 2", "Test 3", "Test 4", "Test 5"])}
+	scene.status_label.text = "XRBox 0.1.10-xr.2 · " + "Network operation failed; check console and retry. ".repeat(3) + "\nAssembled 100 · Decoded 90 · GPU imports 90\nAudio playing · route unknown\nCodec test · status 1"
+	for page in ["home", "consoles", "display", "signout"]:
+		live_ui.page = page
+		live_ui._rebuild()
+		await process_frame
+		verify(scene.buttons.size() > 0 and scene.focus_index == 0, "Live page receives controller focus")
+		verify(scene.menu_panel.get_combined_minimum_size().y <= scene.menu_viewport.size.y, "Live menu must fit its XR surface")
+		verify(scene.menu_panel.get_combined_minimum_size().x <= scene.menu_viewport.size.x, "Long diagnostics must wrap inside menu width")
+	live_ui.page = "consoles"
+	live_ui.console_page = 1
+	live_ui._rebuild()
+	verify(scene.buttons[0].text == "Play Test 5", "Console pagination retains discovered selection order")
+	live_ui.page = "home"
+	live_ui.code = "0O1I-TEST"
+	live_ui._rebuild()
+	verify(live_ui.code_label.text == "0O1I-TEST", "Device code displayed without modification")
+	verify(live_ui.code_label.get_theme_font("font") != null, "Device code has a dedicated monospaced font")
+	scene.live = live_ui
+	live_ui.state = {"active": true}
+	scene.set_menu_open(false)
+	press("ui_cancel", scene)
+	verify(not scene.menu_open, "Gameplay B must stay in gameplay instead of opening local UI")
+	scene.live = null
+	scene.runtime.call("shutdown")
+	scene.runtime.call("shutdown")
+	verify(scene.runtime.call("snapshot").is_empty(), "Bridge shutdown is idempotent")
 	scene.queue_free()
 	await process_frame
 	# A second scene validates extension object teardown/recreation without auth or devices.

@@ -25,7 +25,7 @@ help:
 	  'make clean           Remove XRBox Cargo artifacts; retain dependency caches' \
 	  'make xr-build        Build/stage the Godot native extension (ARGS for target/profile)' \
 	  'make xr-check        Build extension and run headless Godot regression checks' \
-	  'make xr-run          Run the XR foundation with OpenXR (no Xbox media yet)' \
+	  'make xr-run          Run host synthetic XR foundation with OpenXR' \
 	  'make xr-preview      Run the synthetic scene without OpenXR' \
 	  'make xr-apk          Build/sign/verify the Quest 3S development APK' \
 	  'make xr-apk-check    Verify an existing development APK (no device access)'
@@ -82,6 +82,7 @@ xr-build:
 	$(PYTHON) scripts/godot.py build $(ARGS)
 
 xr-check: xr-build
+	$(CARGO) test --locked -p xrbox-godot --lib
 	$(PYTHON) scripts/godot.py check
 
 xr-run: xr-build
