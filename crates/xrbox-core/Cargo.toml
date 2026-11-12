@@ -8,9 +8,7 @@ publish = false
 
 [features]
 default = []
-# Opt-in session stack with platform-specific native services. Keep the old
-# desktop feature name as a compatibility alias for the desktop frontend.
-desktop-session = ["session"]
+# Opt-in session stack with platform-specific native services.
 session = ["dep:jni", "dep:ndk-context", "dep:xcloud-api", "dep:xcloud-proto", "dep:xcloud-stream", "dep:xcloud-webrtc", "dep:xcloud-media", "dep:xcloud-input", "dep:tokio", "dep:tracing", "dep:tracing-subscriber", "dep:anyhow", "dep:parking_lot", "dep:crossbeam-channel", "dep:serde_json", "dep:serde", "dep:directories", "dep:chrono"]
 
 [dependencies]

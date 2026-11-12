@@ -1,7 +1,7 @@
 //! Engine-independent Xbox console Remote Play core.
 //!
-//! `session` is the opt-in streaming stack; `desktop-session` is its compatibility
-//! alias. Decoder/input/credential adapters are selected per platform.
+//! `session` is the opt-in streaming stack. Decoder/input/credential adapters
+//! are selected per platform. This crate has no Godot dependency.
 use std::sync::Arc;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
