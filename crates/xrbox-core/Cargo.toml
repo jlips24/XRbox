@@ -8,9 +8,10 @@ publish = false
 
 [features]
 default = []
-# Current native session dependencies are desktop-only. Android adapters are not
-# available yet; the Godot bring-up build deliberately excludes this feature.
-desktop-session = ["dep:xcloud-api", "dep:xcloud-proto", "dep:xcloud-stream", "dep:xcloud-webrtc", "dep:xcloud-media", "dep:xcloud-input", "dep:tokio", "dep:tracing", "dep:tracing-subscriber", "dep:anyhow", "dep:parking_lot", "dep:crossbeam-channel", "dep:serde_json", "dep:serde", "dep:directories", "dep:chrono"]
+# Opt-in session stack with platform-specific native services. Keep the old
+# desktop feature name as a compatibility alias for the desktop frontend.
+desktop-session = ["session"]
+session = ["dep:jni", "dep:ndk-context", "dep:xcloud-api", "dep:xcloud-proto", "dep:xcloud-stream", "dep:xcloud-webrtc", "dep:xcloud-media", "dep:xcloud-input", "dep:tokio", "dep:tracing", "dep:tracing-subscriber", "dep:anyhow", "dep:parking_lot", "dep:crossbeam-channel", "dep:serde_json", "dep:serde", "dep:directories", "dep:chrono"]
 
 [dependencies]
 xcloud-api = { workspace = true, optional = true }
@@ -32,3 +33,7 @@ chrono = { workspace = true, optional = true }
 
 [target.'cfg(any(target_os = "linux", target_os = "windows"))'.dependencies]
 xcloud-media = { workspace = true, optional = true, features = ["ffmpeg"] }
+
+[target.'cfg(target_os = "android")'.dependencies]
+jni = { version = "=0.21.1", optional = true }
+ndk-context = { version = "0.1", optional = true }

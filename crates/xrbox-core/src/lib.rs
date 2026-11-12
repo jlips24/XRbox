@@ -1,7 +1,7 @@
 //! Engine-independent Xbox console Remote Play core.
 //!
-//! `desktop-session` retains the existing desktop services. It is intentionally
-//! opt-in: Android must not inherit desktop decoder/input/credential backends.
+//! `session` is the opt-in streaming stack; `desktop-session` is its compatibility
+//! alias. Decoder/input/credential adapters are selected per platform.
 use std::sync::Arc;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -27,17 +27,17 @@ impl Default for Notify {
     }
 }
 
-#[cfg(feature = "desktop-session")]
+#[cfg(feature = "session")]
 pub mod auth;
-#[cfg(feature = "desktop-session")]
+#[cfg(feature = "session")]
 pub mod config;
-#[cfg(feature = "desktop-session")]
+#[cfg(feature = "session")]
 pub mod controller;
-#[cfg(feature = "desktop-session")]
+#[cfg(feature = "session")]
 pub mod diagnostics;
-#[cfg(feature = "desktop-session")]
+#[cfg(feature = "session")]
 pub mod media;
-#[cfg(feature = "desktop-session")]
+#[cfg(feature = "session")]
 pub mod session;
 
 #[cfg(test)]
@@ -58,3 +58,6 @@ mod tests {
         assert_eq!(count.load(Ordering::Relaxed), 2);
     }
 }
+
+#[cfg(all(target_os = "android", feature = "session"))]
+pub mod android;

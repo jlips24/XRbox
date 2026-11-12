@@ -94,10 +94,16 @@ impl Media {
                 sink,
             )
         });
-        #[cfg(not(target_os = "macos"))]
+        #[cfg(any(target_os = "linux", target_os = "windows"))]
         let decode = DecodeThread::spawn(writer, Some(on_frame), |sink| {
             xcloud_media::ffmpeg::FfmpegDecoder::new(Default::default(), sink)
         });
+        #[cfg(target_os = "android")]
+        let decode = DecodeThread::spawn(
+            writer,
+            Some(on_frame),
+            xcloud_media::android::AndroidDecoder::new,
+        );
         let audio = Arc::new(Mutex::new(AudioOutput::new()));
         let output = audio.clone();
         let muted = Arc::new(AtomicBool::new(start_muted));

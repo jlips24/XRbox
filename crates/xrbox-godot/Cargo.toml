@@ -10,5 +10,13 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-godot = { version = "=0.5.5", features = ["api-4-7"] }
-xrbox-core = { path = "../xrbox-core", default-features = false }
+godot = { version = "=0.5.5", features = ["api-4-7", "experimental-threads"] }
+xrbox-core = { path = "../xrbox-core", default-features = false, features = ["session"] }
+
+xcloud-input.workspace = true
+xcloud-proto.workspace = true
+xcloud-media.workspace = true
+parking_lot.workspace = true
+
+[target.'cfg(target_os = "android")'.dependencies]
+jni = "=0.21.1"

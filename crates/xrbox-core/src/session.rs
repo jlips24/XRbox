@@ -84,6 +84,16 @@ struct Active {
 }
 impl Session {
     pub fn new(ctx: crate::Notify, native_controller: bool) -> Self {
+        Self::with_sampler(
+            ctx,
+            if native_controller {
+                xcloud_input::native::native_sampler()
+            } else {
+                Box::new(xcloud_input::native::sample_stub)
+            },
+        )
+    }
+    pub fn with_sampler(ctx: crate::Notify, sampler: xcloud_input::source::Sampler) -> Self {
         let (tx, rx) = mpsc::channel(16);
         let state = Arc::new(Mutex::new(Snapshot {
             status: "Sign in to discover your Xbox".into(),
@@ -100,7 +110,7 @@ impl Session {
                 .enable_all()
                 .build()
                 .expect("Tokio runtime");
-            runtime.block_on(run(rx, s, v, f, ctx, shared_controller, native_controller));
+            runtime.block_on(run_sampler(rx, s, v, f, ctx, shared_controller, sampler));
             runtime.shutdown_timeout(Duration::from_secs(2));
         });
         Self {
@@ -148,8 +158,9 @@ async fn stop(active: &mut Option<Active>, video: &Video) {
     }
     *video.lock() = None;
 }
+#[cfg(test)]
 async fn run(
-    mut rx: mpsc::Receiver<Command>,
+    rx: mpsc::Receiver<Command>,
     state: Arc<Mutex<Snapshot>>,
     video: Video,
     focused: Arc<AtomicBool>,
@@ -157,11 +168,22 @@ async fn run(
     controller: crate::controller::Controller,
     native_controller: bool,
 ) {
-    let mut sampler: xcloud_input::source::Sampler = if native_controller {
+    let sampler = if native_controller {
         xcloud_input::native::native_sampler()
     } else {
         Box::new(xcloud_input::native::sample_stub)
     };
+    run_sampler(rx, state, video, focused, ctx, controller, sampler).await;
+}
+async fn run_sampler(
+    mut rx: mpsc::Receiver<Command>,
+    state: Arc<Mutex<Snapshot>>,
+    video: Video,
+    focused: Arc<AtomicBool>,
+    ctx: crate::Notify,
+    controller: crate::controller::Controller,
+    mut sampler: xcloud_input::source::Sampler,
+) {
     let mut menu_ticker = tokio::time::interval(Duration::from_millis(33));
     menu_ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     let mut preferences = crate::config::Settings::default();

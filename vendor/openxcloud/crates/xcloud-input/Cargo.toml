@@ -14,7 +14,7 @@ thiserror = { workspace = true }
 tracing = { workspace = true }
 parking_lot = { workspace = true }
 
-[target.'cfg(not(target_os = "ios"))'.dependencies]
+[target.'cfg(not(any(target_os = "ios", target_os = "android")))'.dependencies]
 gilrs = { workspace = true }
 
 [target.'cfg(target_os = "macos")'.dependencies]

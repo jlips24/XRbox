@@ -53,12 +53,12 @@ pub fn sample_stub() -> NativeGamepadSample {
     NativeGamepadSample::default()
 }
 
-#[cfg(not(target_os = "ios"))]
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 pub use gilrs_backend::NativeGamepad;
 
 /// Diagnostic one-liner of [`gilrs_backend::map_gamepad`] for the `probe` example:
 /// button bits, trigger values and pressed flags as the protocol will see them.
-#[cfg(not(target_os = "ios"))]
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 pub fn map_gamepad_debug(pad: &gilrs::Gamepad<'_>) -> Option<String> {
     let s = gilrs_backend::map_gamepad(pad);
     Some(format!(
@@ -75,7 +75,7 @@ pub fn map_gamepad_debug(pad: &gilrs::Gamepad<'_>) -> Option<String> {
     ))
 }
 
-#[cfg(not(target_os = "ios"))]
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 mod gilrs_backend {
     use gilrs::ff::{BaseEffect, BaseEffectType, Effect, EffectBuilder, Repeat, Replay, Ticks};
     use gilrs::{Axis, Button, EventType, Gamepad, GamepadId, Gilrs, GilrsBuilder};
@@ -425,11 +425,11 @@ mod gilrs_backend {
 /// The platform sampler for [`crate::source::GamepadInputSource::new`]: gilrs where it
 /// builds, the "no controller" stub on iOS.
 pub fn native_sampler() -> Sampler {
-    #[cfg(not(target_os = "ios"))]
+    #[cfg(not(any(target_os = "ios", target_os = "android")))]
     {
         NativeGamepad::new().into_sampler()
     }
-    #[cfg(target_os = "ios")]
+    #[cfg(any(target_os = "ios", target_os = "android"))]
     {
         Box::new(sample_stub)
     }

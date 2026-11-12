@@ -263,7 +263,22 @@ impl ReqwestTransport {
             reqwest::header::CONNECTION,
             reqwest::header::HeaderValue::from_static("Keep-Alive"),
         );
-        reqwest::Client::builder()
+        let builder = reqwest::Client::builder();
+        // Android does not host rustls-platform-verifier's Java runtime. Keep
+        // certificate AND hostname verification using the pinned Mozilla roots.
+        #[cfg(target_os = "android")]
+        let builder = builder.tls_backend_preconfigured(
+            rustls::ClientConfig::builder_with_provider(std::sync::Arc::new(
+                rustls::crypto::aws_lc_rs::default_provider(),
+            ))
+            .with_safe_default_protocol_versions()
+            .expect("standard TLS protocol versions")
+            .with_root_certificates(rustls::RootCertStore {
+                roots: webpki_roots::TLS_SERVER_ROOTS.to_vec(),
+            })
+            .with_no_client_auth(),
+        );
+        builder
             .redirect(policy)
             .user_agent(DEFAULT_USER_AGENT)
             .default_headers(defaults)

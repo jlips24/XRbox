@@ -66,6 +66,8 @@ impl ColorInfo {
 /// `xcloud-gpu` wraps its planes as Metal textures. `Nv12Cpu` is the portable path
 /// (FFmpeg backend, CPU readback, tests).
 pub enum NativeBuffer {
+    #[cfg(target_os = "android")]
+    AndroidImage(crate::android::Image),
     /// A retained, IOSurface-backed `CVPixelBuffer` from VideoToolbox
     /// (`kCVPixelFormatType_420YpCbCr8BiPlanar{Video,Full}Range`).
     #[cfg(target_os = "macos")]
@@ -91,6 +93,8 @@ unsafe impl Sync for NativeBuffer {}
 impl fmt::Debug for NativeBuffer {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            #[cfg(target_os = "android")]
+            Self::AndroidImage(_) => f.write_str("AndroidImage"),
             #[cfg(target_os = "macos")]
             Self::CvPixelBuffer(buf) => {
                 let w = objc2_core_video::CVPixelBufferGetWidth(buf);
@@ -172,6 +176,8 @@ impl Frame {
     /// The NV12 planes as `(y, uv, y_stride, uv_stride)` if this frame is in CPU memory.
     pub fn nv12_planes(&self) -> Option<(&[u8], &[u8], usize, usize)> {
         match &self.buf {
+            #[cfg(target_os = "android")]
+            NativeBuffer::AndroidImage(_) => None,
             NativeBuffer::Nv12Cpu {
                 y,
                 uv,
