@@ -20,6 +20,7 @@ var menu_open: bool = true
 var anchor: Transform3D = Transform3D.IDENTITY
 var menu_combo_armed: bool = true
 var focused: bool = true
+var initial_placement_pending: bool = false
 
 func _ready() -> void:
 	_configure_input()
@@ -43,11 +44,25 @@ func _ready() -> void:
 			xr_running = true
 			get_viewport().use_xr = true
 	# OpenXR failure is visible and still permits an explicitly labeled desktop preview.
-	status_label.text = "Native core %s · %s\n%s\nSynthetic screen only · Xbox media integration pending" % [
+	status_label.text = "XRBox %s · core %s\n%s\n%s\nSynthetic screen only · Xbox media integration pending" % [
+		ProjectSettings.get_setting("application/config/version"),
 		runtime.call("core_version"), runtime.call("native_target"),
 		"OpenXR active" if xr_running else "Desktop preview · no XR presentation verified"]
 	recenter()
+	initial_placement_pending = xr_running
+	set_process(initial_placement_pending)
 	set_menu_open(true)
+
+func _process(_delta: float) -> void:
+	_place_when_tracked(xr_interface != null and xr_interface.get_tracking_status() == XRInterface.XR_NORMAL_TRACKING)
+
+func _place_when_tracked(tracking_valid: bool) -> void:
+	# Startup can precede the first headset pose. Place at eye height once a
+	# tracked pose exists; following head movement must not drag the screen.
+	if initial_placement_pending and tracking_valid:
+		recenter()
+		initial_placement_pending = false
+		set_process(false)
 
 func _configure_input() -> void:
 	# Godot 4.7 desktop defaults omit A/B from accept/cancel. Add explicit

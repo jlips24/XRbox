@@ -24,6 +24,7 @@ func run_tests() -> void:
 	verify(scene.runtime != null, "Native extension must load")
 	verify(scene.runtime.call("core_version") == "0.1.10", "Native core version mismatch")
 	verify(not String(scene.runtime.call("native_target")).is_empty(), "Target diagnostic missing")
+	verify(scene.menu_panel.get_combined_minimum_size().y <= scene.menu_viewport.size.y, "Menu must fit in the XR surface")
 	verify(not scene.xr_running, "Headless checks must not initialize OpenXR")
 	verify(scene.menu_open and scene.focus_index == 0, "Initial menu focus")
 	press("ui_down", scene)
@@ -76,6 +77,16 @@ func run_tests() -> void:
 	verify(is_equal_approx(scene.cinema.position.y, 1.5), "Recenter follows eye height")
 	verify(is_zero_approx(scene.cinema.rotation.x) and is_zero_approx(scene.cinema.rotation.z), "Screen stays level")
 	verify(is_equal_approx(scene.cinema.mesh.size.y, 1.35), "Screen preserves 16:9")
+	scene.initial_placement_pending = true
+	var previous_anchor: Transform3D = scene.anchor
+	scene.camera.position = Vector3(0, 1.7, 0)
+	scene._place_when_tracked(false)
+	verify(scene.initial_placement_pending and scene.anchor == previous_anchor, "Do not place from an untracked startup pose")
+	scene._place_when_tracked(true)
+	verify(not scene.initial_placement_pending and is_equal_approx(scene.cinema.position.y, 1.7), "Initial tracked pose sets eye-height placement")
+	scene.camera.position.y = 1.9
+	scene._place_when_tracked(true)
+	verify(is_equal_approx(scene.cinema.position.y, 1.7), "Subsequent head motion must keep screen world-locked")
 	scene._notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
 	var before: int = scene.focus_index
 	press("ui_down", scene)
