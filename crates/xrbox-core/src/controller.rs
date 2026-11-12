@@ -12,6 +12,7 @@ use xcloud_input::source::{NativeGamepadSample, Sampler};
 use xcloud_proto::input::{gamepad::RawGamepadState, models::GamepadButtons as B};
 
 const GUIDE_CHORD: B = B::from_bits(B::VIEW.bits() | B::MENU.bits());
+#[cfg(test)]
 const APP_CHORD: B =
     B::from_bits(GUIDE_CHORD.bits() | B::LEFT_SHOULDER.bits() | B::RIGHT_SHOULDER.bits());
 const SHORTCUT_PULSE: Duration = Duration::from_millis(120);
@@ -37,13 +38,23 @@ impl Controller {
     pub fn set_menu(&self, open: bool) {
         self.menu.store(open, Ordering::Relaxed);
     }
+    pub fn set_bindings(&self, bindings: crate::config::HotkeyBindings) -> anyhow::Result<()> {
+        bindings.validate()?;
+        let mut shared = self.state.lock();
+        shared.hotkeys = Hotkeys {
+            bindings,
+            ..Default::default()
+        };
+        shared.routed = RawGamepadState::default();
+        Ok(())
+    }
     pub fn poll(
         &self,
         sampler: &mut Sampler,
         streaming: bool,
         focused: bool,
         now: Duration,
-        ctx: &egui::Context,
+        ctx: &crate::Notify,
     ) {
         let next = sampler();
         let mut shared = self.state.lock();
@@ -61,7 +72,7 @@ impl Controller {
         shared.sample = next;
         // Gameplay input must not drive extra GPU/UI frames on top of video presentation.
         if (changed && (!streaming || self.menu())) || open {
-            ctx.request_repaint();
+            ctx.notify();
         }
     }
     pub fn stream_sampler(&self) -> Sampler {
@@ -86,12 +97,14 @@ enum Action {
     Press(B),
     Menu,
 }
-const BINDINGS: [(B, Action); 4] = [
-    (B::VIEW, Action::Press(B::VIEW)),
-    (B::MENU, Action::Press(B::MENU)),
-    (GUIDE_CHORD, Action::Press(B::NEXUS)),
-    (APP_CHORD, Action::Menu),
-];
+fn bindings(settings: crate::config::HotkeyBindings) -> [(B, Action); 4] {
+    [
+        (B::VIEW, Action::Press(B::VIEW)),
+        (B::MENU, Action::Press(B::MENU)),
+        (B::from_bits(settings.guide), Action::Press(B::NEXUS)),
+        (B::from_bits(settings.menu), Action::Menu),
+    ]
+}
 const MAX_PENDING_PRESSES: usize = 16;
 const RELEASE_GAP: Duration = Duration::from_millis(8);
 struct Pending {
@@ -103,6 +116,7 @@ struct Pending {
 /// specific complete binding seen while it was held, even if other buttons release
 /// first. All other gameplay inputs pass through without buffering.
 struct Hotkeys {
+    bindings: crate::config::HotkeyBindings,
     pending: Option<Pending>,
     wait_release: bool,
     presses: VecDeque<B>,
@@ -112,6 +126,7 @@ struct Hotkeys {
 impl Default for Hotkeys {
     fn default() -> Self {
         Self {
+            bindings: Default::default(),
             pending: None,
             wait_release: true,
             presses: VecDeque::new(),
@@ -129,7 +144,10 @@ impl Hotkeys {
         now: Duration,
     ) -> (RawGamepadState, bool) {
         if !eligible || menu {
-            *self = Self::default();
+            *self = Self {
+                bindings: self.bindings,
+                ..Default::default()
+            };
             return (RawGamepadState::default(), false);
         }
         let held = state.buttons;
@@ -140,9 +158,13 @@ impl Hotkeys {
                 self.wait_release = false;
             }
         } else {
-            let matching = BINDINGS
+            let bindings = bindings(self.bindings);
+            let matching = bindings
                 .iter()
-                .rposition(|(buttons, _)| held.contains(*buttons));
+                .enumerate()
+                .filter(|(_, (buttons, _))| held.contains(*buttons))
+                .max_by_key(|(index, (buttons, _))| (buttons.bits().count_ones(), *index))
+                .map(|(index, _)| index);
             if self.pending.is_none() && !(held & GUIDE_CHORD).is_empty() {
                 // If both arrive in one sample, Select is the deterministic first button.
                 self.pending = Some(Pending {
@@ -157,15 +179,21 @@ impl Hotkeys {
             if let Some(pending) = &mut self.pending {
                 if held.contains(pending.first) {
                     if let Some(binding) = matching {
-                        pending.binding = pending.binding.max(binding);
+                        let score = |i: usize| (bindings[i].0.bits().count_ones(), i);
+                        if score(binding) > score(pending.binding) {
+                            pending.binding = binding;
+                        }
                     }
                 } else {
-                    let action = BINDINGS[pending.binding].1;
+                    let action = bindings[pending.binding].1;
                     self.pending = None;
                     self.wait_release = !(held & GUIDE_CHORD).is_empty();
                     match action {
                         Action::Menu => {
-                            *self = Self::default();
+                            *self = Self {
+                                bindings: self.bindings,
+                                ..Default::default()
+                            };
                             return (RawGamepadState::default(), true);
                         }
                         Action::Press(button) => {
@@ -387,7 +415,7 @@ mod tests {
                     xcloud_input::source::GamepadInputSource::new(controller.stream_sampler());
                 source.set_input_queue(Some(queue.clone()));
                 source.set_active(true);
-                let ctx = egui::Context::default();
+                let ctx = crate::Notify::default();
                 let mut packets = Vec::new();
                 for (buttons, time) in [
                     (B::NONE, 0),
@@ -440,7 +468,7 @@ mod tests {
             (true, true, false),
         ] {
             let controller = Controller::default();
-            let ctx = egui::Context::default();
+            let ctx = crate::Notify::default();
             for buttons in [B::NONE, APP_CHORD, B::NONE] {
                 let mut sampler: Sampler = Box::new(move || NativeGamepadSample {
                     connected,
@@ -470,5 +498,69 @@ mod tests {
         );
         assert!(keys.presses.is_empty());
         assert_eq!(step(&mut keys, B::NONE, 1000), (raw(B::NONE), false));
+    }
+    #[test]
+    fn custom_bindings_use_specificity_then_menu_priority_and_survive_cancellation() {
+        let bindings = crate::config::HotkeyBindings {
+            guide: (B::VIEW | B::X | B::LEFT_SHOULDER).bits(),
+            menu: (B::MENU | B::Y).bits(),
+        };
+        let mut keys = Hotkeys {
+            bindings,
+            ..Default::default()
+        };
+        step(&mut keys, B::NONE, 0);
+        let chord = B::VIEW | B::X | B::LEFT_SHOULDER | B::MENU | B::Y;
+        step(&mut keys, chord, 8);
+        assert_eq!(step(&mut keys, B::NONE, 16), (raw(B::NEXUS), false));
+        keys.route(raw(B::NONE), false, false, Duration::from_millis(24));
+        assert_eq!(keys.bindings, bindings);
+        step(&mut keys, B::NONE, 32);
+        step(&mut keys, B::MENU | B::Y, 40);
+        assert!(step(&mut keys, B::NONE, 48).1);
+        assert_eq!(keys.bindings, bindings);
+        keys = Hotkeys {
+            bindings: crate::config::HotkeyBindings {
+                guide: (B::VIEW | B::X).bits(),
+                menu: (B::MENU | B::Y).bits(),
+            },
+            ..Default::default()
+        };
+        step(&mut keys, B::NONE, 0);
+        step(&mut keys, B::VIEW | B::X | B::MENU | B::Y, 8);
+        assert!(step(&mut keys, B::NONE, 16).1);
+    }
+    #[test]
+    fn changing_bindings_cancels_pending_input_and_invalid_bindings_leave_current_mapping() {
+        let controller = Controller::default();
+        let ctx = crate::Notify::default();
+        let poll = |buttons: B, time| {
+            let mut sampler: Sampler = Box::new(move || NativeGamepadSample {
+                connected: true,
+                state: raw(buttons),
+                ..Default::default()
+            });
+            controller.poll(&mut sampler, true, true, Duration::from_millis(time), &ctx);
+        };
+        poll(B::NONE, 0);
+        poll(GUIDE_CHORD, 8);
+        let bindings = crate::config::HotkeyBindings {
+            guide: (B::VIEW | B::X).bits(),
+            menu: (B::MENU | B::Y).bits(),
+        };
+        controller.set_bindings(bindings).unwrap();
+        poll(B::NONE, 16);
+        assert_eq!(controller.stream_sampler()().state, raw(B::NONE));
+        assert!(
+            controller
+                .set_bindings(crate::config::HotkeyBindings {
+                    guide: 0,
+                    ..bindings
+                })
+                .is_err()
+        );
+        poll(B::MENU | B::Y, 24);
+        poll(B::NONE, 32);
+        assert!(controller.menu());
     }
 }

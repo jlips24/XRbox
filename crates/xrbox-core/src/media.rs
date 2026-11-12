@@ -1,7 +1,7 @@
 use parking_lot::Mutex;
 use std::sync::{
     Arc,
-    atomic::{AtomicU64, Ordering},
+    atomic::{AtomicBool, AtomicU64, Ordering},
 };
 use xcloud_media::{AudioOutput, FrameMailbox, MailboxReader};
 use xcloud_proto::{streaming_config::StreamingConfig, streaming_types::StreamingStatsSnapshot};
@@ -64,13 +64,15 @@ impl ConfigurableMediaSink for Pipeline {
 pub struct Media {
     pub reader: Arc<Mutex<MailboxReader>>,
     pub audio: Arc<Mutex<AudioOutput>>,
+    pub muted: Arc<AtomicBool>,
     pub decoded: Arc<AtomicU64>,
     pub health: Arc<Mutex<MediaHealth>>,
 }
 impl Media {
     pub fn attach(
         transport: &xcloud_webrtc::native::WebRtcTransport,
-        ctx: egui::Context,
+        ctx: crate::Notify,
+        start_muted: bool,
     ) -> (
         Self,
         crossbeam_channel::Receiver<xcloud_stream::pipeline::PipelineEvent>,
@@ -80,7 +82,7 @@ impl Media {
         let counter = decoded.clone();
         let on_frame: xcloud_stream::decode_thread::FrameCallback = Box::new(move || {
             counter.fetch_add(1, Ordering::Relaxed);
-            ctx.request_repaint();
+            ctx.notify();
         });
         #[cfg(target_os = "macos")]
         let decode = DecodeThread::spawn(writer, Some(on_frame), |sink| {
@@ -92,18 +94,26 @@ impl Media {
                 sink,
             )
         });
-        #[cfg(not(target_os = "macos"))]
+        #[cfg(any(target_os = "linux", target_os = "windows"))]
         let decode = DecodeThread::spawn(writer, Some(on_frame), |sink| {
             xcloud_media::ffmpeg::FfmpegDecoder::new(Default::default(), sink)
         });
+        #[cfg(target_os = "android")]
+        let decode = DecodeThread::spawn(
+            writer,
+            Some(on_frame),
+            xcloud_media::android::AndroidDecoder::new,
+        );
         let audio = Arc::new(Mutex::new(AudioOutput::new()));
         let output = audio.clone();
+        let muted = Arc::new(AtomicBool::new(start_muted));
+        let mute_gate = muted.clone();
         let (tx, rx) = crossbeam_channel::bounded(64);
         let pipeline = NativeMediaPipeline::new(
             transport.rtcp_sender(),
             decode,
             Box::new(move |pcm, rate, channels| {
-                output.lock().push(pcm, rate, channels as u16);
+                push_audio(&output, &mute_gate, pcm, rate, channels as u16);
             }),
             tx,
         );
@@ -117,10 +127,56 @@ impl Media {
             Self {
                 reader: Arc::new(Mutex::new(reader)),
                 audio,
+                muted,
                 decoded,
                 health,
             },
             rx,
         )
+    }
+}
+
+fn push_audio(
+    output: &Mutex<AudioOutput>,
+    muted: &AtomicBool,
+    pcm: &[i16],
+    rate: u32,
+    channels: u16,
+) {
+    let mut output = output.lock();
+    if !muted.load(Ordering::Relaxed) {
+        output.push(pcm, rate, channels);
+    }
+}
+
+#[cfg(test)]
+mod audio_tests {
+    use super::*;
+    struct SilentBackend;
+    impl xcloud_media::AudioBackend for SilentBackend {
+        fn open(
+            &mut self,
+            _: xcloud_media::PcmFormat,
+            _: xcloud_media::PcmSource,
+        ) -> xcloud_media::Result<Box<dyn xcloud_media::OutputStream>> {
+            Err(xcloud_media::Error::Unavailable("synthetic backend".into()))
+        }
+    }
+    #[test]
+    fn mute_discards_audio_without_opening_a_device_and_unmute_restarts_input() {
+        let output = Mutex::new(AudioOutput::with_backend(Box::new(SilentBackend)));
+        let muted = AtomicBool::new(true);
+        push_audio(&output, &muted, &[10, 20], 48000, 2);
+        assert!(output.lock().format().is_none());
+        muted.store(false, Ordering::Relaxed);
+        push_audio(&output, &muted, &[10, 20], 48000, 2);
+        assert_eq!(
+            output.lock().format(),
+            Some(xcloud_media::PcmFormat::new(48000, 2))
+        );
+        muted.store(true, Ordering::Relaxed);
+        output.lock().stop();
+        push_audio(&output, &muted, &[10, 20], 48000, 2);
+        assert!(output.lock().format().is_none());
     }
 }

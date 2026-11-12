@@ -34,3 +34,8 @@ pub use fallback::{
 };
 pub use frame::{ColorInfo, Frame, NativeBuffer, YCbCrMatrix};
 pub use opus::OpusDecoder;
+
+#[cfg(target_os = "android")]
+pub mod android;
+
+pub mod surface_output;

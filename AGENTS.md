@@ -1,22 +1,30 @@
-# XRBox agent instructions
+# XRbox agent instructions
 
 ## Product and current scope
 
-XRBox is a native Rust Xbox **console Remote Play** client, with standalone Steam
-Frame/Linux ARM64 as the eventual target. It must ship as one app without a relay
-PC, an embedded browser runtime, or separately configured services. Electron and
+XRbox is an Xbox **console Remote Play** client with a native Rust core. Headset
+product targets are Steam Frame/Linux ARM64 and Android ARM64 APKs (Meta Quest
+first, then other validated Android OpenXR headsets). It must ship as one app
+without a relay PC, an embedded browser runtime, or separately configured services. Electron and
 cloud gaming are excluded.
 
-The current milestone is reliable desktop streaming on macOS Apple Silicon.
-The user has reported desktop playback working. Recent authentication, controller
-shortcut and UI changes still need the manual checks recorded in VALIDATION.md.
-Standalone Steam Frame, Linux ARM64 hardware decoding, XR presentation and battery
-performance remain unvalidated; full XR work is a separate milestone.
+The standalone 2D desktop frontend has been retired by user decision. Do not
+reintroduce it by default. macOS remains a development host for Godot previews,
+headless tests and Android builds, not a product target. Existing upstream Mac
+backends are retained as library code, not a shipping desktop application.
 
-Read README.md, ARCHITECTURE.md, VALIDATION.md and the relevant parts of Plan.md
-before architectural changes. Prefer implemented behavior and current validation
-evidence over older planning assumptions. Read the application version from
-crates/xrbox/Cargo.toml; do not infer it from old examples or an existing app bundle.
+Read README.md, ARCHITECTURE.md, VALIDATION.md and relevant Plan.md sections before
+architectural changes. Keep one repository with separate components:
+`crates/xrbox-core` is engine-independent; `crates/xrbox-godot` embeds it through
+an in-process GDExtension; `xr/` owns Godot scene/UI and Android platform glue.
+The core must never depend on Godot. Shared session services use the `session`
+feature. Host previews remain synthetic and do not start auth or streaming.
+Android build 0.1.10-xr.2 implements live streaming, but actual sign-in, Keystore,
+video/audio/controller and XR behavior still need hardware acceptance.
+Linux ARM64 decoding/import, Flatpak and battery performance remain unvalidated.
+Follow XR_PLAN.md and xr/ANDROID.md; do not infer hardware results from builds.
+Read the core version from crates/xrbox-core/Cargo.toml and APK version from the
+Godot configuration; old desktop documentation is historical.
 
 ## Respect the user's machine
 
@@ -39,22 +47,37 @@ crates/xrbox/Cargo.toml; do not infer it from old examples or an existing app bu
 
 ## Code boundaries
 
-- `crates/xrbox/src/main.rs`: native egui/eframe UI and GPU presentation.
-- `auth.rs`: credential-store selection and console-only token acquisition.
-- `session.rs`: bounded commands, session ownership, cancellation, input and recovery.
-- `controller.rs` and `navigation.rs`: shared physical sampling, menu/game input
+- `xr/`: Godot scene/input prototype and synthetic engine tests.
+- `crates/xrbox-godot`: in-process extension; no engine calls from session/decoder workers. Android video uses a documented
+  render-thread callback, external OES texture and fenced AImage leases. Keep Android
+  free of FFmpeg/gilrs/desktop credential dependencies. `android_video.rs` owns EGL
+  import; `input.rs` maps Godot samples with sticky disconnect neutralization.
+- `crates/xrbox-core/src/android.rs` and `xr/android-src/`: JNI bootstrap, Android
+  Keystore sealed refresh persistence and hardware codec selection. Never read
+  live stored credentials during development checks.
+- `vendor/openxcloud/crates/xcloud-media/src/android.rs`: bounded MediaCodec /
+  PRIVATE ImageReader hardware buffers; opaque output size is not a CPU pixel count.
+- `crates/xrbox-core/src/auth.rs`: credential-store selection and console-only token acquisition.
+- `crates/xrbox-core/src/session.rs`: bounded commands, session ownership, cancellation, input and recovery.
+- `crates/xrbox-core/src/controller.rs` and `xr/scripts/`: shared physical sampling, menu/game input
   routing, spatial focus and controller repeat. After stream-menu resume, only
   View/Menu wait for release; other gameplay input must resume immediately.
   Select/View and Start/Menu are deferred bindings: never forward their raw
   button-down events. Resolve the most specific completed binding when the first
-  Select/Start pressed is released. The pair sends Guide; adding LB+RB opens XRBox.
-  Singles use the same deferred recognizer and protocol pulse path. Physical Guide
+  Select/Start pressed is released. Default shortcuts are the pair for Guide and
+  the pair+LB+RB for XRbox; preserve validated user-configured mappings across
+  cancellation. Singles use the same deferred recognizer and protocol pulse path. Physical Guide
   stays reserved to the host and is not forwarded. Preserve bounded input queues
   and cancellation on focus loss/disconnect; do not enable system-gesture capture.
   Reveal a selected tile only on focus change; idle hover must not recenter the
   page. Keep the version footer outside scrollable content.
-- `media.rs`: upstream RTP/decoder/audio wiring and stage counters.
-- `config.rs` and `diagnostics.rs`: non-secret app data and sanitized logging.
+- `crates/xrbox-core/src/media.rs`: upstream RTP/decoder/audio wiring and stage counters.
+- `crates/xrbox-core/src/config.rs`: validated non-secret settings and atomic persistence; credentials
+  never belong in settings.json. Apply live input/audio/hotkeys without cancelling
+  auth jobs; resolution changes apply on the next connection.
+- `xr/scripts/live_ui.gd`: controller-navigable sign-in, console selection and stream
+  menu. Full desktop settings/hotkey editing is not yet ported; do not claim parity.
+- `crates/xrbox-core/src/diagnostics.rs`: sanitized logging.
 - `vendor/openxcloud`: seven library crates pinned to the revision in
   vendor/README.md. Do not add the upstream cloud-oriented application crate.
 
@@ -92,18 +115,17 @@ make check-all
 ```
 
 The full targets generate an ignored synthetic video fixture and require developer
-FFmpeg with libx264/headers, CMake and pkg-config. Some tests bind localhost or
+FFmpeg with libx264/headers, CMake and pkg-config. `make test-all` also runs Python
+helper tests, headless Godot checks and a short synthetic GPU render window; it
+requires Godot and a functioning desktop GPU/display session. It never runs
+ignored credential/audio-device tests or live headset/console acceptance.
+`make test-rust-all` is the Rust-only full suite. Some tests bind localhost or
 require GPU access; distinguish sandbox restrictions from application failures.
 Do not disable assertions or weaken tests just to obtain passing results.
 
-`make smoke` opens the UI briefly without credentials. For isolated non-secret
-logs, prefix that command with an explicit temporary XRBOX_DATA_DIR.
-`make auth-probe` contacts Microsoft and discards the code; it does not authorize an
-account. When packaging is requested or needed, use `make package` for the ad-hoc
-signed macOS development bundle and `make package-release` for an optimized bundle.
-Neither installs the app. The packager can use an existing signing identity via
-`--sign-identity`; do not create certificates or modify Keychain trust automatically.
-Ad-hoc rebuilds may require renewed credential-access approval.
+`make xr-preview` opens only synthetic content on a development host. The retired
+standalone app's smoke/auth-probe/macOS package tasks no longer exist. Use
+`make xr-apk` only when Android packaging is needed; it never operates a device.
 
 ## Dependencies and repository changes
 
@@ -111,7 +133,7 @@ Dependabot configuration lives in .github/dependabot.yml: Cargo updates are chec
 daily at 09:00 America/New_York, with related graphics/WebRTC groups and at most
 five open version-update PRs. Keep schedule documentation consistent with the YAML.
 Do not auto-merge updates. Review API compatibility, enabled features (including
-native clipboard support), hardware decode/import paths, native runtime libraries
+Godot/JNI compatibility), hardware decode/import paths, native runtime libraries
 and license compatibility; 0.x minor upgrades may be breaking changes.
 
 The pinned Rust toolchain and vendored OpenXCloud source revision require manual
@@ -140,3 +162,33 @@ direct LAN routing, zero-copy or battery improvements when supported by relevant
 hardware observations. Private ICE addresses alone do not prove LAN topology.
 After preparing a hardware-dependent fix, provide an identifiable build and exact
 retest steps, then stop for the user's results. Do not fabricate benchmarks.
+
+## Godot checks
+
+`make xr-check` builds/stages the host extension and runs headless Godot tests.
+`make xr-preview` runs the synthetic scene without XR; `make xr-run` attempts XR.
+Use GODOT as a command-local executable path; an authorized project-local Mac
+download may live under ignored .tools/. Never install tools automatically.
+Godot 4.7.2 and godot-rust 0.5.5/API 4.7 are pinned. A cross-target cargo check
+is not a linked library, exported app or device test. Host Godot previews never start auth/sessions; Android live mode does. Headless
+UI tests use fake state and suppress preference restoration. Test the shared core through `make test` / `make check` when touching shared logic.
+
+`make xr-apk` builds/signs/verifies the Quest 3S prototype using a project-local
+SDK/NDK and self-contained Godot. `make xr-apk-check` verifies an existing artifact.
+The helper must never edit global Godot settings, install SDK tools automatically,
+poll/install/launch on headsets or use a production signing key. The preset is not
+runnable in the editor to disable device polling. Preserve local debug keys in
+ignored .tools; never commit them or APKs. Read xr/ANDROID.md for tool pins and the
+manual device gate. Android has its own Compatibility renderer override; do not
+change Linux rendering defaults to accommodate the Android test.
+
+## Test output
+
+`make test-all` captures each suite's full stdout/stderr in a unique ignored
+`.tools/test-results/` directory and prints progress plus a final PASS/FAIL table
+with durations and failure-log paths. Other suites still run after a failure;
+the command exits nonzero if any suite fails. Ctrl-C reports the interrupted and
+unrun suites. Individual suite targets retain their normal verbose output.
+Logs are kept across runs; remove old result directories manually when no longer
+needed. The runner does not authorize accounts or operate devices. The synthetic
+GPU smoke still briefly opens a window. Exit status, not log text, determines success.

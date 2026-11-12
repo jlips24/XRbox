@@ -32,9 +32,34 @@ Changes from the pinned source:
 
 No transport, packet codec, decoder, renderer, or controller protocol was rewritten.
 The root workspace's xcloud-* paths point here. The original repository URL in
-workspace package metadata identifies upstream, not an XRBox upstream repository.
+workspace package metadata identifies upstream, not an XRbox upstream repository.
 
 Generate the ignored synthetic H.264 fixture with `bash scripts/generate_fixture.sh`
-from the XRBox root before running all vendored media tests. The tests' relative
+from the XRbox root before running all vendored media tests. The tests' relative
 include paths resolve to vendor/openxcloud/fixtures. The original audit checkout
 under /private/tmp is not needed to build this repository.
+
+## Android Remote Play integration (November 12, 2026)
+
+Additional narrow platform patches against the same pinned upstream revision:
+
+- xcloud-input/native and its manifest exclude gilrs on Android, just as iOS uses
+  an external sampler. XRbox supplies Godot's controller state to the existing
+  GamepadInputSource/packet queue; shortcut and packet implementations are reused.
+- xcloud-media adds an Android NDK MediaCodec/PRIVATE ImageReader decoder and a
+  retained AndroidImage native frame variant. Hardware codec selection comes from
+  Android MediaCodecInfo.isHardwareAccelerated, excluding secure/software codecs.
+  The existing DecodeThread, bounded AU queue, RTP/jitter/pipeline and Opus/CPAL
+  output remain unchanged. Images retain their reader until all frame leases drop.
+  Native decoder failure/reset and GPU image import still require device testing.
+- xcloud-api's Android HTTPS builder uses the pinned Mozilla webpki-roots with a
+  standard Rustls verifier/provider. This avoids assuming the Java components of
+  rustls-platform-verifier are hosted in Godot. Certificate and hostname checks
+  stay enabled. Other platforms retain their original trust configuration.
+
+New GPU imports/lease retirement and Android Keystore/VM bootstrap live in XRbox's
+own core/extension, not the upstream transport or protocol code. No Xbox signaling,
+SDP/ICE, auth flow, packet codec or Xbox security control is replaced. Host fake
+service/regression tests, Android compile/lint and APK checks are recorded in
+VALIDATION.md; they do not establish hardware playback, native color/crop correctness
+or zero-copy. The source snapshot revision above remains unchanged.

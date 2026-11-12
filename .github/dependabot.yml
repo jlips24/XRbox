@@ -14,11 +14,8 @@ updates:
       # Keep tightly coupled rendering APIs together for review.
       graphics:
         patterns:
-          - "eframe"
-          - "egui*"
-          - "epaint*"
-          - "emath"
-          - "ecolor"
+          - "godot*"
+          - "gdextension*"
           - "wgpu*"
           - "naga*"
       webrtc:

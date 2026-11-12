@@ -27,7 +27,7 @@ pub fn init_logging() {
             .append(true)
             .open(&path)
             .ok()?;
-        eprintln!("XRBox sanitized log: {}", path.display());
+        eprintln!("XRbox sanitized log: {}", path.display());
         Some(std::sync::Arc::new(file))
     });
     tracing_subscriber::fmt()

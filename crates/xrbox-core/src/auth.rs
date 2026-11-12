@@ -1,11 +1,22 @@
 use std::sync::Arc;
+#[cfg(not(target_os = "android"))]
+use xcloud_api::token_store::KeyringTokenStore;
 use xcloud_api::{
     auth::MicrosoftAuthService,
-    token_store::{KeyringTokenStore, MemoryTokenStore, TokenStore},
+    token_store::{MemoryTokenStore, TokenStore},
     transport::ReqwestTransport,
 };
 
 pub fn service(persistent: bool) -> anyhow::Result<Arc<MicrosoftAuthService>> {
+    #[cfg(target_os = "android")]
+    let store: Arc<dyn TokenStore> = if persistent {
+        Arc::new(SessionTokenStore::new(Arc::new(
+            crate::android::SecureStore,
+        )))
+    } else {
+        Arc::new(MemoryTokenStore::new())
+    };
+    #[cfg(not(target_os = "android"))]
     let store: Arc<dyn TokenStore> = if persistent {
         Arc::new(SessionTokenStore::new(Arc::new(
             KeyringTokenStore::with_service("xrbox"),

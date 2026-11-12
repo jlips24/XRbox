@@ -1,195 +1,142 @@
-# XRBox
+# XRbox
 
-A native Rust **Xbox console Remote Play** desktop proof of concept, intended as
-the first step toward efficient standalone playback on Steam Frame. No Electron,
-browser media runtime, relay PC, or separately enabled service is used.
+Play your Xbox console on a virtual screen in a standalone XR headset. XRbox uses
+Godot, OpenXR and a native Rust streaming core. It connects to your own console
+through Xbox Remote Play, without a relay PC or an embedded browser runtime.
 
-**Desktop playback has been reported working by the user.** Version 0.1.2 adds
-automatic secure sign-in restoration and a revised connection UI. Steam Frame,
-battery life, and these new sign-in changes still need hardware testing.
+**Early development:** the Android streaming implementation builds, but playback
+on a real console and headset still needs validation. Meta Quest 3S is the first
+Android test target. Steam Frame / Linux ARM64 support is in development; there
+is no ready-to-install Frame or Flatpak release yet. Xbox Cloud Gaming is not
+supported.
 
-## Run on an Apple Silicon Mac
+## Install on Meta Quest
 
-Requires Rust/rustup and CMake for the bundled native Opus build. The repository's
-rust-toolchain.toml selects Rust 1.99.1 for this project without changing your
-default toolchain. The default Mac app uses VideoToolbox/Metal, with no FFmpeg
-runtime dependency. All dependencies are pinned by Cargo.lock.
+### What you need
+
+- A Quest headset with developer mode and USB debugging enabled. Quest 3S is the
+  initial target; other Android headsets have not been qualified.
+- An Xbox Series X/S with Remote Features enabled and your Microsoft account
+  configured for console Remote Play.
+- A Bluetooth Xbox controller paired with the headset. Touch controllers and
+  hand tracking are not supported.
+- Both the console and headset on the same local network.
+- A computer with Android Platform Tools (`adb`) for installation only.
+
+### Install the APK
+
+The current development package is **0.1.10-xr.2**. APKs are build outputs, not
+included in this repository. If you do not already have one, follow the
+[Android build instructions](xr/ANDROID.md#rebuild-on-this-mac) before continuing.
+No public download is assumed by these instructions.
+
+Connect the Quest by USB, accept the debugging prompt inside the headset, then
+run these commands from the repository root:
 
 ```sh
-make build
-make run
+adb devices
+adb install -r dist/xr/android/XRbox-0.1.10-xr.2-quest-debug.apk
 ```
 
-To create a self-contained development app:
+If `adb devices` shows `unauthorized`, check the headset for its permission prompt.
+Open **XRbox XR Prototype** from the Quest's **Unknown Sources** app library.
+Confirm the displayed version and **OpenXR active** status. The computer can be
+disconnected after installation; it is not part of the streaming pipeline.
 
-```sh
-make package
-open dist/XRBox.app
-```
+## Connect and play
 
-The script builds inside the project, checks for external dynamic libraries and
-ad-hoc signs the bundle. It does not install anything or alter PATH/defaults.
-The package is not Developer ID signed or notarized.
+1. Leave your Xbox awake for the first test and open a game or moving dashboard
+   screen so you can tell whether video is updating.
+2. Use the controller's **D-pad** to navigate and **A** to select **Sign in**.
+3. Enter the displayed code at the Microsoft verification URL on your phone or
+   computer. Complete sign-in, then return to XRbox.
+4. Select your discovered Xbox to connect.
+5. Confirm the picture moves, audio plays and controller input reaches the console.
 
-## Developer commands
+Remembered sign-in is enabled by default. You can choose session-only sign-in
+before starting. Only refresh credentials are stored securely; temporary tokens
+stay in memory. Sign out to remove remembered credentials.
 
-Run `make help` to list all targets. GNU Make or the macOS developer-tools Make is
-sufficient; Python 3 is needed for packaging.
+### Controls
 
-| Command | Purpose |
+| Input | Action |
 | --- | --- |
-| `make build` / `make release` | Debug / optimized desktop executable |
-| `make run` | Launch the native client |
-| `make smoke` | Render ten UI frames and exit without signing in |
-| `make auth-probe` | Request/discard a Microsoft device code; requires internet |
-| `make test` / `make check` | Core tests / formatting and application Clippy |
-| `make test-all` / `make check-all` | Every vendored crate and feature |
-| `make fmt` | Format Rust sources |
-| `make package` / `make package-release` | Debug / optimized macOS .app |
+| D-pad / A | Navigate / select in XRbox menus |
+| Select (View) | Send Select when released |
+| Start (Menu) | Send Start when released |
+| Select + Start | Send the virtual Xbox Guide button |
+| Select + Start + LB + RB | Open XRbox's menu |
 
-Full checks generate a synthetic H.264 fixture and require developer FFmpeg with
-libx264 and headers, CMake and pkg-config. Network tests bind localhost; media/GPU
-tests need the corresponding platform facilities. Ignored keychain and physical
-audio tests are not run automatically. See DEVELOPMENT.md for direct Cargo commands.
+For shortcuts, hold the combination and release the **first Select/Start button
+pressed** to trigger it. The physical Xbox/Guide button stays reserved to the
+headset. B remains game input during streaming; use the menu shortcut to return
+to XRbox. The stream menu includes resume, disconnect and screen adjustments.
 
-No target installs system tools or changes PATH, shell settings, services or system
-defaults. Cargo may download the pinned toolchain and build dependencies to its
-normal caches. Existing environment overrides are inherited. For example, use a
-command-local build cache with `CARGO_TARGET_DIR=/your/cache make build`; for an
-isolated UI test use `XRBOX_DATA_DIR=/private/tmp/xrbox-smoke make smoke`.
-Agent/contributor constraints are recorded in AGENTS.md.
+## Current limits and troubleshooting
 
-## First console test
+- Opening the headset system menu, removing the headset or losing XR focus
+  disconnects an active stream. Reconnect manually on return.
+- Screen size, distance, recenter and vertical-flip controls are available;
+  screen adjustments currently last only for the session. Full settings and
+  custom hotkey editing have not been ported to XR.
+- Steam Frame media integration, passthrough and other-headset compatibility
+  remain unfinished. Host/Linux Godot previews show synthetic content.
+- Hardware decoding, XR output, secure sign-in restoration, audio and physical
+  controls still need device acceptance. Latency, battery life and zero-copy
+  behavior have not been measured.
 
-1. On Xbox, enable Remote Features and run its Remote Play connection checks.
-   Put the Xbox and Mac on the same LAN; console Ethernet is preferable.
-2. Pair the Bluetooth Xbox controller with the Mac, then open XRBox.
-3. Select **Sign in with Microsoft**. **Remember sign-in: On** is the default;
-   select that tile to turn it Off for session-only credentials.
-4. Open Microsoft sign-in, enter the displayed device code, and finish in your
-   browser. XRBox never asks for your password.
-5. Consoles appear automatically after sign-in. Select your Xbox tile to play.
-6. Verify moving video, game audio, sticks/triggers/buttons, D-pad, Menu and View
-   on the dashboard or an installed game. GTA VI is not required for this test.
-7. Play for at least ten minutes. Test focus loss, controller unplug/reconnect,
-   disconnect/reconnect, close/relaunch, and sign-out. Confirm controls release
-   when focus is lost and no old frame remains after disconnect.
-8. Report the visible connection stage, observations, and sanitized diagnostics.
-   Never share credentials, device codes, or tokens.
+If connection or playback fails, record the app version, headset OS, visible
+error and media-stage counters. Counters alone do not prove visible playback.
+Never share sign-in codes, tokens, raw SDP or account details. See the
+[Quest testing and diagnostic guide](xr/ANDROID.md#install-and-test) for lifecycle
+checks and app-only log capture.
 
-After relaunch, XRBox automatically refreshes saved credentials and discovers
-consoles; it does not start a stream until you select a console tile. On macOS, credentials
-use Keychain (service `xrbox`), never a plaintext token file. If storage is locked
-or unavailable, unlock it or uncheck Remember sign-in and sign in for this session.
-Revoked or expired refresh credentials require signing in again. Sign out clears
-in-memory credentials and attempts to remove saved credentials; failures are shown.
-The device code uses the bundled Hack monospace font with a distinct zero. **Copy
-code** copies only the code when clicked; codes are never copied automatically.
+## Build and contribute
 
-The Diagnostics window separates assembled, decoded and presented frames and shows
-dimensions, source FPS, incomplete-frame drops, decoder errors, queue drops,
-keyframe gating, frame age, decoder callback timing, GPU import mode, controller
-detection and audio-device state. Stalls trigger recovery requests and a bounded
-timeout instead of leaving a frozen image labeled as streaming.
-Connection status is gated on peer connectivity, input handshake and decoded media.
-A connected session is not proof that its selected network route is direct/LAN.
-The nominated ICE pair is sampled every five seconds. Relay routes are rejected;
-private/link-local peers are labeled as LAN candidates, not proof of network
-topology (VPNs also use private addresses). An unavailable pair stays unknown.
+The project uses pinned Rust **1.99.1**, Godot **4.7.2** and Cargo.lock. macOS is
+supported as a development host for synthetic previews and Android builds; the
+standalone 2D desktop app is retired. Linux and Android remain the product targets.
+No helper installs system tools or changes PATH/defaults.
 
-## Current limits
-
-- The user reports desktop playback working. New controller shortcuts still need
-  real-console validation; automated tests do not establish physical behavior.
-- No XR renderer, passthrough, Frame package or Frame battery measurements yet.
-- Linux ARM64 hardware decoding and GPU surface import are unresolved. Portable
-  non-macOS compilation uses FFmpeg software decoding; it is not a Frame efficiency solution.
-- macOS requires VideoToolbox hardware decode; there is no silent software fallback.
-- Rumble is not validated. Physical Xbox/Guide is reserved for the host and ignored
-  by console input; the virtual shortcut still needs console validation. Gameplay
-  button/axis mappings reuse upstream; controller identification depends on OS access.
-- CPU/memory, end-to-end latency and power are not yet
-  measured. Decode-to-callback time is not input-to-display latency.
-- Server session deletion is best effort within shutdown; abrupt termination may
-  leave a session until the server expires it or the next connect cleans it up.
-
-See [DEVELOPMENT.md](DEVELOPMENT.md), [ARCHITECTURE.md](ARCHITECTURE.md),
-[ROADMAP.md](ROADMAP.md), [VALIDATION.md](VALIDATION.md) and [Plan.md](Plan.md). Derived from GPL-3.0-only
-OpenXCloud; provenance and modifications are listed in [vendor/README.md](vendor/README.md).
-
-## macOS Keychain password prompts
-
-XRBox 0.1.4 keeps short-lived access, console-streaming and transfer tokens in
-memory. Only refresh-token changes are sent to the secure persistent store, and
-sign-out no longer clears the same Keychain item twice. Existing saved sign-ins
-remain compatible; old temporary values may remain in the bundle until sign-out.
-
-When the macOS prompt identifies XRBox accessing its `xrbox` credentials, choosing
-**Always Allow** grants lasting access for that app identity; **Allow** grants only
-one access. A locked login Keychain may still need unlocking. See
-[Apple's explanation](https://support.apple.com/en-euro/guide/keychain-access/kyca1243/mac).
-Our default development bundle is ad-hoc signed, so rebuilt versions can require
-approval again. Use the same app bundle when testing relaunch. No global Keychain
-permissions or security settings are changed by XRBox.
-
-If you already have a suitable code-signing identity, the packager supports it:
+Start with [DEVELOPMENT.md](DEVELOPMENT.md) for prerequisites and checks,
+[xr/ANDROID.md](xr/ANDROID.md) for APK tooling, and [xr/README.md](xr/README.md)
+for Godot preview and Linux export instructions.
 
 ```sh
-python3 scripts/package_macos.py --debug --sign-identity 'Your existing signing identity'
+make build       # build/stage the host Godot extension
+make xr-preview  # synthetic preview, no account or console access
+make test        # Rust core, bridge and selected protocol tests
+make check       # formatting and core/bridge lint
+make test-all    # all Rust, Python, headless Godot and GPU smoke tests
+make xr-apk      # build/sign/verify Android APK; does not install it
 ```
 
-This does not create certificates or notarize the app. Consistent certificate
-signing supports stable app identity across updates; it does not guarantee an
-unlocked Keychain or eliminate all OS prompts. Session-only sign-in remains
-available by setting Remember sign-in to Off.
+`make test-all` saves full logs under ignored `.tools/test-results/` and prints a
+compact final summary. It needs the full native toolchain, pinned Godot and a functioning
+GPU/display session. Its render smoke briefly opens a window. Hardware-only and
+explicitly ignored credential/audio-device checks remain manual. Run `make help`
+for individual test and build targets.
 
-## Controller navigation
+### Source layout
 
-The home and connection screens use large Xbox-inspired tiles and a green focus
-outline. Use **D-pad / left stick** to move, **A** to select, and **B** to go back,
-close Diagnostics, dismiss sign-out confirmation, or cancel a pending connection.
-Sign-out has a confirmation screen. Keyboard arrows/Enter/Escape and mouse remain
-available. Microsoft authentication itself takes place in the system browser.
-
-During gameplay:
-
-| Shortcut | Action |
+| Location | Responsibility |
 | --- | --- |
-| **Select** (View) | Send one Select press on release |
-| **Start** (Menu) | Send one Start press on release |
-| **Select + Start** | Send one Xbox/Guide press |
-| **Select + Start + LB + RB** | Open XRBox's stream menu instead |
+| `crates/xrbox-core/` | Engine-independent authentication, session, media and controller logic |
+| `crates/xrbox-godot/` | In-process Godot bridge and GPU presentation adapters |
+| `xr/` | Godot scenes, controller UI, OpenXR and Android platform glue |
+| `vendor/openxcloud/` | Pinned reusable protocol/media libraries |
+| `scripts/` | Build, packaging and validation helpers |
 
-Pressing either Select or Start begins a gesture; neither is sent to the console
-on button-down. The most specific completed shortcut is remembered, and it fires
-when the **first Select/Start button pressed is released**. Releasing the other
-button or bumpers first does not downgrade or trigger it. Hold Select+Start while
-adding LB/RB, then release the initiating button to open XRBox without sending Guide.
-If both Select and Start first appear in the same sample, Select is treated as first.
+The core has no Godot dependency. These components share a repository so interface
+changes and tests can land together. Read [AGENTS.md](AGENTS.md) before automated
+contributions.
 
-Single Select, single Start and virtual Guide use the same 120 ms protocol-button
-press followed by release. Long holds produce one short press on release; held
-Select/Start or Guide long-press behavior is not implemented. Rapid taps are queued
-with a release gap so repeated presses remain distinct (bounded to 16 queued taps;
-overflow is discarded with a sanitized warning). No OS key events are generated.
+For design and project status, see [ARCHITECTURE.md](ARCHITECTURE.md),
+[XR_PLAN.md](XR_PLAN.md), [ROADMAP.md](ROADMAP.md) and
+[VALIDATION.md](VALIDATION.md).
 
-Menu navigation stays local and sends neutral gameplay input while open. Resume
-with A or B. All other buttons (including LB/RB), sticks and triggers pass through
-immediately on resume; **only Select/View and Start/Menu** remain suppressed until
-both are released. Bumpers and other controls remain live while constructing a
-shortcut; **Select and Start are always buffered**, so their individual presses
-cannot leak into a combined shortcut. Ordinary gameplay input is not buffered.
+## License
 
-The **physical Xbox/Guide button is ignored by XRBox's console-input mapping**.
-It may still open the host OS/Steam overlay. XRBox does not alter system shortcuts
-or enable upstream system-gesture capture. Steam documents its
-[global Guide chords](https://partner.steamgames.com/doc/features/steam_controller/getting_started_for_players?l=english),
-and Windows uses the [Xbox button for Game Bar](https://support.microsoft.com/en-us/servicing/os/windows/docs/2025/10/windows-gaming-full-screen-experience).
-Apple offers a [system-gesture preference](https://developer.apple.com/documentation/gamecontroller/gccontrollerelement/preferredsystemgesturestate)
-but explicitly does not guarantee that it is respected. These shortcuts avoid
-needing the reserved physical button; OS-specific behavior still needs testing.
-
-The app samples one controller source for both menu and gameplay. Idle controller
-polling is 30 Hz; active streaming retains the 125 Hz sampling rate. Idle menus
-repaint on input changes and navigation repeat rather than continuously. These are
-implementation settings, not measured latency or battery improvements.
+XRbox is licensed under **GPL-3.0-only**. See [LICENSE](LICENSE),
+[third-party notices](THIRD_PARTY_NOTICES.md) and the
+[OpenXCloud provenance and patch notes](vendor/README.md).

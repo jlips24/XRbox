@@ -13,3 +13,17 @@ __pycache__/
 .vscode/
 *.swp
 *.swo
+
+# Project-local Godot tooling, import cache, staged native builds and signing
+/.tools/
+/xr/.godot/
+/xr/native/
+/xr/android/
+*.keystore
+*.jks
+*.apk
+*.aab
+*.flatpak
+# Pinned upstream OpenXR addon staged by the Android dependency task
+/xr/addons/godotopenxrvendors/
+/xr/legal/
