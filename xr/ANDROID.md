@@ -149,7 +149,7 @@ Static package checks and host tests do not establish native startup, successful
 sign-in, Xbox playback, hardware decoding, zero-copy or XR output. Full settings,
 custom hotkey editing in XR, haptics, passthrough, release signing/store submission
 and other-headset qualification are later work. Linux Godot streaming is not yet
-enabled; the native desktop harness remains available. Linux decoding/import and
+enabled; the standalone desktop harness is retired. Linux decoding/import and
 Flatpak permissions need independent implementation and validation.
 
 Primary references: [Godot ExternalTexture](https://docs.godotengine.org/en/stable/classes/class_externaltexture.html),

@@ -2,8 +2,7 @@
 
 Linux first; one shared Godot project with separate native Linux and Android ABIs.
 Android now has an implemented live Remote Play path; device acceptance is pending.
-Host/Linux previews remain synthetic and never start authentication. The existing
-desktop client remains the validated streaming harness.
+Host/Linux previews remain synthetic and never start authentication. The standalone desktop streaming app is retired; macOS remains a development host.
 
 Implemented: in-process Rust GDExtension version/target diagnostics, optional OpenXR
 initialization with labeled desktop fallback, an unshaded test-pattern screen,
@@ -44,7 +43,7 @@ Screen adjustments currently last only for this scene/session. The 3D menu
 uses keyboard/controller navigation; pointer picking is not implemented.
 
 make xr-build honors CARGO_TARGET_DIR and stages only the selected target/profile
-under ignored native/ directories. Desktop make build retains its existing meaning.
+under ignored native/ directories. `make build` now aliases the host extension build.
 Restart Godot after a native rebuild; extension hot reload is disabled.
 
 ## Linux first: build and headset procedure

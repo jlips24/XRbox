@@ -8,28 +8,23 @@ first, then other validated Android OpenXR headsets). It must ship as one app
 without a relay PC, an embedded browser runtime, or separately configured services. Electron and
 cloud gaming are excluded.
 
-Preserve reliable desktop streaming on macOS Apple Silicon while bringing up
-the Godot prototype on Linux first.
-The user has reported desktop playback working. Recent authentication, controller
-shortcut and UI changes still need the manual checks recorded in VALIDATION.md.
-Standalone Steam Frame, Linux ARM64 hardware decoding, XR presentation and battery
-performance remain unvalidated; full XR work is a separate milestone.
+The standalone 2D desktop frontend has been retired by user decision. Do not
+reintroduce it by default. macOS remains a development host for Godot previews,
+headless tests and Android builds, not a product target. Existing upstream Mac
+backends are retained as library code, not a shipping desktop application.
 
-Read README.md, ARCHITECTURE.md, VALIDATION.md and the relevant parts of Plan.md
-before architectural changes. Godot is the selected future XR frontend, with the
-Rust streaming core embedded through an in-process GDExtension. Do not revert to a
-handwritten native OpenXR product frontend by default. The Godot synthetic
-scene/native extension now live in `xr/` and
-`crates/xrbox-godot`. Desktop services are extracted into `xrbox-core` behind
-`desktop-session`; the Android extension enables the shared `session` feature. Host Godot previews remain synthetic. Linux is
-the first deployment target; Android remains a separate ABI. Follow XR_PLAN.md
-and xr/README.md: Android live auth/media adapters are implemented but no headset execution, real
-Godot playback, Android secure-store behavior or Flatpak bundle has been validated.
-Quest 3S build 0.1.10-xr.2 includes streaming and passes package checks;
-installation, sign-in, XR/video/audio/controller acceptance remain manual. Do not migrate the full UI before
-the device/decoder gates. Prefer
-implemented behavior and current validation evidence over older planning assumptions. Read the application version from
-crates/xrbox/Cargo.toml; do not infer it from old examples or an existing app bundle.
+Read README.md, ARCHITECTURE.md, VALIDATION.md and relevant Plan.md sections before
+architectural changes. Keep one repository with separate components:
+`crates/xrbox-core` is engine-independent; `crates/xrbox-godot` embeds it through
+an in-process GDExtension; `xr/` owns Godot scene/UI and Android platform glue.
+The core must never depend on Godot. Shared session services use the `session`
+feature. Host previews remain synthetic and do not start auth or streaming.
+Android build 0.1.10-xr.2 implements live streaming, but actual sign-in, Keystore,
+video/audio/controller and XR behavior still need hardware acceptance.
+Linux ARM64 decoding/import, Flatpak and battery performance remain unvalidated.
+Follow XR_PLAN.md and xr/ANDROID.md; do not infer hardware results from builds.
+Read the core version from crates/xrbox-core/Cargo.toml and APK version from the
+Godot configuration; old desktop documentation is historical.
 
 ## Respect the user's machine
 
@@ -62,10 +57,9 @@ crates/xrbox/Cargo.toml; do not infer it from old examples or an existing app bu
   live stored credentials during development checks.
 - `vendor/openxcloud/crates/xcloud-media/src/android.rs`: bounded MediaCodec /
   PRIVATE ImageReader hardware buffers; opaque output size is not a CPU pixel count.
-- `crates/xrbox/src/main.rs`: native egui/eframe UI and GPU presentation.
 - `crates/xrbox-core/src/auth.rs`: credential-store selection and console-only token acquisition.
 - `crates/xrbox-core/src/session.rs`: bounded commands, session ownership, cancellation, input and recovery.
-- `crates/xrbox-core/src/controller.rs` and desktop `navigation.rs`: shared physical sampling, menu/game input
+- `crates/xrbox-core/src/controller.rs` and `xr/scripts/`: shared physical sampling, menu/game input
   routing, spatial focus and controller repeat. After stream-menu resume, only
   View/Menu wait for release; other gameplay input must resume immediately.
   Select/View and Start/Menu are deferred bindings: never forward their raw
@@ -81,13 +75,8 @@ crates/xrbox/Cargo.toml; do not infer it from old examples or an existing app bu
 - `crates/xrbox-core/src/config.rs`: validated non-secret settings and atomic persistence; credentials
   never belong in settings.json. Apply live input/audio/hotkeys without cancelling
   auth jobs; resolution changes apply on the next connection.
-- `settings_ui.rs`: controller-navigable draft editor, chord capture and background
-  saves. Apply only after a successful save; preserve cancellation/error handling.
-- `toolbar.rs`: compact vector-glyph header actions. Reserve fixed hit rectangles,
-  keep controller focus/accessibility labels, and wrap rather than overlap at
-  narrow widths. Do not reuse large content-tile sizing for header buttons.
-- `presentation.rs`: native fullscreen state and video fit geometry. Fullscreen
-  gameplay hides all informational panels/margins, but must retain menu/exit paths.
+- `xr/scripts/live_ui.gd`: controller-navigable sign-in, console selection and stream
+  menu. Full desktop settings/hotkey editing is not yet ported; do not claim parity.
 - `crates/xrbox-core/src/diagnostics.rs`: sanitized logging.
 - `vendor/openxcloud`: seven library crates pinned to the revision in
   vendor/README.md. Do not add the upstream cloud-oriented application crate.
@@ -130,14 +119,9 @@ FFmpeg with libx264/headers, CMake and pkg-config. Some tests bind localhost or
 require GPU access; distinguish sandbox restrictions from application failures.
 Do not disable assertions or weaken tests just to obtain passing results.
 
-`make smoke` opens the UI briefly without credentials. For isolated non-secret
-logs, prefix that command with an explicit temporary XRBOX_DATA_DIR.
-`make auth-probe` contacts Microsoft and discards the code; it does not authorize an
-account. When packaging is requested or needed, use `make package` for the ad-hoc
-signed macOS development bundle and `make package-release` for an optimized bundle.
-Neither installs the app. The packager can use an existing signing identity via
-`--sign-identity`; do not create certificates or modify Keychain trust automatically.
-Ad-hoc rebuilds may require renewed credential-access approval.
+`make xr-preview` opens only synthetic content on a development host. The retired
+standalone app's smoke/auth-probe/macOS package tasks no longer exist. Use
+`make xr-apk` only when Android packaging is needed; it never operates a device.
 
 ## Dependencies and repository changes
 
@@ -145,7 +129,7 @@ Dependabot configuration lives in .github/dependabot.yml: Cargo updates are chec
 daily at 09:00 America/New_York, with related graphics/WebRTC groups and at most
 five open version-update PRs. Keep schedule documentation consistent with the YAML.
 Do not auto-merge updates. Review API compatibility, enabled features (including
-native clipboard support), hardware decode/import paths, native runtime libraries
+Godot/JNI compatibility), hardware decode/import paths, native runtime libraries
 and license compatibility; 0.x minor upgrades may be breaking changes.
 
 The pinned Rust toolchain and vendored OpenXCloud source revision require manual
@@ -183,8 +167,7 @@ Use GODOT as a command-local executable path; an authorized project-local Mac
 download may live under ignored .tools/. Never install tools automatically.
 Godot 4.7.2 and godot-rust 0.5.5/API 4.7 are pinned. A cross-target cargo check
 is not a linked library, exported app or device test. Host Godot previews never start auth/sessions; Android live mode does. Headless
-UI tests use fake state and suppress preference restoration. Preserve the desktop harness and test its extracted
-core through `make test` / `make check` when touching shared logic.
+UI tests use fake state and suppress preference restoration. Test the shared core through `make test` / `make check` when touching shared logic.
 
 `make xr-apk` builds/signs/verifies the Quest 3S prototype using a project-local
 SDK/NDK and self-contained Godot. `make xr-apk-check` verifies an existing artifact.

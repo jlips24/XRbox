@@ -1,5 +1,15 @@
 # Roadmap and acceptance gates
 
+## Product scope update — November 12, 2026
+
+The standalone 2D desktop client and macOS .app packager are retired by user
+request. macOS remains a development host. Keep the engine-independent Rust core,
+Godot adapter and XR project in separate folders in this repository, with atomic
+interface/test changes. Earlier desktop harness instructions/results below are
+historical; current commands are in README.md and DEVELOPMENT.md. Headset targets
+remain Linux ARM64 and Android ARM64. Hardware acceptance is still pending.
+
+
 ## Immediate gate — November 12, 2026
 
 1. Test **0.1.10-xr.2** on Quest 3S against a real Xbox using [xr/ANDROID.md](xr/ANDROID.md):

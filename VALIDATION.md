@@ -1,5 +1,28 @@
 # Android live implementation validation — November 12, 2026
 
+## Desktop retirement checks — November 12, 2026
+
+- `make test`: **221 passed, zero failed, one ignored** (credential-store test).
+  Initial sandbox execution blocked six fake-HTTP localhost tests; rerun with
+  localhost access passed. No live account/console operations occurred.
+- `make check`: formatting and strict core/bridge Clippy passed.
+- `make xr-check`: host extension built/staged; four native bridge tests and
+  headless Godot scene/UI checks passed without credentials.
+- Four Android packaging helper tests passed; locked workspace metadata resolves
+  without the deleted desktop member. `make help` and diff whitespace checks pass.
+- No APK rebuild or device test was needed for removing the separate executable;
+  the previously verified xr.2 APK remains the hardware-test artifact.
+
+## Product scope update — November 12, 2026
+
+The standalone 2D desktop client and macOS .app packager are retired by user
+request. macOS remains a development host. Keep the engine-independent Rust core,
+Godot adapter and XR project in separate folders in this repository, with atomic
+interface/test changes. Earlier desktop harness instructions/results below are
+historical; current commands are in README.md and DEVELOPMENT.md. Headset targets
+remain Linux ARM64 and Android ARM64. Hardware acceptance is still pending.
+
+
 The following results concern build 0.1.10-xr.2 on macOS Apple Silicon. No real
 account authorization, stored credentials, Xbox, headset, physical controller or
 physical audio device was accessed. Host Godot tests suppress live startup.
