@@ -1,0 +1,21 @@
+; Godot 4.7.2, single shared Linux/Android project.
+config_version=5
+
+[application]
+config/name="XRBox XR Prototype"
+config/version="0.1.10"
+run/main_scene="res://scenes/main.tscn"
+
+[display]
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+
+[rendering]
+renderer/rendering_method="mobile"
+renderer/rendering_method.mobile="mobile"
+environment/defaults/default_clear_color=Color(0.0, 0.0, 0.0, 1.0)
+
+[xr]
+openxr/enabled=true
+shaders/enabled=true

@@ -1,0 +1,95 @@
+extends SceneTree
+
+var failures: int = 0
+
+func verify(condition: bool, message: String) -> void:
+	if not condition:
+		failures += 1
+		push_error(message)
+
+func _initialize() -> void:
+	call_deferred("run_tests")
+
+func press(action: StringName, scene: Node) -> void:
+	var event := InputEventAction.new()
+	event.action = action
+	event.pressed = true
+	scene._input(event)
+
+func run_tests() -> void:
+	var packed: PackedScene = load("res://scenes/main.tscn")
+	var scene = packed.instantiate()
+	root.add_child(scene)
+	await process_frame
+	verify(scene.runtime != null, "Native extension must load")
+	verify(scene.runtime.call("core_version") == "0.1.10", "Native core version mismatch")
+	verify(not String(scene.runtime.call("native_target")).is_empty(), "Target diagnostic missing")
+	verify(not scene.xr_running, "Headless checks must not initialize OpenXR")
+	verify(scene.menu_open and scene.focus_index == 0, "Initial menu focus")
+	press("ui_down", scene)
+	verify(scene.focus_index == 1, "Controller/keyboard down must advance focus")
+	press("ui_accept", scene)
+	verify(is_equal_approx(scene.settings.width, 2.6), "Accept must activate focused setting")
+	press("ui_cancel", scene)
+	verify(not scene.menu_open and not scene.menu_surface.visible, "Back must hide menu")
+	verify(scene.menu_viewport.render_target_update_mode == SubViewport.UPDATE_DISABLED, "Hidden menu must not redraw")
+	press("ui_down", scene)
+	verify(scene.focus_index == 1, "Hidden menu must not consume navigation")
+	press("ui_cancel", scene)
+	verify(scene.menu_open and scene.focus_index == 0, "Menu reopening restores safe focus")
+	press("ui_up", scene)
+	verify(scene.focus_index == scene.buttons.size() - 1, "Focus wraps predictably")
+	scene._select_focus(0)
+	var down := InputEventJoypadButton.new()
+	down.button_index = JOY_BUTTON_DPAD_DOWN
+	down.pressed = true
+	scene._input(down)
+	verify(scene.focus_index == 1, "Physical D-pad mapping")
+	var accept := InputEventJoypadButton.new()
+	accept.button_index = JOY_BUTTON_A
+	accept.pressed = true
+	var old_width: float = scene.settings.width
+	scene._input(accept)
+	verify(scene.settings.width > old_width, "Physical A mapping")
+	var back := InputEventJoypadButton.new()
+	back.button_index = JOY_BUTTON_B
+	back.pressed = true
+	scene._input(back)
+	verify(not scene.menu_open, "Physical B mapping")
+	var escape := InputEventKey.new()
+	escape.keycode = KEY_ESCAPE
+	escape.pressed = true
+	scene._input(escape)
+	verify(scene.menu_open, "Keyboard Escape mapping")
+	var guide := InputEventJoypadButton.new()
+	guide.button_index = JOY_BUTTON_GUIDE
+	guide.pressed = true
+	scene._input(guide)
+	verify(scene.menu_open and scene.focus_index == 0, "Physical Guide stays reserved to host")
+	scene.settings.adjust_width(100.0)
+	scene.settings.adjust_distance(-100.0)
+	verify(scene.settings.width == 5.0 and scene.settings.distance == 1.0, "Geometry bounds")
+	scene.settings.reset()
+	scene.camera.position = Vector3(1, 1.5, 0)
+	scene.camera.rotation = Vector3(0.3, 0.2, 0.1)
+	scene.recenter()
+	verify(is_equal_approx(scene.cinema.position.y, 1.5), "Recenter follows eye height")
+	verify(is_zero_approx(scene.cinema.rotation.x) and is_zero_approx(scene.cinema.rotation.z), "Screen stays level")
+	verify(is_equal_approx(scene.cinema.mesh.size.y, 1.35), "Screen preserves 16:9")
+	scene._notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
+	var before: int = scene.focus_index
+	press("ui_down", scene)
+	verify(scene.focus_index == before, "Unfocused input must be ignored")
+	scene._notification(Node.NOTIFICATION_APPLICATION_FOCUS_IN)
+	verify(scene.menu_open and scene.focus_index == 0, "Focus recovery returns to menu")
+	scene.queue_free()
+	await process_frame
+	# A second scene validates extension object teardown/recreation without auth or devices.
+	var second = packed.instantiate()
+	root.add_child(second)
+	await process_frame
+	verify(second.runtime != null, "Native object recreation")
+	second.queue_free()
+	await process_frame
+	print("XRBox Godot smoke: %s" % ("PASS" if failures == 0 else "FAIL (%d)" % failures))
+	quit(0 if failures == 0 else 1)

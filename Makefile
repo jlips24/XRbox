@@ -22,7 +22,11 @@ help:
 	  'make fixture         Generate the synthetic video fixture (FFmpeg/libx264)' \
 	  'make package         Build dist/XRBox.app in debug mode (macOS)' \
 	  'make package-release Build an optimized dist/XRBox.app (macOS)' \
-	  'make clean           Remove XRBox Cargo artifacts; retain dependency caches'
+	  'make clean           Remove XRBox Cargo artifacts; retain dependency caches' \
+	  'make xr-build        Build/stage the Godot native extension (ARGS for target/profile)' \
+	  'make xr-check        Build extension and run headless Godot regression checks' \
+	  'make xr-run          Run the XR foundation with OpenXR (no Xbox media yet)' \
+	  'make xr-preview      Run the synthetic scene without OpenXR'
 
 build:
 	$(CARGO) build --locked -p xrbox
@@ -69,3 +73,17 @@ package-release:
 
 clean:
 	$(CARGO) clean -p xrbox
+
+# Optional XR tools remain command-local; GODOT can be an absolute executable path.
+.PHONY: xr-build xr-check xr-run xr-preview
+xr-build:
+	$(PYTHON) scripts/godot.py build $(ARGS)
+
+xr-check: xr-build
+	$(PYTHON) scripts/godot.py check
+
+xr-run: xr-build
+	$(PYTHON) scripts/godot.py run
+
+xr-preview: xr-build
+	$(PYTHON) scripts/godot.py run --desktop

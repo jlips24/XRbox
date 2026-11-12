@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/xrbox", "crates/xrbox-core", "vendor/openxcloud/crates/xcloud-api", "vendor/openxcloud/crates/xcloud-proto", "vendor/openxcloud/crates/xcloud-webrtc", "vendor/openxcloud/crates/xcloud-stream", "vendor/openxcloud/crates/xcloud-media", "vendor/openxcloud/crates/xcloud-gpu", "vendor/openxcloud/crates/xcloud-input"]
+members = ["crates/xrbox", "crates/xrbox-core", "crates/xrbox-godot", "vendor/openxcloud/crates/xcloud-api", "vendor/openxcloud/crates/xcloud-proto", "vendor/openxcloud/crates/xcloud-webrtc", "vendor/openxcloud/crates/xcloud-stream", "vendor/openxcloud/crates/xcloud-media", "vendor/openxcloud/crates/xcloud-gpu", "vendor/openxcloud/crates/xcloud-input"]
 default-members = ["crates/xrbox"]
 
 [workspace.package]

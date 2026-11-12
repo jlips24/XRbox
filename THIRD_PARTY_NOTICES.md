@@ -42,3 +42,14 @@ System frameworks and system fonts are loaded from the operating system.
 This source attribution file is not a complete binary dependency licence bundle.
 Generate and review that bundle against the exact release artifacts before shipping,
 including native runtime libraries and transitive Rust dependency notices.
+
+## Godot XR frontend
+
+The optional XR frontend uses Godot Engine (MIT) and godot-rust 0.5.5 (MPL-2.0).
+Godot's engine and third-party notices must accompany exported builds; see
+https://godotengine.org/license/ and https://godotengine.org/license/thirdparty/.
+The binding source and license are available at https://github.com/godot-rust/gdext.
+Preserve the MPL notices/source obligations for binding files and modifications;
+XRBox code remains GPL-3.0-only. No binding source modifications are included here.
+Cargo.lock records transitive versions; review their actual license files with the
+exported artifact before distribution. No Godot binary/export is committed.
