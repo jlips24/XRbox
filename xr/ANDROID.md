@@ -1,62 +1,63 @@
-# Meta Quest 3S development APK
+# Meta Quest 3S Remote Play development APK
 
-Build **0.1.10-xr.1**, package **org.xrbox.prototype**, version code **11001**.
-This is the Godot **synthetic XR screen/menu prototype**. It does not sign in,
-connect to an Xbox, stream games or play audio. Linux remains a product target;
-Quest 3S is the first available headset for on-device validation while Frame ships.
+Build **0.1.10-xr.2**, package **org.xrbox.prototype**, version code **11002**.
+The APK now includes Xbox console Remote Play: supported Microsoft device-code
+sign-in, console discovery, native WebRTC, MediaCodec video, Opus/CPAL audio and
+Bluetooth gamepad input. These paths build successfully but **have not been run
+on a headset or against a console**. No PC or relay service is part of runtime.
 
-## Install and test the provided APK
+## Install and test
 
-The output is dist/xr/android/XRBox-0.1.10-xr.1-quest-debug.apk, with a SHA256 sidecar.
-No headset has been installed/launched by the build tools. The APK is signed with
-a local development key, not a production/store key.
-
-1. Enable developer mode for your Quest account/headset through Meta's supported
-   developer setup, then connect the Quest 3S by USB. Accept USB debugging inside
-   the headset. No PC is needed after installation.
-2. Pair your **Bluetooth Xbox controller** with the Quest. This prototype uses
-   Android gamepad input; Touch motion-controller/hand UI is not implemented.
-3. From the repository root, install manually with your existing adb:
+1. Enable Xbox Remote Features through the console's supported settings, keep the
+   console awake for this first test, and put both devices on the same LAN.
+   Start a game or moving console screen so a frozen image is easy to recognize.
+2. Enable Quest developer mode and USB debugging using Meta's supported setup.
+   Pair a Bluetooth Xbox controller. Touch controllers/hand interaction are not
+   implemented. Install manually from the repository root:
 
    ```sh
-   adb install -r dist/xr/android/XRBox-0.1.10-xr.1-quest-debug.apk
+   adb install -r dist/xr/android/XRBox-0.1.10-xr.2-quest-debug.apk
    ```
 
-4. Open **XRBox XR Prototype** from the headset's **Unknown Sources** library.
-   Alternatively launch its exported alias manually:
+3. Launch **XRBox XR Prototype** from **Unknown Sources**. Confirm build xr.2,
+   android/aarch64 and **OpenXR active**; confirm stereo and head tracking.
+4. Select **Sign in**, copy the displayed code or enter it on another device at
+   the displayed Microsoft verification URL. The browser action is optional;
+   return to XRBox after approval. Never share codes or tokens in a bug report.
+   Remember sign-in defaults on; choose session-only before starting if desired.
+5. Select your discovered console, then connect. Console lists paginate when
+   needed. Confirm the picture actually moves, audio is audible, and stick,
+   D-pad, face-button and trigger input reaches the console.
+6. Select/View and Start/Menu are deferred until the first is released. Their
+   pair sends virtual Guide; pair + LB + RB opens XRBox's menu. Check that the
+   pair does not also press the individual buttons. Physical Guide stays reserved
+   to the headset. B remains gameplay input while streaming; use the chord for
+   the local menu. Resume should restore held gameplay input immediately while
+   only View/Menu wait for release.
+7. Test screen width/distance, recenter and vertical flip if necessary. Screen
+   controls are session-only. Inspect status counters for assembly, decoding,
+   decoder errors, GPU imports, audio and drops, plus codec/status and route.
+   Network traffic, decoded counts and GPU imports alone do not prove presentation.
+8. Disconnect, reconnect and quit. Opening a system menu, losing XR focus or
+   removing the headset disconnects active media; reconnect manually on return.
+   Browser sign-in polling can continue when no media session is active. Unplug
+   the controller during gameplay and verify input neutralizes before reconnect.
+9. Relaunch to check remembered sign-in and console discovery, then confirm
+   sign-out removes remembered credentials. Android Keystore persistence and
+   rotation still need this device test; no agent has read the credential store.
 
-   ```sh
-   adb shell am start -n org.xrbox.prototype/com.godot.game.GodotAppLauncher
-   ```
-
-5. Confirm the displayed build is **0.1.10-xr.1**, native target is **android /
-   aarch64**, and status says **OpenXR active**. A flat window or fallback label
-   does not pass XR acceptance. Confirm stereo and head tracking in the headset.
-6. Use D-pad to navigate, A to select and B to hide/show the menu. Test width,
-   distance, reset and recenter. Select + Start + LB + RB also opens the menu.
-   Verify the screen stays still as your head moves, begins at eye height, and
-   recenter works when seated and after turning. Settings are session-only.
-7. Test removing/replacing the headset, opening/closing the system menu and
-   disconnecting/reconnecting the Xbox controller. Quit and reopen the app.
-   Report any misplaced screen, clipped menu, unresponsive control or crash.
-
-Keep Meta's physical system buttons reserved. A keyboard can navigate the desktop
-preview; this APK does not add touch/pointer picking. No passthrough, decoder,
-stream performance, battery or zero-copy claim follows from this test.
-
-If launch fails, capture only the app's process logs rather than an entire device
-log (which can contain unrelated account/app data):
+Report build, Quest OS version, XR startup, whether video moves, audio/controller
+results, stage counters and any visible error. For app-only logs:
 
 ```sh
 adb shell pidof org.xrbox.prototype
-# Substitute the reported PID:
+# Substitute that PID; do not clear all device logs:
 adb logcat --pid=12345 -v threadtime
 ```
 
-If the process dies before you can capture it, report the crash symptom and we
-will choose a targeted capture. Do not clear all device logs or change system
-settings to debug this prototype. Report headset OS version, build label, whether
-XR loaded, controller behavior and a screenshot/photo if practical.
+Review logs before sharing; do not include auth codes, tokens, raw SDP or addresses.
+If the process crashes before capture, report the symptom for targeted follow-up.
+No headset is polled, installed or launched by our build commands.
 
 ## Rebuild on this Mac
 
@@ -127,20 +128,31 @@ The upstream plugin dependency may be downloaded automatically to the ignored
 cache, but is checksum-verified; unmanaged addon directories are not overwritten.
 No source changes to the vendor plugin are made.
 
-## Known boundary
+## Implemented pipeline and remaining boundary
 
-Signature/manifest/native checks and host Godot tests pass. **Quest installation,
-Android native loading, XR output and physical input have not been tested yet.**
-The first tracked pose triggers one initial recenter; subsequent head motion does
-not move the screen. This behavior has headless regression coverage, and needs
-headset confirmation. Android pause/physical input and OpenXR focus transitions
-also remain manual checks before any live stream integration.
+The existing console-only Rust session owner runs off the UI thread. Android
+uses a named hardware H.264 MediaCodec, PRIVATE ImageReader buffers and EGLImage
+import into a Godot external OES texture on the render thread. Frame leases are
+retained through GPU fences; the bounded retirement queue waits if exhausted.
+There is no deliberate CPU pixel readback. Driver copies, color/crop correctness,
+frame pacing, latency, thermal behavior and battery consumption remain unmeasured.
+No software-decoder fallback silently replaces unavailable hardware support.
 
-Only a debug APK is produced. Full release signing, store submission, exhaustive
-license/source bundling, other-headset compatibility, MediaCodec video and secure
-Android Xbox credentials remain later milestones. Primary references:
+Only refresh credentials are AES-GCM sealed with an Android Keystore key; encrypted
+blobs/IVs are in app-private preferences. Access/stream/transfer tokens stay in
+memory. Storage errors are visible. Android HTTPS uses pinned Mozilla trust roots
+with normal TLS verification, not a Java verifier adapter or a trust bypass.
+Audio reuses upstream Opus and CPAL's Android backend; synchronization, routing and
+physical playback are unverified. No microphone/camera/location permission is used.
 
-- [Godot Android export](https://docs.godotengine.org/en/stable/tutorials/export/exporting_for_android.html)
-- [Godot Android OpenXR](https://docs.godotengine.org/en/stable/tutorials/xr/deploying_to_android.html)
-- [Pinned Meta exporter source](https://github.com/GodotVR/godot_openxr_vendors/blob/5.1.0-stable/plugin/src/main/cpp/export/meta_export_plugin.cpp)
-- [Meta developer setup](https://developers.meta.com/horizon/documentation/native/android/mobile-device-setup/)
+Static package checks and host tests do not establish native startup, successful
+sign-in, Xbox playback, hardware decoding, zero-copy or XR output. Full settings,
+custom hotkey editing in XR, haptics, passthrough, release signing/store submission
+and other-headset qualification are later work. Linux Godot streaming is not yet
+enabled; the native desktop harness remains available. Linux decoding/import and
+Flatpak permissions need independent implementation and validation.
+
+Primary references: [Godot ExternalTexture](https://docs.godotengine.org/en/stable/classes/class_externaltexture.html),
+[Android MediaCodec](https://developer.android.com/reference/android/media/MediaCodec),
+[Android Keystore](https://developer.android.com/privacy-and-security/keystore),
+[Godot Android OpenXR](https://docs.godotengine.org/en/stable/tutorials/xr/deploying_to_android.html).

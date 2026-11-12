@@ -1,5 +1,17 @@
 # XRBox implementation plan
 
+## Current progress — November 12, 2026
+
+Android **0.1.10-xr.2** now implements Godot console Remote Play: sign-in/discovery,
+Keystore refresh persistence, native WebRTC, MediaCodec/EGL video, Opus/CPAL audio
+and shared controller shortcuts. The user requested streaming before first headset
+testing, bringing Android media adapters forward. Build/tests pass; **real headset,
+console and battery acceptance remain pending**. Linux Godot streaming and Flatpak
+still need their own adapters/qualification. The desktop harness is preserved.
+See [ARCHITECTURE.md](ARCHITECTURE.md), [VALIDATION.md](VALIDATION.md) and the exact
+[Quest test procedure](xr/ANDROID.md). Earlier progress below is historical.
+
+
 Updated: November 11, 2026. Current source: **0.1.10**.
 
 The detailed Godot implementation/build sequence is in [XR_PLAN.md](XR_PLAN.md).

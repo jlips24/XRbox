@@ -1,3 +1,29 @@
+# Android live implementation validation — November 12, 2026
+
+The following results concern build 0.1.10-xr.2 on macOS Apple Silicon. No real
+account authorization, stored credentials, Xbox, headset, physical controller or
+physical audio device was accessed. Host Godot tests suppress live startup.
+
+- Full workspace/all-feature serial tests: **564 passed, zero failed, two ignored**
+  (OS credential access and physical audio). Includes opaque-surface output policy,
+  input mapping/reconnect neutralization and GPU lease retirement ordering.
+- Full workspace/all-target/all-feature strict Clippy and formatting: passed.
+- Android-specific strict Clippy for the bridge, core and affected upstream
+  API/input/media crates: passed with the NDK ARM64 toolchain.
+- `make xr-check`: passed, including four Rust bridge tests and fake-state Godot
+  menus, pagination, long diagnostics/code layout, gameplay B and shutdown.
+- Four Python packaging regression tests and Python compilation: passed.
+- `make xr-apk`: passed; signature, ARM64-only libraries, 16 KiB alignment,
+  one XR loader, Java/JNI bootstrap, Internet permission and key exclusion verified.
+  APK size **108,496,044 bytes**; SHA256
+  `6e9bd35d001f78224331d313335d68283d39ddc1a2b29e1bf76eb79a767bcd5a`.
+  These checks establish build correctness, not successful device playback.
+
+Manual acceptance is in [xr/ANDROID.md](xr/ANDROID.md). Confirm each stage separately:
+auth/discovery, media assembly, actual hardware decode, visible moving XR video,
+audible audio, game controls and lifecycle/persistence. Direct LAN behavior,
+zero-copy, frame pacing, latency and battery remain unverified.
+
 # Executed validation — November 11, 2026
 
 Environment: macOS ARM64 (Apple Silicon), project-pinned Rust 1.99.1.

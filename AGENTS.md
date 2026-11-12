@@ -21,11 +21,12 @@ Rust streaming core embedded through an in-process GDExtension. Do not revert to
 handwritten native OpenXR product frontend by default. The Godot synthetic
 scene/native extension now live in `xr/` and
 `crates/xrbox-godot`. Desktop services are extracted into `xrbox-core` behind
-`desktop-session`; the extension deliberately excludes that feature. Linux is
+`desktop-session`; the Android extension enables the shared `session` feature. Host Godot previews remain synthetic. Linux is
 the first deployment target; Android remains a separate ABI. Follow XR_PLAN.md
-and xr/README.md: no live Godot media, headset execution, Android media/auth
-adapters or Flatpak bundle have been validated. A Quest 3S debug APK now builds
-and passes package checks; installation and XR/controller acceptance are manual. Do not migrate the full UI before
+and xr/README.md: Android live auth/media adapters are implemented but no headset execution, real
+Godot playback, Android secure-store behavior or Flatpak bundle has been validated.
+Quest 3S build 0.1.10-xr.2 includes streaming and passes package checks;
+installation, sign-in, XR/video/audio/controller acceptance remain manual. Do not migrate the full UI before
 the device/decoder gates. Prefer
 implemented behavior and current validation evidence over older planning assumptions. Read the application version from
 crates/xrbox/Cargo.toml; do not infer it from old examples or an existing app bundle.
@@ -52,8 +53,15 @@ crates/xrbox/Cargo.toml; do not infer it from old examples or an existing app bu
 ## Code boundaries
 
 - `xr/`: Godot scene/input prototype and synthetic engine tests.
-- `crates/xrbox-godot`: in-process extension; no engine calls from workers or
-  speculative streaming commands. Keep Android free of desktop dependencies.
+- `crates/xrbox-godot`: in-process extension; no engine calls from session/decoder workers. Android video uses a documented
+  render-thread callback, external OES texture and fenced AImage leases. Keep Android
+  free of FFmpeg/gilrs/desktop credential dependencies. `android_video.rs` owns EGL
+  import; `input.rs` maps Godot samples with sticky disconnect neutralization.
+- `crates/xrbox-core/src/android.rs` and `xr/android-src/`: JNI bootstrap, Android
+  Keystore sealed refresh persistence and hardware codec selection. Never read
+  live stored credentials during development checks.
+- `vendor/openxcloud/crates/xcloud-media/src/android.rs`: bounded MediaCodec /
+  PRIVATE ImageReader hardware buffers; opaque output size is not a CPU pixel count.
 - `crates/xrbox/src/main.rs`: native egui/eframe UI and GPU presentation.
 - `crates/xrbox-core/src/auth.rs`: credential-store selection and console-only token acquisition.
 - `crates/xrbox-core/src/session.rs`: bounded commands, session ownership, cancellation, input and recovery.
@@ -174,8 +182,8 @@ retest steps, then stop for the user's results. Do not fabricate benchmarks.
 Use GODOT as a command-local executable path; an authorized project-local Mac
 download may live under ignored .tools/. Never install tools automatically.
 Godot 4.7.2 and godot-rust 0.5.5/API 4.7 are pinned. A cross-target cargo check
-is not a linked library, exported app or device test. No auth/session startup
-occurs in this frontend. Preserve the desktop harness and test its extracted
+is not a linked library, exported app or device test. Host Godot previews never start auth/sessions; Android live mode does. Headless
+UI tests use fake state and suppress preference restoration. Preserve the desktop harness and test its extracted
 core through `make test` / `make check` when touching shared logic.
 
 `make xr-apk` builds/signs/verifies the Quest 3S prototype using a project-local

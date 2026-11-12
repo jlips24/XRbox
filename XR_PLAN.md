@@ -1,5 +1,16 @@
 # XRBox Godot XR build plan
 
+## Current progress — November 12, 2026
+
+M3/M4 Android implementation is now present in **0.1.10-xr.2**: native auth/session,
+Keystore refresh persistence, MediaCodec PRIVATE images imported as external OES
+textures, audio and shared deferred shortcuts. These milestones remain **pending
+hardware acceptance**, not complete. The user requested streaming before first
+Quest testing; follow [xr/ANDROID.md](xr/ANDROID.md) next. Linux media/Flatpak and
+battery gates remain open. Host Godot previews remain synthetic. Architecture and
+ownership details are in [ARCHITECTURE.md](ARCHITECTURE.md).
+
+
 Updated: November 11, 2026. Planning baseline: desktop source **0.1.10**.
 
 This is the execution plan for the selected Godot frontend. [Plan.md](Plan.md)
@@ -8,7 +19,7 @@ describes the implemented desktop code. Everything below is proposed unless
 explicitly marked as current. The original plan created no runtime components; the progress section below
 records subsequent implementation. Headset and APK validation remain pending.
 
-## Implementation progress — Linux first
+## Earlier foundation progress — November 11 (superseded by update above)
 
 Implemented in this iteration: engine-neutral Notify and shared xrbox-core consumed
 by the desktop app; godot-rust 0.5.5/API 4.7 extension; Godot 4.7.2 synthetic cinema

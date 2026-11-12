@@ -1,5 +1,21 @@
 # Development and validation
 
+## Android live build — November 12, 2026
+
+`make xr-apk` builds/signs/verifies **0.1.10-xr.2** using local tools; it never
+installs or launches on a headset. `make xr-apk-check` verifies the existing APK.
+See [xr/ANDROID.md](xr/ANDROID.md) for prerequisites, manual console testing and
+known limits. `make xr-check` runs native bridge tests plus fake-state headless
+Godot scene/UI checks without credentials. Host previews stay synthetic; live
+streaming is Android-only in Godot for now. Desktop streaming is preserved.
+
+Android requires a linked NDK toolchain, not just a Rust target. The packager sets
+`ANDROID_NDK_HOME`, target compiler/linker and CMake ABI locally so Opus builds for
+ARM64. It patches only the pinned generated Godot Activity bootstrap and stages
+tracked `xr/android-src` platform services. Never change global editor settings,
+install tools automatically, or use production keys. Device acceptance is pending.
+
+
 Builds use the project-pinned Rust 1.99.1. Do not change PATH, global toolchain,
 shell settings, default browser, system services, or OS defaults for this project.
 Build caches can be selected per command using CARGO_TARGET_DIR; no export or

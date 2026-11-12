@@ -1,5 +1,20 @@
 # Roadmap and acceptance gates
 
+## Immediate gate — November 12, 2026
+
+1. Test **0.1.10-xr.2** on Quest 3S against a real Xbox using [xr/ANDROID.md](xr/ANDROID.md):
+   startup, sign-in/persistence, moving video, audio, controller shortcuts and lifecycle.
+2. Fix observed device issues before adding settings, passthrough or environments.
+3. Measure decoder/import/presentation timing, power and thermal behavior; avoid
+   claiming latency or zero-copy from counters alone.
+4. Implement/qualify Linux ARM64 hardware decoding/import on Frame, then Flatpak
+   runtime permissions and packaging. Preserve the working desktop harness.
+5. Port validated settings/custom hotkey editing and qualify other Android headsets.
+
+Android live paths now build but have no hardware acceptance. Earlier items below
+remain subject to those device gates.
+
+
 The detailed current plan is [Plan.md](Plan.md). The selected XR frontend is
 **Godot with the existing Rust streaming core through an in-process GDExtension**.
 Two headset deliverables are required: **Steam Frame Linux ARM64** and an

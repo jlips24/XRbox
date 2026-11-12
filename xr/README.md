@@ -1,9 +1,9 @@
 # XRBox Godot foundation
 
 Linux first; one shared Godot project with separate native Linux and Android ABIs.
-This is a **synthetic cinema-screen prototype**, not a Godot Xbox player yet.
-No network, account restoration, stored credentials, audio devices or Xbox session
-is used by this frontend. The existing desktop client remains the streaming client.
+Android now has an implemented live Remote Play path; device acceptance is pending.
+Host/Linux previews remain synthetic and never start authentication. The existing
+desktop client remains the validated streaming harness.
 
 Implemented: in-process Rust GDExtension version/target diagnostics, optional OpenXR
 initialization with labeled desktop fallback, an unshaded test-pattern screen,
@@ -77,7 +77,7 @@ mkdir -p dist/xr/linux-arm64
 /absolute/path/to/godot --headless --path xr --export-release 'Linux ARM64'
 ```
 
-The native library is deliberately media-free for this gate. Deployment must
+The Linux live decoder/import adapter is not enabled for this gate. Deployment must
 include the exported executable, PCK and generated native-library dependencies;
 do not copy only the executable. The export has not been built/verified here.
 Use Valve's supported developer deployment workflow; no automatic headset install.
@@ -105,10 +105,10 @@ make xr-apk         # build/sign/verify, no device install
 make xr-apk-check   # verify the existing APK
 ```
 
-This APK still contains only synthetic content and the native identity bridge.
-Desktop session dependencies remain excluded. No Xbox authentication, streaming,
-MediaCodec/audio or Android credential adapter is connected. An APK signature
-or ARM64 ELF check is not proof of successful Android native loading or XR output.
+The Android build includes native console authentication/discovery, WebRTC,
+MediaCodec-to-EGL video, Opus/CPAL audio and shared deferred controller shortcuts.
+See ANDROID.md for the exact hardware test. The host remains synthetic. No real
+account, console or headset was accessed while implementing this build.
 
 ## Validation scope
 

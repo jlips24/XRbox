@@ -1,5 +1,39 @@
 # XRBox architecture
 
+## Android live implementation — November 12, 2026
+
+Build **0.1.10-xr.2** now includes the first live Android Godot Remote Play path.
+This is implemented/build-tested, **not headset or console validated**. The user
+requested streaming before the first Quest test, so Android adapters were brought
+forward; Linux remains a product target and needs its own decoder/import work.
+
+Godot calls the in-process Rust `Session` through bounded commands. Microsoft
+device-code sign-in, secure refresh persistence, discovery and console-only
+negotiation reuse the existing core. Godot UI exposes sign-in/copy/browser,
+console selection, disconnect/resume and screen controls. No relay or browser
+runtime is introduced. Host/Linux Godot previews remain synthetic.
+
+Android startup initializes JNI/CPAL using application context, selects a named
+hardware AVC codec, and seals refresh credentials with Android Keystore AES-GCM.
+Temporary tokens stay in memory. Android HTTPS uses standard validated TLS with
+pinned Mozilla roots. Storage/decoder/import failures surface instead of silently
+switching to plaintext credentials or CPU decoding.
+
+MediaCodec outputs PRIVATE ImageReader images. Latest-frame native leases pass to
+the render thread for AHardwareBuffer → EGLImage → external OES texture import.
+Leases remain alive through GPU fences; bounded retirement may wait when full.
+There is no deliberate CPU pixel readback, but actual driver copies, color/crop,
+latency, pacing and energy cost require device measurements. Audio uses upstream
+Opus/CPAL. Godot gamepad samples feed the existing deferred shortcut recognizer;
+physical Guide remains host-reserved. Focus loss disconnects active streaming.
+
+Next gate: follow [xr/ANDROID.md](xr/ANDROID.md) on Quest 3S with a real Xbox.
+Validate actual moving video, audio, controls, storage, lifecycle and XR separately.
+Do not infer successful presentation from packet, decode or GPU import counters.
+Full XR settings/hotkey editor, passthrough, Linux hardware media, Flatpak and
+battery optimization remain later work. No hardware performance claims are made.
+
+
 One native process, one window, one active Xbox home session. `crates/xrbox`
 contains the desktop frontend; `crates/xrbox-core` contains shared auth, settings,
 controller routing, session ownership and media wiring. Seven pinned OpenXCloud library crates supply the
