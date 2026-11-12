@@ -40,14 +40,14 @@ auth-probe:
 	$(CARGO) run --locked -p xrbox -- --auth-probe
 
 test:
-	$(CARGO) test --locked -p xrbox -p xcloud-api -p xcloud-stream -p xcloud-input -- --test-threads=1
+	$(CARGO) test --locked -p xrbox -p xrbox-core -p xcloud-api -p xcloud-stream -p xcloud-input -- --test-threads=1
 
 test-all: fixture
 	$(CARGO) test --locked --workspace --all-targets --all-features -- --test-threads=1
 
 check:
 	$(CARGO) fmt --all -- --check
-	$(CARGO) clippy --locked -p xrbox --all-targets -- -D warnings
+	$(CARGO) clippy --locked -p xrbox -p xrbox-core --all-targets -- -D warnings
 
 check-all: fixture
 	$(CARGO) fmt --all -- --check

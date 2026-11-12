@@ -45,9 +45,9 @@ crates/xrbox/Cargo.toml; do not infer it from old examples or an existing app bu
 ## Code boundaries
 
 - `crates/xrbox/src/main.rs`: native egui/eframe UI and GPU presentation.
-- `auth.rs`: credential-store selection and console-only token acquisition.
-- `session.rs`: bounded commands, session ownership, cancellation, input and recovery.
-- `controller.rs` and `navigation.rs`: shared physical sampling, menu/game input
+- `crates/xrbox-core/src/auth.rs`: credential-store selection and console-only token acquisition.
+- `crates/xrbox-core/src/session.rs`: bounded commands, session ownership, cancellation, input and recovery.
+- `crates/xrbox-core/src/controller.rs` and desktop `navigation.rs`: shared physical sampling, menu/game input
   routing, spatial focus and controller repeat. After stream-menu resume, only
   View/Menu wait for release; other gameplay input must resume immediately.
   Select/View and Start/Menu are deferred bindings: never forward their raw
@@ -59,8 +59,8 @@ crates/xrbox/Cargo.toml; do not infer it from old examples or an existing app bu
   and cancellation on focus loss/disconnect; do not enable system-gesture capture.
   Reveal a selected tile only on focus change; idle hover must not recenter the
   page. Keep the version footer outside scrollable content.
-- `media.rs`: upstream RTP/decoder/audio wiring and stage counters.
-- `config.rs`: validated non-secret settings and atomic persistence; credentials
+- `crates/xrbox-core/src/media.rs`: upstream RTP/decoder/audio wiring and stage counters.
+- `crates/xrbox-core/src/config.rs`: validated non-secret settings and atomic persistence; credentials
   never belong in settings.json. Apply live input/audio/hotkeys without cancelling
   auth jobs; resolution changes apply on the next connection.
 - `settings_ui.rs`: controller-navigable draft editor, chord capture and background
@@ -70,7 +70,7 @@ crates/xrbox/Cargo.toml; do not infer it from old examples or an existing app bu
   narrow widths. Do not reuse large content-tile sizing for header buttons.
 - `presentation.rs`: native fullscreen state and video fit geometry. Fullscreen
   gameplay hides all informational panels/margins, but must retain menu/exit paths.
-- `diagnostics.rs`: sanitized logging.
+- `crates/xrbox-core/src/diagnostics.rs`: sanitized logging.
 - `vendor/openxcloud`: seven library crates pinned to the revision in
   vendor/README.md. Do not add the upstream cloud-oriented application crate.
 

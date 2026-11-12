@@ -83,7 +83,7 @@ struct Active {
     next_recovery: Instant,
 }
 impl Session {
-    pub fn new(ctx: egui::Context, native_controller: bool) -> Self {
+    pub fn new(ctx: crate::Notify, native_controller: bool) -> Self {
         let (tx, rx) = mpsc::channel(16);
         let state = Arc::new(Mutex::new(Snapshot {
             status: "Sign in to discover your Xbox".into(),
@@ -124,11 +124,11 @@ impl Session {
         }
     }
 }
-fn status(state: &Mutex<Snapshot>, ctx: &egui::Context, message: impl Into<String>) {
+fn status(state: &Mutex<Snapshot>, ctx: &crate::Notify, message: impl Into<String>) {
     let message = message.into();
     tracing::info!(target: "xrbox", stage = %message);
     state.lock().status = message;
-    ctx.request_repaint();
+    ctx.notify();
 }
 async fn cancel(job: &mut Option<tokio::task::JoinHandle<anyhow::Result<Outcome>>>) {
     if let Some(job) = job.take() {
@@ -153,7 +153,7 @@ async fn run(
     state: Arc<Mutex<Snapshot>>,
     video: Video,
     focused: Arc<AtomicBool>,
-    ctx: egui::Context,
+    ctx: crate::Notify,
     controller: crate::controller::Controller,
     native_controller: bool,
 ) {
@@ -254,7 +254,7 @@ async fn run(
                         job = Some(tokio::spawn(async move {
                             let code = auth.request_device_code().await?;
                             s.lock().code = Some((code.user_code.clone(), code.verification_uri.clone()));
-                            c.request_repaint();
+                            c.notify();
                             auth.poll_for_msa_token(
                                 &code.device_code,
                                 code.interval.max(1) as u64,
@@ -348,7 +348,7 @@ async fn run(
                         "Background operation stopped unexpectedly; retry",
                     ),
                 }
-                ctx.request_repaint();
+                ctx.notify();
             }
             _ = menu_ticker.tick(), if active.is_none() => {
                 controller.set_menu(false);
@@ -494,7 +494,7 @@ async fn run(
                     s.active = false;
                     s.audio_playing = false;
                     s.controller.clear();
-                    ctx.request_repaint();
+                    ctx.notify();
                 }
             }
         }
@@ -505,7 +505,7 @@ async fn run(
 fn build_active(
     api: Arc<XCloudApiClient>,
     auth: Arc<MicrosoftAuthService>,
-    ctx: egui::Context,
+    ctx: crate::Notify,
     id: &str,
     lpt: &str,
     controller: &crate::controller::Controller,
@@ -558,7 +558,7 @@ mod tests {
     }
     #[test]
     fn invalid_console_disconnect_and_shutdown_do_not_start_media() {
-        let mut session = Session::new(egui::Context::default(), false);
+        let mut session = Session::new(crate::Notify::default(), false);
         session.send(Command::Connect("not-discovered".into()));
         session.send(Command::Disconnect);
         session.shutdown();
@@ -649,7 +649,7 @@ mod configure_tests {
             ..Default::default()
         }));
         let controller = crate::controller::Controller::default();
-        let ctx = egui::Context::default();
+        let ctx = crate::Notify::default();
         run(
             rx,
             state.clone(),

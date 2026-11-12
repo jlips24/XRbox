@@ -54,7 +54,7 @@ impl Controller {
         streaming: bool,
         focused: bool,
         now: Duration,
-        ctx: &egui::Context,
+        ctx: &crate::Notify,
     ) {
         let next = sampler();
         let mut shared = self.state.lock();
@@ -72,7 +72,7 @@ impl Controller {
         shared.sample = next;
         // Gameplay input must not drive extra GPU/UI frames on top of video presentation.
         if (changed && (!streaming || self.menu())) || open {
-            ctx.request_repaint();
+            ctx.notify();
         }
     }
     pub fn stream_sampler(&self) -> Sampler {
@@ -415,7 +415,7 @@ mod tests {
                     xcloud_input::source::GamepadInputSource::new(controller.stream_sampler());
                 source.set_input_queue(Some(queue.clone()));
                 source.set_active(true);
-                let ctx = egui::Context::default();
+                let ctx = crate::Notify::default();
                 let mut packets = Vec::new();
                 for (buttons, time) in [
                     (B::NONE, 0),
@@ -468,7 +468,7 @@ mod tests {
             (true, true, false),
         ] {
             let controller = Controller::default();
-            let ctx = egui::Context::default();
+            let ctx = crate::Notify::default();
             for buttons in [B::NONE, APP_CHORD, B::NONE] {
                 let mut sampler: Sampler = Box::new(move || NativeGamepadSample {
                     connected,
@@ -533,7 +533,7 @@ mod tests {
     #[test]
     fn changing_bindings_cancels_pending_input_and_invalid_bindings_leave_current_mapping() {
         let controller = Controller::default();
-        let ctx = egui::Context::default();
+        let ctx = crate::Notify::default();
         let poll = |buttons: B, time| {
             let mut sampler: Sampler = Box::new(move || NativeGamepadSample {
                 connected: true,

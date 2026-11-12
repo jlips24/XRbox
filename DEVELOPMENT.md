@@ -9,8 +9,8 @@ persistent shell edit is needed. The Mac app needs CMake and the platform SDK.
 cargo build --locked -p xrbox
 cargo run --locked -p xrbox -- --smoke
 cargo run --locked -p xrbox -- --auth-probe
-cargo test --locked -p xrbox -p xcloud-api -p xcloud-stream -p xcloud-input -- --test-threads=1
-cargo clippy --locked -p xrbox --all-targets -- -D warnings
+cargo test --locked -p xrbox -p xrbox-core -p xcloud-api -p xcloud-stream -p xcloud-input -- --test-threads=1
+cargo clippy --locked -p xrbox -p xrbox-core --all-targets -- -D warnings
 cargo fmt --all -- --check
 ```
 

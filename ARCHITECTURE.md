@@ -1,7 +1,8 @@
 # XRBox architecture
 
 One native process, one window, one active Xbox home session. `crates/xrbox`
-contains the application; seven pinned OpenXCloud library crates supply the
+contains the desktop frontend; `crates/xrbox-core` contains shared auth, settings,
+controller routing, session ownership and media wiring. Seven pinned OpenXCloud library crates supply the
 protocol and media stack. No upstream cloud application UI is included.
 
 ```mermaid
@@ -286,3 +287,13 @@ MediaCodec surface path, secure TokenStore and lifecycle/input/audio adapters.
 These are future decisions, not current implementations. The desktop architecture
 above still describes the actual code. See Plan.md for progress, the renderer
 qualification, first Linux/APK prototype, staged acceptance and primary sources.
+
+## Engine-independent core extraction
+
+The desktop frontend now consumes `xrbox-core` with the opt-in `desktop-session`
+feature. `Notify` replaces egui contexts in session/media/controller workers; the
+desktop adapter supplies a repaint callback. State and native-frame mailboxes,
+protocol ownership, bounded queues and credential behavior are unchanged. Core
+code has no egui/wgpu dependency. Without `desktop-session`, the crate has no
+third-party dependencies; this permits Android extension bring-up without falsely
+claiming its desktop decoder/input/storage adapters work on Android.

@@ -1,11 +1,6 @@
-mod auth;
-mod config;
-mod controller;
-mod diagnostics;
-mod media;
+use xrbox_core::{auth, config, diagnostics, session};
 mod navigation;
 mod presentation;
-mod session;
 mod settings_ui;
 mod toolbar;
 
@@ -70,7 +65,13 @@ impl App {
                 }
             }
         };
-        let session = Session::new(cc.egui_ctx.clone(), !smoke);
+        let session = Session::new(
+            {
+                let ctx = cc.egui_ctx.clone();
+                xrbox_core::Notify::new(move || ctx.request_repaint())
+            },
+            !smoke,
+        );
         session.send(Command::Configure(settings.clone()));
         if smoke {
             // Synthetic only: exercise code layout without reading credentials or contacting Microsoft.

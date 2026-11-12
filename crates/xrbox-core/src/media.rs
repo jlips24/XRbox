@@ -71,7 +71,7 @@ pub struct Media {
 impl Media {
     pub fn attach(
         transport: &xcloud_webrtc::native::WebRtcTransport,
-        ctx: egui::Context,
+        ctx: crate::Notify,
         start_muted: bool,
     ) -> (
         Self,
@@ -82,7 +82,7 @@ impl Media {
         let counter = decoded.clone();
         let on_frame: xcloud_stream::decode_thread::FrameCallback = Box::new(move || {
             counter.fetch_add(1, Ordering::Relaxed);
-            ctx.request_repaint();
+            ctx.notify();
         });
         #[cfg(target_os = "macos")]
         let decode = DecodeThread::spawn(writer, Some(on_frame), |sink| {

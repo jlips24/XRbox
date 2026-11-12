@@ -6883,21 +6883,32 @@ name = "xrbox"
 version = "0.1.10"
 dependencies = [
  "anyhow",
- "chrono",
- "crossbeam-channel",
- "directories",
  "eframe",
  "egui",
  "open",
+ "tokio",
+ "wgpu",
+ "xcloud-gpu",
+ "xcloud-input",
+ "xcloud-proto",
+ "xrbox-core",
+]
+
+[[package]]
+name = "xrbox-core"
+version = "0.1.10"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "crossbeam-channel",
+ "directories",
  "parking_lot 0.13.0",
  "serde",
  "serde_json",
  "tokio",
  "tracing",
  "tracing-subscriber",
- "wgpu",
  "xcloud-api",
- "xcloud-gpu",
  "xcloud-input",
  "xcloud-media",
  "xcloud-proto",
