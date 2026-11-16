@@ -171,10 +171,11 @@ explicitly and still fail the suite. Verbose import logging helps investigate
 Linux editor aborts without weakening any assertions or suppressing errors.
 
 The Linux Test workflow installs GDB on its ephemeral runner and enables
-`XRBOX_GODOT_CRASH_BACKTRACE=1`. If a captured Godot process exits by signal,
-the helper reruns that phase under GDB (up to 120 seconds) and records all-thread
-backtraces and loaded libraries in `.tools/godot-<phase>-backtrace.log`. The
-debugger rerun has a separate engine log and never replaces the original failure.
-These logs are included in the existing validation artifact. A non-reproducing
-rerun or stripped engine symbols may limit the evidence; no crash fix is implied.
-Local commands do not enable the debugger or install it.
+`XRBOX_GODOT_CRASH_BACKTRACE=1`. The original headless import runs under GDB;
+there is no diagnostic rerun, which could miss a cold-import failure after caches
+have been populated. A debugger stop captures all-thread backtraces and loaded
+libraries and fails the stage. Normal inferior exit codes and engine error checks
+are preserved. Output is retained in `.tools/godot-import-backtrace.log` and the
+existing validation artifact. The debugger has a 180-second timeout. Stripped
+engine symbols or debugger timing effects may limit the evidence; no crash fix
+is implied. Local commands do not enable the debugger or install it.

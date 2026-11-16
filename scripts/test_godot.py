@@ -2,6 +2,8 @@
 from contextlib import redirect_stderr, redirect_stdout
 import io
 import subprocess
+import shutil
+import sys
 import tempfile
 from pathlib import Path
 import unittest
@@ -27,7 +29,8 @@ class GodotHelperTests(unittest.TestCase):
     def test_signal_exit_is_reported_without_obscuring_it_as_exit_250(self):
         result = subprocess.CompletedProcess(['godot'], -6, stdout='partial import diagnostics\n')
         output, errors = io.StringIO(), io.StringIO()
-        with patch.object(godot.subprocess, 'run', return_value=result), \
+        with patch.dict(godot.os.environ, {'XRBOX_GODOT_CRASH_BACKTRACE': '0'}), \
+                patch.object(godot.subprocess, 'run', return_value=result), \
                 redirect_stdout(output), redirect_stderr(errors), \
                 self.assertRaises(SystemExit) as stopped:
             godot.run(['godot', '--headless', '--import'], capture=True)
@@ -35,29 +38,58 @@ class GodotHelperTests(unittest.TestCase):
         self.assertIn('SIGABRT', errors.getvalue())
         self.assertIn('partial import diagnostics', output.getvalue())
 
-    def test_debugger_rerun_keeps_original_failure_and_import_log(self):
-        for debugger_result in [subprocess.CompletedProcess(['gdb'], 0),
-                                subprocess.TimeoutExpired(['gdb'], 120)]:
-            with self.subTest(debugger_result=debugger_result), tempfile.TemporaryDirectory() as directory:
+    def test_original_import_runs_once_under_debugger_and_preserves_status(self):
+        for status in (0, 1, 7):
+            with self.subTest(status=status), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 command = ['godot', '--log-file', str(root / 'godot-import.log'), '--headless', '--import']
-                crash = subprocess.CompletedProcess(command, -6, stdout='import output\n')
+                def debugger(arguments, **kwargs):
+                    self.assertEqual(arguments[0], 'gdb')
+                    self.assertEqual(arguments[arguments.index('--args') + 1:], command)
+                    script = Path(arguments[arguments.index('-x') + 1]).read_text()
+                    self.assertIn('thread apply all bt full', script)
+                    self.assertIn('info sharedlibrary', script)
+                    self.assertIn('quit $_exitcode', script)
+                    self.assertIn('quit 1', script)
+                    return subprocess.CompletedProcess(arguments, status, stdout='debugger evidence\n')
                 with patch.object(godot, 'ROOT', root), \
                         patch.object(godot.sys, 'platform', 'linux'), \
                         patch.dict(godot.os.environ, {'XRBOX_GODOT_CRASH_BACKTRACE': '1'}), \
-                        patch.object(godot.subprocess, 'run', side_effect=[crash, debugger_result]) as run, \
-                        redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()), \
-                        self.assertRaises(SystemExit) as stopped:
-                    godot.run(command, capture=True)
-                self.assertEqual(stopped.exception.code, 134)
-                debugger = run.call_args_list[1].args[0]
-                self.assertEqual(debugger[0], 'gdb')
-                self.assertIn('thread apply all bt full', debugger)
-                self.assertIn('info sharedlibrary', debugger)
-                self.assertIn(str(root / '.tools/godot-import-debugger-rerun.log'), debugger)
-                self.assertNotIn(str(root / 'godot-import.log'), debugger)
-                self.assertEqual(command[2], str(root / 'godot-import.log'))
-                self.assertTrue((root / '.tools/godot-import-backtrace.log').is_file())
+                        patch.object(godot.subprocess, 'run', side_effect=debugger) as run, \
+                        redirect_stdout(io.StringIO()):
+                    if status:
+                        with self.assertRaises(SystemExit) as stopped:
+                            godot.run(command, capture=True)
+                        self.assertEqual(stopped.exception.code, status)
+                    else:
+                        godot.run(command, capture=True)
+                run.assert_called_once()
+                self.assertEqual((root / '.tools/godot-import-backtrace.log').read_text(), 'debugger evidence\n')
+
+    def test_debugger_timeout_retains_partial_diagnostics(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with patch.object(godot, 'ROOT', root), \
+                    patch.object(godot.subprocess, 'run', side_effect=subprocess.TimeoutExpired(['gdb'], 180, output=b'partial stack')), \
+                    redirect_stdout(io.StringIO()), self.assertRaises(subprocess.TimeoutExpired):
+                godot.run_import_with_backtrace(['godot', '--import'])
+            self.assertIn('partial stack', (root / '.tools/godot-import-backtrace.log').read_text())
+
+    @unittest.skipUnless(sys.platform == 'linux' and shutil.which('gdb'), 'Linux GDB integration check')
+    def test_real_debugger_preserves_exit_and_captures_abort(self):
+        cases = [('import sys; sys.exit(0)', 0),
+                 ('import sys; sys.exit(7)', 7),
+                 ('import os; os.abort()', 1)]
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.object(godot, 'ROOT', Path(directory)), redirect_stdout(io.StringIO()):
+            for program, expected in cases:
+                with self.subTest(program=program):
+                    result = godot.run_import_with_backtrace([sys.executable, '-c', program])
+                    self.assertEqual(result.returncode, expected, result.stdout)
+                    if 'abort' in program:
+                        self.assertIn('SIGABRT', result.stdout)
+                        self.assertIn('#0', result.stdout)
+                        self.assertIn('Shared Object Library', result.stdout)
 
     def test_logged_engine_error_still_fails_even_with_exit_zero(self):
         result = subprocess.CompletedProcess(['godot'], 0, stdout='SCRIPT ERROR: synthetic failure\n')

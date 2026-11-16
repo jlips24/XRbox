@@ -19,47 +19,60 @@ TARGETS = {
 }
 
 
-def capture_crash_backtrace(command):
-    """Diagnostic rerun only; never replace the original failing exit status."""
-    if os.environ.get('XRBOX_GODOT_CRASH_BACKTRACE') != '1' or sys.platform != 'linux':
-        return
+# A normal inferior exit must preserve its status. A debugger stop (including a
+# fatal signal) must print the live stack and fail, never inherit GDB's default 0.
+GDB_COMMANDS = """set pagination off
+set confirm off
+set debuginfod enabled off
+run
+if $_isvoid($_exitcode)
+  thread apply all bt full
+  info sharedlibrary
+  quit 1
+else
+  quit $_exitcode
+end
+"""
+
+
+def run_import_with_backtrace(command):
+    """Debug the original cold import; rerunning may no longer reproduce it."""
     directory = ROOT / '.tools'
     directory.mkdir(exist_ok=True)
-    rerun = list(command)
-    phase = 'godot-crash'
-    if '--log-file' in rerun:
-        index = rerun.index('--log-file') + 1
-        phase = Path(rerun[index]).stem
-        rerun[index] = str(directory / (phase + '-debugger-rerun.log'))
-    path = directory / (phase + '-backtrace.log')
-    print(f'Diagnostic rerun under GDB (original failure retained): {path}', flush=True)
-    debugger = ['gdb', '--batch', '-q',
-                '-ex', 'set pagination off', '-ex', 'set confirm off',
-                '-ex', 'set debuginfod enabled off',
-                '-ex', 'run', '-ex', 'thread apply all bt full',
-                '-ex', 'info sharedlibrary', '--args']
-    try:
-        with path.open('w') as output:
-            output.write('Diagnostic rerun after signal exit; original test remains failed.\n')
-            output.flush()
-            subprocess.run(debugger + rerun, cwd=ROOT, text=True,
-                           stdout=output, stderr=subprocess.STDOUT, timeout=120)
-    except (OSError, subprocess.TimeoutExpired) as error:
-        print(f'Backtrace capture incomplete: {error}', file=sys.stderr)
+    path = directory / 'godot-import-backtrace.log'
+    print(f'Running original import under GDB: {path}', flush=True)
+    with tempfile.TemporaryDirectory(prefix='xrbox-gdb-') as temporary:
+        script = Path(temporary) / 'import.gdb'
+        script.write_text(GDB_COMMANDS)
+        debugger = ['gdb', '--batch', '-q', '-x', str(script), '--args'] + command
+        try:
+            result = subprocess.run(debugger, cwd=ROOT, text=True,
+                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=180)
+        except subprocess.TimeoutExpired as error:
+            output = error.stdout or b''
+            if isinstance(output, bytes):
+                output = output.decode(errors='replace')
+            path.write_text(output + '\nDebugger timed out; import failed.\n')
+            raise
+        path.write_text(result.stdout)
+        return result
 
 
 def run(command, capture=False):
-    result = subprocess.run(command, cwd=ROOT, text=True,
-                            stdout=subprocess.PIPE if capture else None,
-                            stderr=subprocess.STDOUT if capture else None,
-                            timeout=180 if capture else None)
+    debug_import = (capture and '--import' in command and sys.platform == 'linux'
+                    and os.environ.get('XRBOX_GODOT_CRASH_BACKTRACE') == '1')
+    if debug_import:
+        result = run_import_with_backtrace(command)
+    else:
+        result = subprocess.run(command, cwd=ROOT, text=True,
+                                stdout=subprocess.PIPE if capture else None,
+                                stderr=subprocess.STDOUT if capture else None,
+                                timeout=180 if capture else None)
     if capture:
         print(result.stdout, end='')
     if result.returncode < 0:
         name = signal.Signals(-result.returncode).name
         print(f'Command terminated by {name} ({-result.returncode}): {command[0]}', file=sys.stderr)
-        if capture:
-            capture_crash_backtrace(command)
         raise SystemExit(128 - result.returncode)
     if result.returncode or (capture and any(marker in result.stdout for marker in
                                             ('SCRIPT ERROR:', 'ERROR:'))):
