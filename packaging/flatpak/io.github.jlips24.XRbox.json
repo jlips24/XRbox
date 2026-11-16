@@ -1,0 +1,53 @@
+{
+  "app-id": "io.github.jlips24.XRbox",
+  "runtime": "org.freedesktop.Platform",
+  "runtime-version": "25.08",
+  "sdk": "org.freedesktop.Sdk",
+  "command": "xrbox",
+  "default-branch": "stable",
+  "finish-args": [
+    "--socket=wayland",
+    "--socket=fallback-x11",
+    "--share=ipc",
+    "--device=all",
+    "--socket=pulseaudio",
+    "--filesystem=xdg-run/monado_comp_ipc:ro",
+    "--filesystem=xdg-config/openxr:ro"
+  ],
+  "build-options": {
+    "env": {
+      "CARGO": "/app/rust/bin/cargo",
+      "RUSTC": "/app/rust/bin/rustc",
+      "CARGO_HOME": "/run/build/xrbox/.cargo-home",
+      "CARGO_NET_OFFLINE": "true"
+    },
+    "prepend-path": "/app/rust/bin"
+  },
+  "cleanup": ["/rust", "/include", "/lib/pkgconfig", "/share/man"],
+  "modules": [
+    {
+      "name": "rust-toolchain",
+      "buildsystem": "simple",
+      "build-commands": ["mkdir -p /app/rust", "cp -a . /app/rust/"],
+      "sources": [{"type": "dir", "path": "rust-toolchain"}]
+    },
+    {
+      "name": "ffmpeg",
+      "buildsystem": "autotools",
+      "no-autogen": true,
+      "config-opts": [
+        "--disable-static", "--enable-shared", "--disable-doc", "--disable-programs",
+        "--disable-everything", "--disable-autodetect", "--enable-avcodec", "--enable-avformat",
+        "--enable-swscale", "--disable-avfilter", "--disable-avdevice", "--disable-swresample",
+        "--enable-decoder=h264", "--enable-parser=h264", "--enable-demuxer=h264", "--enable-protocol=file"
+      ],
+      "sources": [{"type": "archive", "path": "ffmpeg.tar.xz"}]
+    },
+    {
+      "name": "xrbox",
+      "buildsystem": "simple",
+      "build-commands": ["python3 scripts/package_flatpak.py --inside-sdk"],
+      "sources": [{"type": "dir", "path": "source"}]
+    }
+  ]
+}

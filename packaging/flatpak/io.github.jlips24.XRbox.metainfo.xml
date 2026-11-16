@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.jlips24.XRbox</id>
+  <name>XRbox</name>
+  <summary>Xbox console Remote Play in XR</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+  <launchable type="desktop-id">io.github.jlips24.XRbox.desktop</launchable>
+  <url type="homepage">https://github.com/jlips24/XRbox</url>
+  <description>
+    <p>Experimental Godot and Rust XR client targeting standalone headsets.</p>
+    <p>This Linux build currently shows synthetic content. Linux console streaming
+    and Steam Frame OpenXR compatibility are not yet validated.</p>
+  </description>
+  <content_rating type="oars-1.1"/>
+</component>

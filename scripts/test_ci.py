@@ -3,7 +3,6 @@ from pathlib import Path
 import json
 import tempfile
 import subprocess
-import tarfile
 import unittest
 from unittest.mock import patch
 
@@ -88,7 +87,7 @@ class CiTests(unittest.TestCase):
             root = Path(directory)
             linux, android = root / 'linux', root / 'android'
             for folder, kind, files in [
-                    (linux, 'linux-arm64-extension', ['libxrbox_godot.so', 'runtime-libraries.txt']),
+                    (linux, 'linux-arm64-flatpak', ['XRbox-0.0.1-linux-arm64.flatpak']),
                     (android, 'android-development-apk', ['XRbox-0.0.1-quest-debug.apk'])]:
                 folder.mkdir()
                 for name in files + ['LICENSE', 'THIRD_PARTY_NOTICES.md']:
@@ -98,12 +97,10 @@ class CiTests(unittest.TestCase):
                 (folder / 'build.json').write_text(json.dumps(info))
             output = root / 'assets'
             ci.release_assets(linux, android, output, 'v0.0.1', 'abc')
-            with tarfile.open(output / 'XRbox-v0.0.1-linux-arm64-extension.tar.gz') as archive:
-                self.assertIn('libxrbox_godot.so', archive.getnames())
-                self.assertIn('build.json', archive.getnames())
-            for line in (output / 'SHA256SUMS').read_text().splitlines():
-                checksum, name = line.split('  ', 1)
-                self.assertEqual(checksum, ci.digest(output / name, 'sha256'))
+            self.assertEqual({p.name for p in output.iterdir()},
+                             {'XRbox-0.0.1-linux-arm64.flatpak', 'XRbox-0.0.1-quest-debug.apk'})
+            self.assertEqual((output / 'XRbox-0.0.1-linux-arm64.flatpak').read_bytes(),
+                             (linux / 'XRbox-0.0.1-linux-arm64.flatpak').read_bytes())
             for revision, tag in [('wrong-source', 'v0.0.1'), ('abc', 'v0.0.2')]:
                 with self.assertRaisesRegex(ValueError, 'provenance'):
                     ci.release_assets(linux, android, root / 'rejected', tag, revision)

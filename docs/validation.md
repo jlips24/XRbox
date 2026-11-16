@@ -168,3 +168,16 @@ bump synchronization, unrelated-setting preservation, idempotence, invalid confi
 and missing-setting rejection. `make xr-check` passed bridge and fake-state UI
 checks. No new APK was built and no device was accessed; the configured version
 and code remain 0.0.1/11003.
+
+## Linux ARM64 Flatpak packaging — November 16, 2026
+
+Implemented the complete Godot export/SDK-native compilation/Flatpak bundle path,
+launcher and notices, with a PR build gate before release. Release uploads now
+contain only APK and Flatpak; GitHub supplies both source archives. Checksummed
+provenance remains in CI artifacts. Existing releases were not edited.
+
+Local Python regressions passed 32 tests with one Linux-only skip; manifest JSON,
+AppStream XML, source staging isolation, package-only release output, Make dry run
+and whitespace checks passed. This Mac lacks Flatpak/SDK tooling, so no actual
+Flatpak build, installation, Linux launch or hardware acceptance was performed.
+The new Linux PR job must pass before publishing a release. See [Linux guide](linux.md).

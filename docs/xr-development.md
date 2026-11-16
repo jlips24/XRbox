@@ -88,9 +88,11 @@ headset removal/focus loss/return/disconnect/quit recover without stale controls
 Check the menu in the headset itself, not just a spectator window. Stop before
 real account/console testing: hardware decoder/import integration is the next gate.
 
-Flatpak remains the preferred Linux release package. Its manifest/bundle and
-host OpenXR IPC/driver/decoder/controller/credential permissions are not yet
-implemented or qualified. Compare unpackaged and sandboxed bring-up early.
+The Linux release workflow now targets a complete Flatpak via `make xr-flatpak`.
+See [Linux guide](linux.md) for SDK prerequisites, install commands and sandbox
+permissions. The implementation awaits its first Linux CI build; host OpenXR
+IPC/driver/decoder/controller behavior remains unqualified. Compare unpackaged
+and sandboxed bring-up early.
 
 ## Android / Quest 3S debug APK
 

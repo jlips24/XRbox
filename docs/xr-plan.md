@@ -9,7 +9,7 @@ Host previews are synthetic. Keep the core, bridge and Godot project in one repo
 | Native presentation | Correct color/crop, bounded surface lifetime, reconnect and teardown with frames in flight |
 | Lifecycle | XR focus loss, browser return, headset removal, disconnect/reconnect and process recreation |
 | Linux ARM64 | Linked native extension, qualified hardware decoder/import, Frame OpenXR and audio/input |
-| Flatpak | Reproducible ARM64 bundle, narrow network/GPU/audio/controller/credential permissions and runtime qualification |
+| Flatpak | Packaging/PR build gate implemented; first Linux build, narrower device permissions and Frame runtime qualification pending |
 | Compatibility/power | Per-headset results and matched idle/local-video/streaming measurements |
 
 Preserve deferred shortcuts, bounded queues, refresh-only secure persistence and

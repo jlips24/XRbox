@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=XRbox
+Comment=Xbox console Remote Play XR client (experimental Linux prototype)
+Exec=xrbox
+Icon=io.github.jlips24.XRbox
+Terminal=false
+Categories=Game;
+StartupNotify=true

@@ -31,7 +31,7 @@ jobs:
         run: python3 scripts/ci.py release-source
 
   linux:
-    name: Linux ARM64 extension
+    name: Linux ARM64 Flatpak
     needs: version
     if: needs.version.outputs.eligible == 'true'
     runs-on: ubuntu-24.04-arm
@@ -42,21 +42,31 @@ jobs:
           ref: ${{ needs.version.outputs.revision }}
           persist-credentials: false
       - uses: ./.github/actions/setup
-      - name: Build the optimized native extension
-        run: make release
-      - name: Prepare extension artifact and provenance
+      - uses: ./.github/actions/setup-flatpak
+      - name: Build and verify the installable Flatpak
+        run: |
+          mkdir -p .tools
+          make xr-flatpak 2>&1 | tee .tools/flatpak-build.log
+      - name: Retain Flatpak diagnostics
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: flatpak-logs-${{ github.run_id }}
+          path: .tools/flatpak-build.log
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Prepare Flatpak artifact and provenance
         env:
           XRBOX_TAG: ${{ needs.version.outputs.tag }}
-          XRBOX_BUILD_KIND: linux-arm64-extension
+          XRBOX_BUILD_KIND: linux-arm64-flatpak
         run: |
           mkdir -p dist/ci/linux
-          cp xr/native/linux-arm64/release/libxrbox_godot.so dist/ci/linux/
+          cp dist/xr/linux-arm64/*.flatpak dist/ci/linux/
           cp LICENSE THIRD_PARTY_NOTICES.md dist/ci/linux/
-          ldd dist/ci/linux/libxrbox_godot.so > dist/ci/linux/runtime-libraries.txt
           python3 scripts/ci.py metadata --output dist/ci/linux
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: xrbox-${{ needs.version.outputs.tag }}-linux-arm64-extension
+          name: xrbox-${{ needs.version.outputs.tag }}-linux-arm64-flatpak
           path: dist/ci/linux/
           if-no-files-found: error
           retention-days: 30
@@ -108,7 +118,7 @@ jobs:
           persist-credentials: false
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: xrbox-${{ needs.version.outputs.tag }}-linux-arm64-extension
+          name: xrbox-${{ needs.version.outputs.tag }}-linux-arm64-flatpak
           path: dist/download/linux
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
