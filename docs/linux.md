@@ -66,8 +66,9 @@ Before creating the bundle the helper checks exported executable/PCK presence,
 transitive ELF dependencies under the **Platform** runtime, and a bounded
 headless synthetic startup with `--test`, dummy audio and XR disabled. Error
 markers and nonzero exits fail the build. It never opens credentials or starts
-live auth/streaming. The PR workflow runs this same full packaging command so
-failures can be found before publishing a release; logs are retained in Actions.
+live auth/streaming. Only the release workflow runs this full packaging command automatically;
+PRs and pushes to master run the normal synthetic checks without building a
+Flatpak. Packaging logs are retained in Actions.
 
 ## Sandbox and hardware boundary
 
