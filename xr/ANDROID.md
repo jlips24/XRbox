@@ -59,6 +59,35 @@ Review logs before sharing; do not include auth codes, tokens, raw SDP or addres
 If the process crashes before capture, report the symptom for targeted follow-up.
 No headset is polled, installed or launched by our build commands.
 
+## Reorganization retest
+
+The November 16 reorganization keeps version 0.1.10-xr.2/code 11002. Identify its
+APK by the checksum in [VALIDATION.md](../VALIDATION.md#rebuilt-artifact), not the
+version label alone. From the repository root, verify it before manual installation:
+
+```sh
+shasum -a 256 dist/xr/android/XRbox-0.1.10-xr.2-quest-debug.apk
+adb install -r dist/xr/android/XRbox-0.1.10-xr.2-quest-debug.apk
+```
+
+Run steps 1–9 above. In particular:
+
+1. Navigate home, sign-in/code, console pages and screen settings with D-pad/A;
+   verify pagination, selected-console order and readable code/diagnostics.
+2. Connect and confirm moving video, audible audio and actual gameplay input.
+   Change vertical flip, open/resume the menu and verify deferred Guide/menu
+   shortcuts without stray Select/Start presses.
+3. Disconnect/reconnect repeatedly; the synthetic material must return while
+   disconnected and live video must return on reconnection. Quit during playback,
+   relaunch and repeat to exercise texture/native lease cleanup.
+4. Test controller disconnect, XR focus loss/headset removal and manual reconnect.
+   Verify immediate neutralization and held gameplay input after menu resume.
+5. Check remembered restoration, session-only sign-in and sign-out cleanup as in
+   step 9. Report the APK checksum with observations and sanitized stage counters.
+
+The automated tests/build do not establish these hardware results. No automatic
+device installation, launch or account authorization is part of the refactor.
+
 ## Rebuild on this Mac
 
 ```sh

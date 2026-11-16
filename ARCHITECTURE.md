@@ -86,3 +86,31 @@ Diagnostics expose sanitized categories/counters, never tokens, raw responses,
 SDP or addresses. Relay routes are rejected; private ICE addresses alone do not
 prove direct LAN routing. Linux hardware decoding/import, release packaging and
 battery behavior remain independent hardware gates.
+
+## Source ownership map
+
+Within `crates/xrbox-core/src/session/`, `mod.rs` defines the public handle and
+bounded command interface, `worker.rs` coordinates commands/jobs/timers,
+`auth_jobs.rs` prepares credentials and discovery, and `active.rs` owns stream
+polling, readiness, route inspection, recovery and stop. `tests.rs` exercises the
+session boundary. Controller routing stays in `controller.rs`; its unit tests
+live in `controller_tests.rs`.
+
+The bridge entrypoint only registers the extension. `runtime.rs` keeps the Godot
+class and command API, `snapshot.rs` owns its dictionary contract, `video.rs`
+coordinates engine textures, and `android_bootstrap.rs` exports JNI startup.
+`android_video.rs` remains the render-thread EGL/native-lease implementation;
+`retirement.rs` owns bounded fenced retirement. Neither worker calls engine APIs.
+
+In `xr/scripts/`, `main.gd` composes the scene and coordinates XR lifecycle,
+`menu_ui.gd` owns menu nodes/buttons/focus, and `live_ui.gd` chooses pages and
+renders session state. Helpers receive explicit objects and callables.
+`controller_input.gd` supplies physical samples; `video_surface.gd` assigns and
+restores screen materials using `xr/shaders/video.gdshader`. `screen_settings.gd`
+contains session-only screen geometry settings. Headless smoke scenarios remain
+behind `xr/tests/smoke.gd`; `xr/tests/render.gd` is the synthetic GPU check.
+
+Build helpers remain under `scripts/`. APK byte/ELF inspection lives in
+`android_validation.py`; `package_android.py` owns build/export/signature tooling.
+Current guidance is in root documents; superseded narratives are linked from
+those documents into `docs/history/`. Vendored source layout is preserved.

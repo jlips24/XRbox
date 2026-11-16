@@ -103,3 +103,15 @@ unrun suites. Individual suite targets retain their normal verbose output.
 Logs are kept across runs; remove old result directories manually when no longer
 needed. The runner does not authorize accounts or operate devices. The synthetic
 GPU smoke still briefly opens a window. Exit status, not log text, determines success.
+
+## Finding code and evidence
+
+[ARCHITECTURE.md](ARCHITECTURE.md#source-ownership-map) maps responsibilities to
+modules. Keep private Rust regressions beside the owning module (large test bodies
+may use sibling files); Python helper tests stay beside scripts. Godot's smoke
+entrypoint groups navigation, placement, live pages, video material lifetime and
+shutdown scenarios. Every new scenario must remain reachable from `make xr-check`.
+
+[Plan.md](Plan.md) and [XR_PLAN.md](XR_PLAN.md) track unfinished product/engineering
+work; [VALIDATION.md](VALIDATION.md) indexes observed evidence. Superseded desktop
+plans and results are preserved under `docs/history/`, not current instructions.

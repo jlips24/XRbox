@@ -52,6 +52,8 @@ Godot configuration; old desktop documentation is historical and indexed under d
   render-thread callback, external OES texture and fenced AImage leases. Keep Android
   free of FFmpeg/gilrs/desktop credential dependencies. `android_video.rs` owns EGL
   import; `input.rs` maps Godot samples with sticky disconnect neutralization.
+  `runtime.rs` owns the Godot API, `snapshot.rs` its dictionary contract and
+  `video.rs` its texture adapter; JNI exports live in `android_bootstrap.rs`.
 - `crates/xrbox-core/src/android.rs` and `xr/android-src/`: JNI bootstrap, Android
   Keystore sealed refresh persistence and hardware codec selection. Never read
   live stored credentials during development checks.
@@ -75,8 +77,10 @@ Godot configuration; old desktop documentation is historical and indexed under d
 - `crates/xrbox-core/src/config.rs`: validated non-secret settings and atomic persistence; credentials
   never belong in settings.json. Apply live input/audio/hotkeys without cancelling
   auth jobs; resolution changes apply on the next connection.
+- `xr/scripts/main.gd` composes scene/XR lifecycle; `menu_ui.gd` owns menu/focus,
+  `controller_input.gd` samples physical input and `video_surface.gd` owns materials.
 - `xr/scripts/live_ui.gd`: controller-navigable sign-in, console selection and stream
-  menu. Full desktop settings/hotkey editing is not yet ported; do not claim parity.
+  menu through explicit helper dependencies. Full desktop settings/hotkey editing is not yet ported; do not claim parity.
 - `crates/xrbox-core/src/diagnostics.rs`: sanitized logging.
 - `vendor/openxcloud`: seven library crates pinned to the revision in
   vendor/README.md. Do not add the upstream cloud-oriented application crate.
