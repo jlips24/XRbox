@@ -44,6 +44,7 @@ jobs:
       - uses: ./.github/actions/setup
       - uses: ./.github/actions/setup-flatpak
       - name: Build and verify the installable Flatpak
+        shell: bash
         run: |
           mkdir -p .tools
           make xr-flatpak 2>&1 | tee .tools/flatpak-build.log

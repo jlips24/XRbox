@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import subprocess
 import tempfile
+import textwrap
 import unittest
 from unittest.mock import patch
 import xml.etree.ElementTree as ET
@@ -73,6 +74,33 @@ class FlatpakTests(unittest.TestCase):
         for output in ['ERROR: GDExtension failed to load', 'SCRIPT ERROR: Parse error']:
             with self.assertRaises(ValueError):
                 packaging.check_output(output)
+
+    def test_missing_elfutils_fails_before_staging_or_downloading(self):
+        for missing in ['eu-strip', 'eu-elfcompress']:
+            with self.subTest(missing=missing), \
+                    patch.object(packaging.platform, 'system', return_value='Linux'), \
+                    patch.object(packaging.platform, 'machine', return_value='aarch64'), \
+                    patch.object(packaging.shutil, 'which', side_effect=lambda tool: None if tool == missing else '/synthetic/' + tool), \
+                    patch.object(packaging, 'copy_sources') as staging, \
+                    patch.object(packaging.ci, 'download') as download, \
+                    self.assertRaisesRegex(ValueError, 'Missing prerequisite: ' + missing):
+                packaging.build()
+            staging.assert_not_called()
+            download.assert_not_called()
+
+    def test_ci_build_failure_survives_tee_and_retains_log(self):
+        workflow = (packaging.ROOT / '.github/workflows/build.yml').read_text()
+        step = workflow.split('      - name: Build and verify the installable Flatpak\n', 1)[1].split('      - name:', 1)[0]
+        self.assertIn('        shell: bash\n', step)
+        script = textwrap.dedent(step.split('        run: |\n', 1)[1])
+        # Run the actual workflow body under GitHub's explicit bash flags.
+        with tempfile.TemporaryDirectory() as temporary:
+            result = subprocess.run(
+                ['bash', '--noprofile', '--norc', '-eo', 'pipefail', '-c',
+                 "make() { printf 'synthetic Flatpak failure\\n'; return 23; }\n" + script],
+                cwd=temporary, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            self.assertEqual(result.returncode, 23, result.stdout)
+            self.assertIn('synthetic Flatpak failure', (Path(temporary) / '.tools/flatpak-build.log').read_text())
 
     def test_unsupported_host_fails_before_downloading_or_building(self):
         with patch.object(packaging.platform, 'system', return_value='Darwin'), \

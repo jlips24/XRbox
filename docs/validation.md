@@ -305,3 +305,39 @@ hardware checks. Follow the [targeted retest](android.md#room-darkness-and-pictu
 Godot documents [opaque alpha-scissor rendering](https://docs.godotengine.org/en/4.7/classes/class_basematerial3d.html)
 and [MSAA's geometry-only scope](https://docs.godotengine.org/en/4.7/classes/class_projectsettings.html#class-projectsettings-property-rendering-anti-aliasing-quality-msaa-3d).
 No image postprocessing, supersampling or native media/protocol change was added.
+
+## Flatpak release runner prerequisites — November 16, 2026
+
+[Release job 133287581833](https://github.com/jlips24/XRbox/actions/runs/43863911609/job/133287581833)
+failed while flatpak-builder processed the staged Rust toolchain, before compiling
+XRbox. It reported missing `eu-strip` and warned that `eu-elfcompress` was absent.
+Both tools come from elfutils. The `make xr-flatpak | tee` pipeline masked the
+builder's exit status, so the visible failing step instead tried to copy a
+nonexistent Flatpak. This run does not establish Linux app or hardware behavior.
+
+Branch `bug/flatpak-ci-prerequisites` installs elfutils on the ephemeral CI runner,
+checks both tools before staging/downloads on developer hosts, and uses explicit
+Bash for the logged build step so GitHub enables pipefail. No host tools were
+installed on this Mac and no global settings or release/tag were changed.
+
+Seven Flatpak helper tests and seven release-helper tests passed, including missing
+elfutils rejection and execution of the actual workflow build body with a failing
+synthetic make command: exit 23 survives tee and the log remains available. Diff
+whitespace validation passed. No actual Flatpak build or CI rerun was performed;
+this Mac cannot validate Linux ARM64 SDK packaging. Rerunning the existing tagged
+release uses its old source; these changes require a build from the corrected
+revision under the normal release/version gate.
+
+## CI lint failure propagation — November 16, 2026
+
+The Test workflow's logged `make check-all` pipeline used the default shell,
+allowing tee's success to hide a failing formatter or linter. The lint step now
+explicitly selects Bash, so GitHub runs it with pipefail. Existing always-run
+log upload remains intact. Branch `bug/ci-lint-failure-propagation` preserves the
+pending Flatpak fixes; app version 0.0.5 and Android code 11007 are unchanged.
+
+A regression initially rejected the missing shell setting. After the fix, the
+actual workflow body was run under GitHub's Bash flags with synthetic make exits
+0 and 23: each status propagated and output remained both visible and logged.
+Eight CI helper tests and seven Flatpak helper tests passed; diff whitespace
+checks passed. No app rebuild or remote workflow run was needed/performed.
