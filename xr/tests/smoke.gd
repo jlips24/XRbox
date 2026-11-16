@@ -22,6 +22,7 @@ func run_tests() -> void:
 	root.add_child(scene)
 	await process_frame
 	_test_navigation(scene)
+	_test_meta_input(scene)
 	_test_placement(scene)
 	_test_video_surface(scene)
 	_test_focus(scene)
@@ -112,13 +113,25 @@ func _test_live_pages(scene: Node) -> void:
 	var live_ui = load("res://scripts/live_ui.gd").new(scene.runtime, scene.menu, scene.video, scene.settings, scene._apply_screen, scene.recenter, scene.set_menu_open, func(): quit(), false)
 	live_ui.state = {"consoles": PackedStringArray(["Test 1", "Test 2", "Test 3", "Test 4", "Test 5"])}
 	scene.menu.status_label.text = "XRbox 0.1.10-xr.2 · " + "Network operation failed; check console and retry. ".repeat(3) + "\nAssembled 100 · Decoded 90 · GPU imports 90\nAudio playing · route unknown\nCodec test · status 1"
-	for page in ["home", "consoles", "display", "signout"]:
+	for page in ["home", "consoles", "display", "signout", "diagnostics"]:
 		live_ui.page = page
 		live_ui._rebuild()
 		await process_frame
 		verify(scene.menu.buttons.size() > 0 and scene.menu.focus_index == 0, "Live page receives controller focus")
 		verify(scene.menu.menu_panel.get_combined_minimum_size().y <= scene.menu.menu_viewport.size.y, "Live menu must fit its XR surface")
 		verify(scene.menu.menu_panel.get_combined_minimum_size().x <= scene.menu.menu_viewport.size.x, "Long diagnostics must wrap inside menu width")
+	live_ui.page = "home"
+	live_ui._rebuild()
+	await process_frame
+	scene.menu.select_focus(scene.menu.buttons.size() - 1)
+	await process_frame
+	var footer_position: Vector2 = scene.menu.footer.position
+	scene.menu.scroll.scroll_vertical = 17
+	var idle_scroll: int = scene.menu.scroll.scroll_vertical
+	scene.menu.select_focus(scene.menu.focus_index)
+	await process_frame
+	verify(scene.menu.scroll.scroll_vertical == idle_scroll, "Idle focus must not recenter a scrolled page")
+	verify(scene.menu.footer.position == footer_position, "Action scrolling must not move the version footer")
 	live_ui.page = "consoles"
 	live_ui.console_page = 1
 	live_ui._rebuild()
@@ -179,3 +192,35 @@ func _test_video_surface(scene: Node) -> void:
 	surface.update(true)
 	surface.dispose()
 	verify(scene.cinema.material_override == original and native.clears == 2, "Scene teardown releases an active video material")
+
+func _test_meta_input(scene: Node) -> void:
+	var moves: Array[int] = []
+	var actions: Array[String] = []
+	var input = load("res://scripts/xr_menu_input.gd").new(scene.origin,
+		func(value: int): moves.append(value), func(): actions.append("select"),
+		func(): actions.append("back"), func(): actions.append("menu"))
+	input.sample(0.0, 0.0, true, false, false, true)
+	verify(actions.is_empty(), "Held Meta select on startup must not activate anything")
+	input.sample(0.0, 0.0, false, false, false, true)
+	input.sample(0.0, -0.8, false, false, false, true)
+	input.sample(0.2, -0.8, false, false, false, true)
+	verify(moves == [1], "Meta stick moves once before repeat delay")
+	input.sample(0.21, -0.8, false, false, false, true)
+	verify(moves == [1, 1], "Meta stick repeats after delay")
+	input.sample(0.0, 0.0, true, false, false, true)
+	input.sample(0.0, 0.0, true, false, false, true)
+	verify(actions == ["select"], "A/X activates exactly once per press")
+	input.sample(0.0, 0.0, false, true, true, true)
+	verify(actions == ["select", "menu"], "Menu click wins simultaneous menu/back")
+	input.sample(0.0, 0.0, false, false, false, false)
+	input.sample(0.0, 0.0, false, true, false, true)
+	verify(actions.size() == 2, "Focus recovery waits for Meta buttons to be released")
+	input.sample(0.0, 0.0, false, false, false, true)
+	input.sample(0.0, 0.0, false, true, false, true)
+	verify(actions.back() == "back", "B/Y returns after neutral rearming")
+	var map: OpenXRActionMap = load("res://openxr_action_map.tres")
+	verify(map.get_action_sets().size() == 1, "XR menu uses one explicit action set")
+	for profile in map.get_interaction_profiles():
+		for binding in profile.bindings:
+			verify(not binding.binding_path.contains("/menu/") and not binding.binding_path.contains("/system/"), "System-reserved buttons are never bound")
+	verify(not scene.menu.scroll.is_ancestor_of(scene.menu.footer), "Version footer stays outside scrolling actions")

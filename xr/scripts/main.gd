@@ -18,6 +18,7 @@ var menu_combo_armed: bool = true
 var focused: bool = true
 var initial_placement_pending: bool = false
 var live: RefCounted
+var xr_menu: RefCounted
 
 func _ready() -> void:
 	_configure_input()
@@ -35,6 +36,7 @@ func _ready() -> void:
 	_create_screen()
 	menu = preload("res://scripts/menu_ui.gd").new(self, settings, _apply_screen, recenter, set_menu_open)
 	controller_input = preload("res://scripts/controller_input.gd").new(runtime)
+	xr_menu = preload("res://scripts/xr_menu_input.gd").new(origin, _xr_navigate, _xr_accept, _xr_back, _xr_toggle)
 	video = preload("res://scripts/video_surface.gd").new(runtime, cinema)
 	var args := OS.get_cmdline_user_args()
 	if not args.has("--desktop") and not args.has("--test"):
@@ -46,13 +48,10 @@ func _ready() -> void:
 				if xr_interface.has_signal(signal_name): xr_interface.connect(signal_name, _xr_focus_lost)
 			if xr_interface.has_signal("session_focussed"): xr_interface.connect("session_focussed", _xr_focus_returned)
 	# OpenXR failure is visible and still permits an explicitly labeled desktop preview.
-	menu.status_label.text = "XRbox %s · core %s\n%s\n%s\nSynthetic screen only · Xbox media integration pending" % [
-		ProjectSettings.get_setting("application/config/version"),
-		runtime.call("core_version"), runtime.call("native_target"),
-		"OpenXR active" if xr_running else "Desktop preview · no XR presentation verified"]
+	menu.status_label.text = "OpenXR active" if xr_running else "Synthetic preview · no account or console access"
 	recenter()
 	initial_placement_pending = xr_running
-	set_process(initial_placement_pending)
+	set_process(true)
 	set_menu_open(true)
 	if runtime.call("streaming_supported") and not args.has("--test"):
 		live = load("res://scripts/live_ui.gd").new(runtime, menu, video, settings, _apply_screen, recenter, set_menu_open, func(): get_tree().quit())
@@ -63,7 +62,15 @@ func _ready() -> void:
 			live = null
 			menu.status_label.text = "Android services failed to initialize; check app logs"
 
+	if args.has("--ui-preview"):
+		live = load("res://scripts/live_ui.gd").new(runtime, menu, video, settings, _apply_screen, recenter, set_menu_open, func(): get_tree().quit(), false)
+		live.preview = true
+		live.state = {"status": "Interface preview · synthetic consoles, no network access", "consoles": PackedStringArray(["Living room Xbox", "Office Xbox"])}
+		live._rebuild()
+
 func _process(_delta: float) -> void:
+	if xr_menu != null:
+		xr_menu.tick(_delta, focused and xr_running)
 	if live != null:
 		controller_input.sample(focused)
 		live.tick(_delta)
@@ -75,7 +82,7 @@ func _place_when_tracked(tracking_valid: bool) -> void:
 	if initial_placement_pending and tracking_valid:
 		recenter()
 		initial_placement_pending = false
-		set_process(live != null)
+		set_process(true)
 
 func _configure_input() -> void:
 	# Godot 4.7 desktop defaults omit A/B from accept/cancel. Add explicit
@@ -169,3 +176,28 @@ func _exit_tree() -> void:
 		get_viewport().use_xr = false
 		xr_interface.uninitialize()
 	runtime = null
+
+func _xr_navigate(direction: int) -> void:
+	if focused and menu_open:
+		menu.move(direction)
+
+func _xr_accept() -> void:
+	if not focused:
+		return
+	if menu_open:
+		menu.accept()
+	else:
+		set_menu_open(true)
+
+func _xr_back() -> void:
+	if not focused:
+		return
+	if live != null and menu_open and live.page != "home":
+		live.page = "home"
+		live.key = ""
+	else:
+		set_menu_open(not menu_open)
+
+func _xr_toggle() -> void:
+	if focused:
+		set_menu_open(not menu_open)

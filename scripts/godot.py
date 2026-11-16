@@ -35,6 +35,7 @@ def main():
     parser.add_argument('action', choices=['build', 'check', 'render', 'run'])
     parser.add_argument('--target', choices=TARGETS)
     parser.add_argument('--release', action='store_true')
+    parser.add_argument('--ui-preview', action='store_true', help='Show synthetic product pages without sign-in')
     parser.add_argument('--desktop', action='store_true', help='Preview without OpenXR')
     args = parser.parse_args()
     cargo = os.environ.get('CARGO', 'cargo')
@@ -91,9 +92,13 @@ def main():
         run(common + ['--headless', '--xr-mode', 'off', '--import'], capture=True)
         run(common + ['--headless', '--xr-mode', 'off', '--script', 'res://tests/smoke.gd', '--', '--test'], capture=True)
     elif args.action == 'render':
-        run(common + ['--xr-mode', 'off', '--script', 'res://tests/render.gd', '--', '--test'], capture=True)
+        run(common + ['--xr-mode', 'off', '--script', 'res://tests/render.gd', '--', '--test', '--ui-preview'], capture=True)
     else:
         command = common + (['--xr-mode', 'off', '--', '--desktop'] if args.desktop else [])
+        if args.ui_preview:
+            if '--' not in command:
+                command.append('--')
+            command.append('--ui-preview')
         run(command)
 
 

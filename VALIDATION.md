@@ -1,5 +1,20 @@
 # Validation evidence
 
+## Shared UI and Wednesday test preparation — November 16, 2026
+
+- Source xr.3/code 11003 adds styled controller-first menus, a fixed footer,
+  diagnostics page and explicit Meta Touch menu action bindings. Gameplay still
+  requires a physical Xbox controller; hand tracking is not implemented.
+- `make xr-check` passed with fake Meta input/repeat/focus recovery and idle-scroll
+  regression coverage. Seven Python helper tests and shell syntax checks passed.
+- A synthetic GPU UI render was inspected. No new APK was built and no actual
+  Meta/Frame input, headset, account or console behavior was validated.
+- Experimental Vulkan probe, Docker build/packaging helpers, downloaded Linux
+  source/cache and staged artifacts were discarded. Stock Godot remains unchanged.
+- [Wednesday test plan](xr/FRAME_TEST_PLAN.md) and
+  [results template](xr/FRAME_RESULTS_TEMPLATE.md) explicitly gate live testing on
+  GPU-native local video. Linux live streaming remains unimplemented/disabled.
+
 ## Maintainability reorganization — November 16, 2026
 
 - `make check`: formatting and strict core/bridge Clippy passed.

@@ -18,14 +18,14 @@ supported.
   initial target; other Android headsets have not been qualified.
 - An Xbox Series X/S with Remote Features enabled and your Microsoft account
   configured for console Remote Play.
-- A Bluetooth Xbox controller paired with the headset. Touch controllers and
-  hand tracking are not supported.
+- A Bluetooth Xbox controller paired with the headset. Meta Touch controllers can navigate XRbox menus; gameplay requires the Bluetooth
+  Xbox controller. Hand tracking is not supported.
 - Both the console and headset on the same local network.
 - A computer with Android Platform Tools (`adb`) for installation only.
 
 ### Install the APK
 
-The current development package is **0.1.10-xr.2**. APKs are build outputs, not
+The current development source is **0.1.10-xr.3** (new UI; APK rebuild pending). APKs are build outputs, not
 included in this repository. If you do not already have one, follow the
 [Android build instructions](xr/ANDROID.md#rebuild-on-this-mac) before continuing.
 No public download is assumed by these instructions.
@@ -35,11 +35,11 @@ run these commands from the repository root:
 
 ```sh
 adb devices
-adb install -r dist/xr/android/XRbox-0.1.10-xr.2-quest-debug.apk
+adb install -r dist/xr/android/XRbox-0.1.10-xr.3-quest-debug.apk
 ```
 
 If `adb devices` shows `unauthorized`, check the headset for its permission prompt.
-Open **XRbox XR Prototype** from the Quest's **Unknown Sources** app library.
+Open **XRbox** from the Quest's **Unknown Sources** app library.
 Confirm the displayed version and **OpenXR active** status. The computer can be
 disconnected after installation; it is not part of the streaming pipeline.
 
@@ -70,7 +70,9 @@ stay in memory. Sign out to remove remembered credentials.
 For shortcuts, hold the combination and release the **first Select/Start button
 pressed** to trigger it. The physical Xbox/Guide button stays reserved to the
 headset. B remains game input during streaming; use the menu shortcut to return
-to XRbox. The stream menu includes resume, disconnect and screen adjustments.
+to XRbox. The stream menu includes resume, disconnect and screen adjustments. Meta menus use
+either thumbstick to move, A/X to select, B/Y to go back and stick click for the menu.
+XR controller input is never forwarded as Xbox gameplay input.
 
 ## Current limits and troubleshooting
 
