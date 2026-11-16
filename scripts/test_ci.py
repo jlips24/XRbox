@@ -2,6 +2,8 @@
 from pathlib import Path
 import json
 import tempfile
+import subprocess
+import tarfile
 import unittest
 from unittest.mock import patch
 
@@ -58,6 +60,57 @@ class CiTests(unittest.TestCase):
             self.assertEqual(info['app_version'], '0.0.1')
             self.assertFalse(info['hardware_validated'])
             self.assertEqual(info['sha256']['test.apk'], ci.digest(artifact / 'test.apk', 'sha256'))
+
+    def test_release_source_requires_matching_version_and_master_ancestry(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'xr').mkdir()
+            (root / 'xr/project.godot').write_text('config/version="0.0.1"\n')
+            def git(*arguments):
+                return subprocess.check_output(['git', '-c', 'user.name=XRbox test', '-c',
+                                                'user.email=test@example.invalid', *arguments], cwd=root, text=True).strip()
+            git('init', '-b', 'master')
+            git('commit', '--allow-empty', '-m', 'synthetic master')
+            revision = git('rev-parse', 'HEAD')
+            git('update-ref', 'refs/remotes/origin/master', revision)
+            with patch.object(ci, 'ROOT', root):
+                self.assertEqual(ci.release_source('v0.0.1'), revision)
+                with self.assertRaises(ValueError):
+                    ci.release_source('v0.0.2')
+                git('switch', '-c', 'feat/unmerged')
+                git('commit', '--allow-empty', '-m', 'unmerged synthetic change')
+                with self.assertRaises(subprocess.CalledProcessError):
+                    ci.release_source('v0.0.1')
+
+    def test_release_assets_verify_both_builds_before_packaging(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            linux, android = root / 'linux', root / 'android'
+            for folder, kind, files in [
+                    (linux, 'linux-arm64-extension', ['libxrbox_godot.so', 'runtime-libraries.txt']),
+                    (android, 'android-development-apk', ['XRbox-0.0.1-quest-debug.apk'])]:
+                folder.mkdir()
+                for name in files + ['LICENSE', 'THIRD_PARTY_NOTICES.md']:
+                    (folder / name).write_text('synthetic ' + name)
+                info = dict(tag='v0.0.1', source_revision='abc', kind=kind, app_version='0.0.1',
+                            sha256={p.name: ci.digest(p, 'sha256') for p in folder.iterdir()})
+                (folder / 'build.json').write_text(json.dumps(info))
+            output = root / 'assets'
+            ci.release_assets(linux, android, output, 'v0.0.1', 'abc')
+            with tarfile.open(output / 'XRbox-v0.0.1-linux-arm64-extension.tar.gz') as archive:
+                self.assertIn('libxrbox_godot.so', archive.getnames())
+                self.assertIn('build.json', archive.getnames())
+            for line in (output / 'SHA256SUMS').read_text().splitlines():
+                checksum, name = line.split('  ', 1)
+                self.assertEqual(checksum, ci.digest(output / name, 'sha256'))
+            for revision, tag in [('wrong-source', 'v0.0.1'), ('abc', 'v0.0.2')]:
+                with self.assertRaisesRegex(ValueError, 'provenance'):
+                    ci.release_assets(linux, android, root / 'rejected', tag, revision)
+                self.assertFalse((root / 'rejected').exists())
+            (android / 'XRbox-0.0.1-quest-debug.apk').write_text('tampered')
+            with self.assertRaisesRegex(ValueError, 'checksum'):
+                ci.release_assets(linux, android, root / 'rejected', 'v0.0.1', 'abc')
+            self.assertFalse((root / 'rejected').exists())
 
     def test_verified_cache_is_reused_but_mismatched_download_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:

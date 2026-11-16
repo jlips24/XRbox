@@ -9,6 +9,7 @@ import platform
 import re
 import shutil
 import subprocess
+import tarfile
 import urllib.request
 import zipfile
 
@@ -129,10 +130,48 @@ def metadata(directory):
     (directory / 'build.json').write_text(json.dumps(info, indent=2) + '\n')
 
 
+def release_source(tag):
+    app = re.search(r'^config/version="([^"]+)"', (ROOT / 'xr/project.godot').read_text(), re.M).group(1)
+    validate_release_version(tag, app)
+    subprocess.run(['git', 'merge-base', '--is-ancestor', 'HEAD', 'origin/master'], cwd=ROOT, check=True)
+    return subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
+
+
+def release_assets(linux, android, output, tag, revision):
+    """Combine only verified outputs from this release's exact source revision."""
+    if not valid_tag(tag):
+        raise ValueError('Invalid release tag')
+    for directory, kind in [(linux, 'linux-arm64-extension'), (android, 'android-development-apk')]:
+        info = json.loads((directory / 'build.json').read_text())
+        if (info['tag'], info['source_revision'], info['kind'], info['app_version']) != (tag, revision, kind, tag[1:]):
+            raise ValueError('Release artifact provenance mismatch: ' + kind)
+        actual = {str(path.relative_to(directory)): digest(path, 'sha256')
+                  for path in sorted(directory.rglob('*')) if path.is_file() and path.name != 'build.json'}
+        if info['sha256'] != actual:
+            raise ValueError('Release artifact checksum mismatch: ' + kind)
+    apk = 'XRbox-' + tag[1:] + '-quest-debug.apk'
+    for directory, required in [(linux, ['libxrbox_godot.so', 'runtime-libraries.txt', 'LICENSE', 'THIRD_PARTY_NOTICES.md']),
+                                (android, [apk, 'LICENSE', 'THIRD_PARTY_NOTICES.md'])]:
+        if any(not (directory / name).is_file() for name in required):
+            raise ValueError('Incomplete release artifacts')
+    output.mkdir(parents=True, exist_ok=False)
+    with tarfile.open(output / ('XRbox-' + tag + '-linux-arm64-extension.tar.gz'), 'w:gz') as archive:
+        for path in sorted(linux.iterdir()):
+            archive.add(path, arcname=path.name)
+    for source, name in [(android / apk, apk), (android / 'build.json', 'android-build.json'),
+                         (linux / 'build.json', 'linux-build.json'),
+                         (android / 'LICENSE', 'LICENSE'), (android / 'THIRD_PARTY_NOTICES.md', 'THIRD_PARTY_NOTICES.md')]:
+        shutil.copy2(source, output / name)
+    (output / 'SHA256SUMS').write_text(''.join(digest(path, 'sha256') + '  ' + path.name + '\n'
+                                            for path in sorted(output.iterdir())))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['rust-version', 'tag', 'godot', 'android', 'metadata'])
+    parser.add_argument('action', choices=['rust-version', 'tag', 'godot', 'android', 'metadata', 'release-source', 'release-assets'])
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--linux", type=Path)
+    parser.add_argument("--android", type=Path)
     args = parser.parse_args()
     action = args.action
     if action == 'rust-version':
@@ -147,6 +186,15 @@ def main():
             if valid_tag(tag):
                 output.write('tag=' + tag + '\n')
         print('Release name accepted' if valid_tag(tag) else 'Skipped: name must match vX.X or vX.X.X')
+    elif action == 'release-source':
+        tag = os.environ['XRBOX_TAG']
+        revision = release_source(tag)
+        with Path(os.environ['GITHUB_OUTPUT']).open('a') as output:
+            output.write(f'eligible=true\ntag={tag}\nrevision={revision}\n')
+    elif action == 'release-assets':
+        if not all([args.linux, args.android, args.output]):
+            parser.error('release-assets requires --linux, --android and --output')
+        release_assets(args.linux, args.android, args.output, os.environ['XRBOX_TAG'], os.environ['XRBOX_REVISION'])
     elif action == 'metadata':
         if args.output is None or not valid_tag(os.environ['XRBOX_TAG']):
             parser.error('metadata requires --output and a valid XRBOX_TAG')

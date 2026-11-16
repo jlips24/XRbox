@@ -151,7 +151,10 @@ The pinned Rust toolchain and vendored OpenXCloud source revision require manual
 updates. Dependabot does not update that source snapshot. The Test workflow is
 configured for full synthetic checks on PRs targeting master and pushes to master
 (the latter refreshes the base build cache). The Build workflow
-builds the Linux ARM64 extension and Android development APK for version tags/releases. Inspect actual workflow results before claiming CI passed; opening
+builds the Linux ARM64 extension and Android development APK when a release is
+published with a matching numeric version tag on master history. After both
+builds pass, its final job verifies and attaches release assets automatically;
+only that job has repository write permission. Tag pushes alone do not build. Inspect actual workflow results before claiming CI passed; opening
 a Dependabot PR alone establishes nothing. GitHub Actions updates are checked
 daily at 09:00 America/New_York, with at most two open action-update PRs.
 

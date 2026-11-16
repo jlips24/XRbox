@@ -126,19 +126,20 @@ Local validation does not establish hosted runner or release build results.
   (`make check-all`) and `make test-ci`. GPU smoke uses Xvfb/software Vulkan as
   a synthetic fixture, not Frame compatibility evidence. Logs are retained for
   seven days. Ignored credential/audio tests and real account/device tests remain off.
-- **Build**: a new pushed tag or published release whose tag exactly matches
-  `vX.X` or `vX.X.X` (numeric components). Other names, including prerelease
-  suffixes, skip builds. Moving an existing tag does not trigger a new build.
-- Build outputs are the optimized **Linux ARM64 native extension** with runtime
-  dependency information, and a verified **Android development APK**. Artifacts
-  include source/version/checksum metadata and are retained for 30 days. A native
-  extension is not an exported Linux app or proof of streaming compatibility.
-- Both a tag push and later publishing its release can each produce a build run.
-  These workflows do not create releases, attach release assets, deploy or operate
-  devices. Source versions remain authoritative; the tag identifies the build.
-- Actions use pinned commit SHAs and read-only repository permissions. Godot,
-  export templates, SDK/NDK and Rust stay pinned; downloads are verified or managed
-  by the SDK manager. Tool installation happens only on ephemeral hosted runners.
+- **Build**: publishing a release with a numeric `vX.X` or `vX.X.X` tag builds
+  the optimized Linux ARM64 extension and verified Android development APK.
+  Tags must match the APK version and point into `master` history. Invalid
+  source/version choices fail validation. Tag pushes alone do not start builds.
+- After both builds succeed, a final job verifies provenance/checksums and attaches
+  the APK, Linux archive, metadata, checksums and notices to that release. Actions
+  artifacts are also retained for 30 days. The Linux output is an extension, not
+  an exported Linux app or proof of streaming compatibility.
+- Create the tag and publish the release through GitHub's UI using the
+  [release guide](releases.md). No manual artifact attachment is required.
+- Actions use pinned commit SHAs. Builds use read-only repository permissions;
+  only the final attachment job has `contents: write`. It does not create releases
+  or operate devices. Godot, export templates, SDK/NDK and Rust stay pinned;
+  downloads are verified or SDK-managed. Installation is confined to ephemeral runners.
 - Android uses the existing self-contained project-local editor and an ephemeral
   debug signing key, never production keys. Separate runs can have different debug
   signatures and may not update an existing locally signed installation in place.
