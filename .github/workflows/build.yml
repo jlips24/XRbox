@@ -1,0 +1,96 @@
+name: Build
+
+on:
+  push:
+    tags: ['v*']
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.event.release.tag_name || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  version:
+    name: Validate release/tag name
+    if: github.event_name == 'release' || github.event.created
+    runs-on: ubuntu-24.04
+    outputs:
+      eligible: ${{ steps.version.outputs.eligible }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.release.tag_name || github.ref }}
+          persist-credentials: false
+      - id: version
+        env:
+          XRBOX_TAG: ${{ github.event.release.tag_name || github.ref_name }}
+        run: python3 scripts/ci.py tag
+
+  linux:
+    name: Linux ARM64 extension
+    needs: version
+    if: needs.version.outputs.eligible == 'true'
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.version.outputs.tag }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: Build the optimized native extension
+        run: make release
+      - name: Prepare extension artifact and provenance
+        env:
+          XRBOX_TAG: ${{ needs.version.outputs.tag }}
+          XRBOX_BUILD_KIND: linux-arm64-extension
+        run: |
+          mkdir -p dist/ci/linux
+          cp xr/native/linux-arm64/release/libxrbox_godot.so dist/ci/linux/
+          cp LICENSE THIRD_PARTY_NOTICES.md dist/ci/linux/
+          ldd dist/ci/linux/libxrbox_godot.so > dist/ci/linux/runtime-libraries.txt
+          python3 scripts/ci.py metadata --output dist/ci/linux
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: xrbox-${{ needs.version.outputs.tag }}-linux-arm64-extension
+          path: dist/ci/linux/
+          if-no-files-found: error
+          retention-days: 30
+
+  android:
+    name: Android development APK
+    needs: version
+    if: needs.version.outputs.eligible == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.version.outputs.tag }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          godot: 'true'
+          android: 'true'
+      - name: Build, debug-sign and verify the APK
+        run: make xr-apk
+      - name: Prepare APK artifact and provenance
+        env:
+          XRBOX_TAG: ${{ needs.version.outputs.tag }}
+          XRBOX_BUILD_KIND: android-development-apk
+        run: |
+          mkdir -p dist/ci/android
+          cp dist/xr/android/*.apk dist/ci/android/
+          cp LICENSE THIRD_PARTY_NOTICES.md dist/ci/android/
+          python3 scripts/ci.py metadata --output dist/ci/android
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: xrbox-${{ needs.version.outputs.tag }}-android-development-apk
+          path: dist/ci/android/
+          if-no-files-found: error
+          retention-days: 30

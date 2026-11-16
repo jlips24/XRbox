@@ -1,0 +1,39 @@
+name: XRbox Linux toolchain
+description: Install build prerequisites on an ephemeral GitHub-hosted Linux runner.
+inputs:
+  godot:
+    description: Prepare the pinned, checksum-verified project-local Godot editor.
+    default: 'false'
+  android:
+    description: Prepare the pinned project-local Android SDK/NDK/templates.
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    - name: Install native prerequisites
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install --no-install-recommends -y \
+          build-essential clang libclang-dev cmake pkg-config python3 \
+          ffmpeg libavcodec-dev libavformat-dev libavutil-dev libswscale-dev \
+          libx264-dev libasound2-dev libudev-dev libdbus-1-dev \
+          libx11-dev libxcursor1 libxinerama1 libxrandr2 libxi6 \
+          libxkbcommon-dev libwayland-dev libgl1-mesa-dev \
+          libvulkan1 mesa-vulkan-drivers xvfb xauth
+    - name: Install the project-pinned Rust toolchain
+      shell: bash
+      run: |
+        version="$(python3 scripts/ci.py rust-version)"
+        rustup toolchain install "$version" --profile minimal --component clippy --component rustfmt
+    - name: Prepare Godot
+      if: inputs.godot == 'true'
+      shell: bash
+      run: python3 scripts/ci.py godot
+    - name: Prepare Android
+      if: inputs.android == 'true'
+      shell: bash
+      run: |
+        version="$(python3 scripts/ci.py rust-version)"
+        rustup target add --toolchain "$version" aarch64-linux-android
+        python3 scripts/ci.py android

@@ -1,5 +1,19 @@
 # Validation evidence
 
+## GitHub Actions configuration — November 16, 2026
+
+- Test workflow targets PRs against master and invokes full lint/synthetic suites.
+  Build workflow gates new version tags/published releases and produces a Linux
+  ARM64 extension plus an Android development APK as Actions artifacts.
+- Local validation: actionlint 1.7.12 passed; workflow/composite/Dependabot YAML
+  parsed; ten Python helper regressions passed, including exact version-tag
+  filtering, output-injection rejection and download-checksum rejection.
+- Action SHAs and the Linux Godot editor checksum were checked against their
+  public release metadata. `git diff --check` passed. GitHub Actions itself has
+  **not run**: no branch was pushed and no PR/tag/release was created.
+- Hosted software-Vulkan tests will remain synthetic. Building artifacts cannot
+  establish headset playback, Frame compatibility or hardware acceptance.
+
 ## Shared UI and Wednesday test preparation — November 16, 2026
 
 - Source xr.3/code 11003 adds styled controller-first menus, a fixed footer,

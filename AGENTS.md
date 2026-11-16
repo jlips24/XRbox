@@ -148,9 +148,11 @@ Godot/JNI compatibility), hardware decode/import paths, native runtime libraries
 and license compatibility; 0.x minor upgrades may be breaking changes.
 
 The pinned Rust toolchain and vendored OpenXCloud source revision require manual
-updates. Dependabot does not update that source snapshot. There are currently no
-GitHub Actions checks; do not claim that a dependency PR has passed CI just because
-it was opened by Dependabot. Add action dependency coverage if workflows are added.
+updates. Dependabot does not update that source snapshot. The Test workflow is
+configured for full synthetic checks on PRs targeting master. The Build workflow
+builds the Linux ARM64 extension and Android development APK for version tags/releases. Inspect actual workflow results before claiming CI passed; opening
+a Dependabot PR alone establishes nothing. GitHub Actions updates are checked
+daily at 09:00 America/New_York, with at most two open action-update PRs.
 
 Keep commits grouped by purpose and avoid unrelated user changes. Do not commit
 build output, generated video fixtures, local logs or credentials; preserve the

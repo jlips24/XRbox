@@ -46,5 +46,10 @@
       "url": "https://www.mozilla.org/media/MPL/2.0/index.txt",
       "sha256": "3f3d9e0024b1921b067d6f7f88deb4a60cbe7a78e76c64e3f1d7fc3b779b9d04"
     }
+  },
+  "linux_x86_64_archive": {
+    "url": "https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip",
+    "binary": "Godot_v4.7.2-stable_linux.x86_64",
+    "sha512": "9aa00f7a605200940bce3027a567b782f49bd8e940dd06ae9e987bd65aee1b1467edd56ed84fcdcbdd44354bf613bdbb4e5d2913e925850368e150c59ed54c65"
   }
 }

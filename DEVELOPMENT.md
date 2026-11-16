@@ -83,15 +83,15 @@ See [GitHub's configuration documentation](https://docs.github.com/en/code-secur
 
 The root entry covers Cargo manifests and the shared lockfile. The pinned Rust
 toolchain and vendored OpenXCloud source revision still need manual updates;
-Dependabot does not replace that source snapshot. There are currently no GitHub
-Actions workflows to maintain. Add a `github-actions` entry if workflows are added.
+Dependabot does not replace that source snapshot. GitHub Actions updates use a separate daily 09:00 America/New_York schedule,
+with at most two open update PRs and one grouped action update.
 
 For dependency PRs, run `make check` and `make test`; use the broader checks from
 AGENTS.md when media/protocol dependencies change. Review default features and
 native library requirements, especially Godot/JNI compatibility, hardware decoder and GPU import
-support. No hosted CI exists yet, so GitHub will not automatically run these local
-checks just because Dependabot is configured. Actual Dependabot execution must be
-verified on GitHub after upload; local YAML validation alone does not establish it.
+support. The Test workflow runs checks for PRs targeting master once these workflows are
+on GitHub. Inspect the actual run before claiming success. Actual Dependabot
+execution must also be verified on GitHub; local YAML validation establishes neither.
 
 ## Test output
 
@@ -115,3 +115,32 @@ shutdown scenarios. Every new scenario must remain reachable from `make xr-check
 [Plan.md](Plan.md) and [XR_PLAN.md](XR_PLAN.md) track unfinished product/engineering
 work; [VALIDATION.md](VALIDATION.md) indexes observed evidence. Superseded desktop
 plans and results are preserved under `docs/history/`, not current instructions.
+
+## GitHub Actions
+
+Workflows are committed locally; they have not run on GitHub until pushed.
+
+- **Test**: `pull_request` targeting `master`; formatting, full workspace Clippy
+  (`make check-all`) and `make test-all`. GPU smoke uses Xvfb/software Vulkan as
+  a synthetic fixture, not Frame compatibility evidence. Logs are retained for
+  seven days. Ignored credential/audio tests and real account/device tests remain off.
+- **Build**: a new pushed tag or published release whose tag exactly matches
+  `vX.X` or `vX.X.X` (numeric components). Other names, including prerelease
+  suffixes, skip builds. Moving an existing tag does not trigger a new build.
+- Build outputs are the optimized **Linux ARM64 native extension** with runtime
+  dependency information, and a verified **Android development APK**. Artifacts
+  include source/version/checksum metadata and are retained for 30 days. A native
+  extension is not an exported Linux app or proof of streaming compatibility.
+- Both a tag push and later publishing its release can each produce a build run.
+  These workflows do not create releases, attach release assets, deploy or operate
+  devices. Source versions remain authoritative; the tag identifies the build.
+- Actions use pinned commit SHAs and read-only repository permissions. Godot,
+  export templates, SDK/NDK and Rust stay pinned; downloads are verified or managed
+  by the SDK manager. Tool installation happens only on ephemeral hosted runners.
+- Android uses the existing self-contained project-local editor and an ephemeral
+  debug signing key, never production keys. Separate runs can have different debug
+  signatures and may not update an existing locally signed installation in place.
+
+The shared runner setup is `.github/actions/setup/action.yml`; `scripts/ci.py`
+handles checksum-verified editor/templates, isolated SDK setup, exact tag gating
+and artifact provenance. Dependabot covers action pins without auto-merging them.
