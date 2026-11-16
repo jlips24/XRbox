@@ -13,12 +13,11 @@ import sys
 import urllib.request
 import zipfile
 
+import release_version
+
 from android_validation import validate_native, validate_manifest
 
 ROOT = Path(__file__).resolve().parents[1]
-APK_VERSION = re.search(r'^config/version="([0-9A-Za-z.\-]+)"$',
-                        (ROOT / 'xr/project.godot').read_text(), re.M).group(1)
-APK_NAME = f'XRbox-{APK_VERSION}-quest-debug.apk'
 
 
 def digest(path, algorithm='sha256'):
@@ -99,6 +98,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--verify-only', action='store_true')
     args = parser.parse_args()
+    config = release_version.load(ROOT)
+    if not args.verify_only:
+        release_version.sync(ROOT)
     pins = json.loads((ROOT / 'xr/toolchain.json').read_text())
     sdk = Path(os.environ.get('XRBOX_ANDROID_SDK', ROOT / '.tools/android/sdk')).resolve()
     java_value = os.environ.get('JAVA_HOME')
@@ -116,7 +118,7 @@ def main():
     env = dict(os.environ, JAVA_HOME=str(java), ANDROID_HOME=str(sdk), ANDROID_SDK_ROOT=str(sdk),
                GRADLE_USER_HOME=str(ROOT / '.tools/android/gradle'),
                CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=str(toolbin / ('aarch64-linux-android' + str(pins['android_sdk_ndk']['rust_link_api']) + '-clang')))
-    apk = ROOT / 'dist/xr/android' / APK_NAME
+    apk = ROOT / 'dist/xr/android' / release_version.apk_name(config)
     for path in [java / 'bin/java', tools / 'apksigner', tools / 'aapt2', tools / 'zipalign',
                  sdk / ('platforms/android-' + str(pins['android_sdk_ndk']['compile_sdk'])) / 'android.jar', toolbin / 'llvm-strip']:
         if not path.is_file():
@@ -206,7 +208,7 @@ def main():
     run([tools / 'apksigner', 'verify', '--verbose', apk], env)
     run([tools / 'zipalign', '-c', '-P', '16', '4', apk], env)
     manifest = run([tools / 'aapt2', 'dump', 'xmltree', apk, '--file', 'AndroidManifest.xml'], env, capture=True)
-    validate_manifest(manifest, APK_VERSION)
+    validate_manifest(manifest, config['version'])
     checksum = digest(apk)
     apk.with_suffix('.apk.sha256').write_text(checksum + '  ' + apk.name + '\n')
     print('Verified development APK:', apk)

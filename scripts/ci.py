@@ -13,6 +13,8 @@ import tarfile
 import urllib.request
 import zipfile
 
+import release_version
+
 ROOT = Path(__file__).resolve().parents[1]
 TAG = re.compile(r'v[0-9]+\.[0-9]+(?:\.[0-9]+)?', re.ASCII)
 
@@ -112,7 +114,8 @@ def validate_release_version(tag, app_version):
 def metadata(directory):
     directory.mkdir(parents=True, exist_ok=True)
     core = re.search(r'^version\s*=\s*"([^"]+)"', (ROOT / 'crates/xrbox-core/Cargo.toml').read_text(), re.M).group(1)
-    app = re.search(r'^config/version="([^"]+)"', (ROOT / 'xr/project.godot').read_text(), re.M).group(1)
+    config = release_version.load(ROOT)
+    app = config['version']
     validate_release_version(os.environ['XRBOX_TAG'], app)
     target = {'linux-arm64-extension': 'aarch64-unknown-linux-gnu',
               'android-development-apk': 'aarch64-linux-android'}[os.environ['XRBOX_BUILD_KIND']]
@@ -121,6 +124,7 @@ def metadata(directory):
         'kind': os.environ['XRBOX_BUILD_KIND'],
         'source_revision': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
         'core_version': core, 'app_version': app,
+        'android_version_code': config['android_version_code'],
         'architecture': 'aarch64', 'target': target,
         'build_host_architecture': platform.machine(),
         'hardware_validated': False,
@@ -131,7 +135,7 @@ def metadata(directory):
 
 
 def release_source(tag):
-    app = re.search(r'^config/version="([^"]+)"', (ROOT / 'xr/project.godot').read_text(), re.M).group(1)
+    app = release_version.load(ROOT)['version']
     validate_release_version(tag, app)
     subprocess.run(['git', 'merge-base', '--is-ancestor', 'HEAD', 'origin/master'], cwd=ROOT, check=True)
     return subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()

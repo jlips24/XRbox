@@ -10,6 +10,8 @@ import sys
 import subprocess
 import tempfile
 
+import release_version
+
 ROOT = Path(__file__).resolve().parents[1]
 TARGETS = {
     'aarch64-apple-darwin': ('macos-arm64', 'libxrbox_godot.dylib'),
@@ -104,6 +106,7 @@ def main():
     parser.add_argument('--ui-preview', action='store_true', help='Show synthetic product pages without sign-in')
     parser.add_argument('--desktop', action='store_true', help='Preview without OpenXR')
     args = parser.parse_args()
+    release_version.sync(ROOT)
     cargo = os.environ.get('CARGO', 'cargo')
     host = next(line.split(': ', 1)[1] for line in subprocess.check_output(
         ['rustc', '-vV'], cwd=ROOT, text=True).splitlines() if line.startswith('host: '))
