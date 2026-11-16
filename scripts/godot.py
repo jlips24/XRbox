@@ -158,7 +158,11 @@ def main():
         return common + ['--log-file', str(ROOT / '.tools' / name)] + arguments
     (ROOT / '.tools').mkdir(exist_ok=True)
     if args.action == 'check':
-        run(logged('godot-import.log', ['--verbose', '--headless', '--xr-mode', 'off', '--import']), capture=True)
+        # Godot #111048: cold GDExtension docs callbacks can outlive editor docs.
+        # Upstream documents >=800ms between import frames as a workaround.
+        # Keep errors fatal; the UI/render processes do not inherit this delay.
+        run(logged('godot-import.log', ['--verbose', '--headless', '--xr-mode', 'off',
+                                       '--frame-delay', '1000', '--import']), capture=True)
         run(logged('godot-check.log', ['--headless', '--xr-mode', 'off', '--script', 'res://tests/smoke.gd', '--', '--test']), capture=True)
     elif args.action == 'render':
         run(logged('godot-render.log', ['--xr-mode', 'off', '--script', 'res://tests/render.gd', '--', '--test', '--ui-preview']), capture=True)

@@ -106,3 +106,19 @@ smoke 1.2s; Godot staging reused the build in 0.26s. These are macOS timings,
 not a GitHub benchmark. Workflow actionlint and diff whitespace checks passed.
 Hosted cache timings and the Linux import failure still require a GitHub rerun;
 these changes do not establish that the import failure is fixed.
+
+## Cold-import crash investigation — November 16, 2026
+
+Run 43829070998 captured SIGSEGV on the original import process's main thread,
+after `EditorSettings: Save OK!`. Engine frames lack function symbols; this does
+not establish an exact failing function. The evidence closely matches Godot's
+confirmed [GDExtension documentation shutdown race](https://github.com/godotengine/godot/issues/111048),
+including earlier clean diagnostic reruns after a failed cold import. The helper
+now applies the upstream frame-delay workaround (1000ms) to editor import only.
+Crash diagnostics, nonzero exit checks and UI/render assertions remain enabled.
+
+Local `make xr-check` passed the four bridge regressions and headless UI smoke.
+A fresh-cache import in a temporary project copy also passed on macOS.
+Python helpers passed 17 tests; one Linux-only GDB integration check was skipped
+on macOS. Diff whitespace checks passed. Linux CI must validate the timing
+workaround; this is not a symbolicated root-cause confirmation or engine fix.

@@ -179,3 +179,10 @@ are preserved. Output is retained in `.tools/godot-import-backtrace.log` and the
 existing validation artifact. The debugger has a 180-second timeout. Stripped
 engine symbols or debugger timing effects may limit the evidence; no crash fix
 is implied. Local commands do not enable the debugger or install it.
+
+Pinned Godot has a known [cold-import documentation shutdown race](https://github.com/godotengine/godot/issues/111048).
+Editor import uses `--frame-delay 1000` (milliseconds), following the upstream
+workaround, to allow deferred extension-documentation callbacks to run before
+shutdown. This is a timing workaround, not an engine fix; keep crash diagnostics
+and fail on nonzero exits or engine errors. UI tests and rendering do not inherit
+the delay. Linux CI must confirm whether it resolves XRbox's matching failure.
