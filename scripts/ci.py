@@ -9,7 +9,6 @@ import platform
 import re
 import shutil
 import subprocess
-import tarfile
 import urllib.request
 import zipfile
 
@@ -117,7 +116,7 @@ def metadata(directory):
     config = release_version.load(ROOT)
     app = config['version']
     validate_release_version(os.environ['XRBOX_TAG'], app)
-    target = {'linux-arm64-extension': 'aarch64-unknown-linux-gnu',
+    target = {'linux-arm64-flatpak': 'aarch64-unknown-linux-gnu',
               'android-development-apk': 'aarch64-linux-android'}[os.environ['XRBOX_BUILD_KIND']]
     info = {
         'tag': os.environ['XRBOX_TAG'],
@@ -145,7 +144,7 @@ def release_assets(linux, android, output, tag, revision):
     """Combine only verified outputs from this release's exact source revision."""
     if not valid_tag(tag):
         raise ValueError('Invalid release tag')
-    for directory, kind in [(linux, 'linux-arm64-extension'), (android, 'android-development-apk')]:
+    for directory, kind in [(linux, 'linux-arm64-flatpak'), (android, 'android-development-apk')]:
         info = json.loads((directory / 'build.json').read_text())
         if (info['tag'], info['source_revision'], info['kind'], info['app_version']) != (tag, revision, kind, tag[1:]):
             raise ValueError('Release artifact provenance mismatch: ' + kind)
@@ -154,20 +153,16 @@ def release_assets(linux, android, output, tag, revision):
         if info['sha256'] != actual:
             raise ValueError('Release artifact checksum mismatch: ' + kind)
     apk = 'XRbox-' + tag[1:] + '-quest-debug.apk'
-    for directory, required in [(linux, ['libxrbox_godot.so', 'runtime-libraries.txt', 'LICENSE', 'THIRD_PARTY_NOTICES.md']),
+    flatpak = 'XRbox-' + tag[1:] + '-linux-arm64.flatpak'
+    for directory, required in [(linux, [flatpak, 'LICENSE', 'THIRD_PARTY_NOTICES.md']),
                                 (android, [apk, 'LICENSE', 'THIRD_PARTY_NOTICES.md'])]:
         if any(not (directory / name).is_file() for name in required):
             raise ValueError('Incomplete release artifacts')
     output.mkdir(parents=True, exist_ok=False)
-    with tarfile.open(output / ('XRbox-' + tag + '-linux-arm64-extension.tar.gz'), 'w:gz') as archive:
-        for path in sorted(linux.iterdir()):
-            archive.add(path, arcname=path.name)
-    for source, name in [(android / apk, apk), (android / 'build.json', 'android-build.json'),
-                         (linux / 'build.json', 'linux-build.json'),
-                         (android / 'LICENSE', 'LICENSE'), (android / 'THIRD_PARTY_NOTICES.md', 'THIRD_PARTY_NOTICES.md')]:
-        shutil.copy2(source, output / name)
-    (output / 'SHA256SUMS').write_text(''.join(digest(path, 'sha256') + '  ' + path.name + '\n'
-                                            for path in sorted(output.iterdir())))
+    # Public assets contain only installable packages. Provenance, checksums and
+    # legal-file copies stay in Actions artifacts; packages include their notices.
+    for source in [linux / flatpak, android / apk]:
+        shutil.copy2(source, output / source.name)
 
 
 def main():

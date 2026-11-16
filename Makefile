@@ -32,6 +32,7 @@ help:
 	  'make xr-render       Run synthetic GPU smoke (opens a short-lived window)' \
 	  'make xr-run          Run host synthetic scene with OpenXR' \
 	  'make xr-preview      Run host synthetic scene without OpenXR' \
+	  'make xr-flatpak      Build/verify a Linux ARM64 Flatpak (Linux ARM64 host)' \
 	  'make xr-apk          Build/sign/verify Quest development APK' \
 	  'make xr-apk-check    Verify existing APK (no device access)'
 
@@ -110,3 +111,8 @@ xr-apk:
 
 xr-apk-check:
 	$(PYTHON) scripts/package_android.py --verify-only
+
+.PHONY: xr-flatpak
+xr-flatpak:
+	$(PYTHON) -m unittest discover -s scripts -p 'test_*flatpak*.py'
+	$(PYTHON) scripts/package_flatpak.py

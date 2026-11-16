@@ -7,8 +7,9 @@ The Rust core has an internal version, currently `0.1.10`, recorded separately i
 artifact metadata. Do not reset that library version to match a public app tag.
 
 The first release is an **experimental Quest 3S test build**, not a claim of
-headset acceptance. Linux artifacts currently contain only the native ARM64
-extension, not a complete Linux streaming app. Linux live video remains disabled.
+headset acceptance. Linux releases target an installable ARM64 Flatpak of the Godot XR frontend.
+The new packaging path needs its first Linux CI build; Linux live video remains
+disabled. See [Linux packaging](linux.md).
 
 ## 1. Prepare and merge the source
 
@@ -73,20 +74,20 @@ Only that final job receives permission to write release assets.
 | Release asset | Contents |
 | --- | --- |
 | `XRbox-0.0.1-quest-debug.apk` | Verified Android ARM64 development APK, directly installable |
-| `XRbox-v0.0.1-linux-arm64-extension.tar.gz` | Optimized native `.so`, runtime dependency listing, notices and build metadata |
-| `android-build.json`, `linux-build.json` | Source revision, tag, app/core versions and artifact SHA256 values |
-| `SHA256SUMS` | Checksums of all attached build files and notices |
-| `LICENSE`, `THIRD_PARTY_NOTICES.md` | License and dependency notices |
+| `XRbox-0.0.1-linux-arm64.flatpak` | Complete experimental Linux ARM64 app; synthetic XR frontend, Linux streaming disabled |
+| Source code (zip), Source code (tar.gz) | Automatically provided by GitHub for the release tag |
 
+Only APK and Flatpak are uploaded as public build assets. Provenance JSON,
+checksums and separate legal-file copies remain inside Actions artifacts for
+verification. Both installable packages bundle their applicable legal notices.
 Release attachments persist beyond the 30-day Actions artifact retention period.
-Linux is an extension artifact, not a complete Linux streaming application.
 Publishing the release makes its notes visible immediately; assets appear after
 building finishes. A published release with missing assets is not a successful build.
 
 If a build fails, inspect its logs in **Actions → Build** and use **Re-run failed
 jobs** after resolving any transient runner problem. The attachment job waits for
 both successful builds. A full rerun replaces assets of the same names with the
-new run's outputs and regenerated checksums. Asset uploads are not atomic: if
+new run's outputs. Asset uploads are not atomic: if
 attachment fails partway, rerun the failed job to complete the set. Source fixes
 require merging a new PR and publishing a new version, not moving the old tag.
 
