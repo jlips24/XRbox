@@ -1,4 +1,6 @@
 """Android packaging and template preparation regressions."""
+import configparser
+import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -21,12 +23,22 @@ class PackagingTests(unittest.TestCase):
             packaging.configure_editor_text('invalid', Path('/sdk'), Path('/jdk'))
 
     def test_clean_template_extracts_and_bootstraps_java_at_source_root(self):
+        presets = configparser.ConfigParser(interpolation=None)
+        presets.read(packaging.ROOT / 'xr/export_presets.cfg')
+        preset = next(section for section in presets.sections()
+                      if presets[section].get('name') == '"Meta Quest Debug"')
+        options = presets[preset + '.options']
+        self.assertEqual(options['gradle_build/use_gradle_build'], 'true')
+        directory = json.loads(options['gradle_build/gradle_build_directory'])
+        # Godot 4.7 appends /build to a custom Gradle directory.
+        export_build = Path(directory.removeprefix('res://')) / 'build' if directory else Path('android/build')
         with tempfile.TemporaryDirectory() as temporary, patch.object(packaging, 'ROOT', Path(temporary)):
             root = Path(temporary)
             templates = root / '.tools/godot/editor_data/export_templates/4.7.2.stable'
             templates.mkdir(parents=True)
             activity_path = 'src/main/java/com/godot/game/GodotApp.java'
             with zipfile.ZipFile(templates / 'android_source.zip', 'w') as archive:
+                archive.writestr('build.gradle', '// synthetic Gradle entry point\n')
                 archive.writestr(activity_path, 'super.onCreate(savedInstanceState);\n')
             sources = root / 'xr/android-src/org/xrbox'
             sources.mkdir(parents=True)
@@ -35,6 +47,8 @@ class PackagingTests(unittest.TestCase):
 
             packaging.prepare_android_template(pins)
             build = root / 'xr/android/build'
+            self.assertEqual(root / 'xr' / export_build, build)
+            self.assertTrue((root / 'xr' / export_build / 'build.gradle').is_file())
             activity = build / activity_path
             bootstrap = 'org.xrbox.AndroidServices.initialize(getApplicationContext());'
             self.assertEqual(activity.read_text().count(bootstrap), 1)
