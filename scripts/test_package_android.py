@@ -38,6 +38,9 @@ class PackagingTests(unittest.TestCase):
             templates.mkdir(parents=True)
             activity_path = 'src/main/java/com/godot/game/GodotApp.java'
             with zipfile.ZipFile(templates / 'android_source.zip', 'w') as archive:
+                wrapper = zipfile.ZipInfo('gradlew')
+                wrapper.external_attr = 0o100755 << 16
+                archive.writestr(wrapper, '#!/bin/sh\nexit 0\n')
                 archive.writestr('build.gradle', '// synthetic Gradle entry point\n')
                 archive.writestr(activity_path, 'super.onCreate(savedInstanceState);\n')
             sources = root / 'xr/android-src/org/xrbox'
@@ -54,10 +57,16 @@ class PackagingTests(unittest.TestCase):
             self.assertEqual(activity.read_text().count(bootstrap), 1)
             self.assertTrue((build / 'src/main/java/org/xrbox/AndroidServices.java').is_file())
             self.assertFalse((build / 'build').exists())
-            self.assertEqual((build / '.build_version').read_text().strip(), '4.7.2.stable')
+            self.assertEqual((build.parent / '.build_version').read_text().strip(), '4.7.2.stable')
+            self.assertFalse((build / '.build_version').exists())
+            self.assertTrue((build / '.gdignore').is_file())
+            self.assertEqual((build / 'gradlew').stat().st_mode & 0o777, 0o755)
 
             packaging.prepare_android_template(pins)
             self.assertEqual(activity.read_text().count(bootstrap), 1)
+            (build.parent / '.build_version').write_text('wrong-version\n')
+            with self.assertRaisesRegex(ValueError, 'version differs'):
+                packaging.prepare_android_template(pins)
 
     def test_tampered_or_escaping_vendor_archives_cannot_be_staged(self):
         with tempfile.TemporaryDirectory() as temporary, patch.object(packaging, 'ROOT', Path(temporary)):
