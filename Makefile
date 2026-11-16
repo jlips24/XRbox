@@ -91,7 +91,7 @@ xr-preview: xr-build
 
 .PHONY: xr-apk xr-apk-check
 xr-apk:
-	$(PYTHON) -m unittest discover -s scripts -p test_package_android.py
+	$(PYTHON) -m unittest discover -s scripts -p 'test_*android*.py'
 	$(PYTHON) scripts/package_android.py
 
 xr-apk-check:
