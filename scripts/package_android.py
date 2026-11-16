@@ -97,12 +97,19 @@ def stage_vendor(pin):
 def prepare_android_template(pins):
     """Install the template and bootstrap Java sources before Godot export."""
     build = ROOT / 'xr/android/build'
-    if not (build / '.build_version').is_file():
+    version_file = build.parent / '.build_version'
+    if not version_file.is_file():
         templates = ROOT / '.tools/godot/editor_data/export_templates/4.7.2.stable'
         with zipfile.ZipFile(templates / 'android_source.zip') as archive:
             archive.extractall(build)
-        (build / '.build_version').write_text('4.7.2.stable\n')
-    if (build / '.build_version').read_text().strip() != pins['export_templates']['version']:
+            # Match Godot's installer: zipfile does not restore executable bits.
+            for item in archive.infolist():
+                mode = (item.external_attr >> 16) & 0o777
+                if mode and not item.is_dir():
+                    (build / item.filename).chmod(mode)
+        version_file.write_text(pins['export_templates']['version'] + '\n')
+    (build / '.gdignore').touch()
+    if version_file.read_text().strip() != pins['export_templates']['version']:
         raise ValueError('Generated Android template version differs from pinned engine; review before replacing it')
     java_root = build / 'src/main/java'
     shutil.copytree(ROOT / 'xr/android-src', java_root, dirs_exist_ok=True)
@@ -200,8 +207,6 @@ def main():
         prepare_android_template(pins)
         command = [godot, '--headless', '--xr-mode', 'off', '--audio-driver', 'Dummy', '--path', ROOT / 'xr',
                    '--log-file', ROOT / '.tools/android/godot-export.log']
-        if not (ROOT / 'xr/android/build/.build_version').is_file():
-            command.append('--install-android-build-template')
         run(command + ['--export-debug', 'Meta Quest Debug', apk], env, capture=True)
     libraries = validate_native(apk)
     with zipfile.ZipFile(apk) as archive:

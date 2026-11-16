@@ -192,3 +192,8 @@ The export preset sets `gradle_build/gradle_build_directory` to `res://android`.
 Godot appends `build` to custom Gradle directories, so this resolves to
 `xr/android/build`, where the packaging helper extracts `android_source.zip`
 and stages the Java bootstrap under `src/main/java`.
+
+Template preparation mirrors Godot installation metadata: `xr/android/.build_version`
+identifies the pinned template, `xr/android/build/.gdignore` excludes generated
+sources from asset scanning, and archive executable permissions are preserved
+for the Gradle wrapper.
