@@ -95,6 +95,28 @@ def stage_vendor(pin):
     marker.write_text(pin['sha256'] + '\n')
 
 
+def prepare_android_template(pins):
+    """Install the template and bootstrap Java sources before Godot export."""
+    build = ROOT / 'xr/android/build'
+    if not (build / '.build_version').is_file():
+        templates = ROOT / '.tools/godot/editor_data/export_templates/4.7.2.stable'
+        with zipfile.ZipFile(templates / 'android_source.zip') as archive:
+            archive.extractall(build)
+        (build / '.build_version').write_text('4.7.2.stable\n')
+    if (build / '.build_version').read_text().strip() != pins['export_templates']['version']:
+        raise ValueError('Generated Android template version differs from pinned engine; review before replacing it')
+    java_root = build / 'src/main/java'
+    shutil.copytree(ROOT / 'xr/android-src', java_root, dirs_exist_ok=True)
+    activity = java_root / 'com/godot/game/GodotApp.java'
+    content = activity.read_text()
+    bootstrap = 'org.xrbox.AndroidServices.initialize(getApplicationContext());'
+    if bootstrap not in content:
+        hook = 'super.onCreate(savedInstanceState);'
+        if content.count(hook) != 1:
+            raise ValueError('Unexpected Godot activity template; inspect Android bootstrap hook')
+        activity.write_text(content.replace(hook, hook + '\n\t\t' + bootstrap))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--verify-only', action='store_true')
@@ -173,24 +195,7 @@ def main():
         for source in (ROOT / 'xr/addons/godotopenxrvendors').rglob('LICENSE*'):
             shutil.copy2(source, legal / (source.parent.name + '-' + source.name + '.txt'))
         apk.parent.mkdir(parents=True, exist_ok=True)
-        build = ROOT / 'xr/android/build'
-        if not (build / '.build_version').is_file():
-            templates = ROOT / '.tools/godot/editor_data/export_templates/4.7.2.stable'
-            with zipfile.ZipFile(templates / 'android_source.zip') as archive:
-                archive.extractall(build)
-            (build / '.build_version').write_text('4.7.2.stable\n')
-        if (build / '.build_version').read_text().strip() != pins['export_templates']['version']:
-            raise ValueError('Generated Android template version differs from pinned engine; review before replacing it')
-        java_root = build / 'build/src/main/java'
-        shutil.copytree(ROOT / 'xr/android-src', java_root, dirs_exist_ok=True)
-        activity = java_root / 'com/godot/game/GodotApp.java'
-        content = activity.read_text()
-        bootstrap = 'org.xrbox.AndroidServices.initialize(getApplicationContext());'
-        if bootstrap not in content:
-            hook = 'super.onCreate(savedInstanceState);'
-            if content.count(hook) != 1:
-                raise ValueError('Unexpected Godot activity template; inspect Android bootstrap hook')
-            activity.write_text(content.replace(hook, hook + '\n\t\t' + bootstrap))
+        prepare_android_template(pins)
         command = [godot, '--headless', '--xr-mode', 'off', '--audio-driver', 'Dummy', '--path', ROOT / 'xr',
                    '--log-file', ROOT / '.tools/android/godot-export.log']
         if not (ROOT / 'xr/android/build/.build_version').is_file():
