@@ -87,3 +87,22 @@ lifecycle remain unaccepted. Linux ARM64 decoding/import, Frame, Flatpak, direct
 LAN routing, zero-copy, latency and battery remain independently unvalidated.
 Follow [xr/ANDROID.md](xr/ANDROID.md) for manual device checks and
 [DEVELOPMENT.md](DEVELOPMENT.md) for automated commands.
+
+## CI compile reuse — November 16, 2026
+
+Hosted [run 43821987015](https://github.com/jlips24/XRbox/actions/runs/43821987015)
+passed Rust, Python and GPU smoke, but failed the Godot frontend stage during
+headless editor import. Rust took 539 seconds, including 520 seconds compiling;
+Godot built a separate feature graph for another 97 seconds. The captured import
+log did not establish the cause of the abnormal exit. The successful render
+screenshot does not establish that the headless UI suite ran.
+
+The CI runner now retains build caches after failures, stages Godot with the full
+workspace feature graph, and avoids repeating bridge tests already run by Rust.
+It retains all four suites and separate import/UI/render logs. Local macOS
+`make test-ci` passed all four suites, including 15 Python helper regressions.
+A warm local run recorded Rust 17.7s, Python 0.1s, Godot frontend 3.1s and GPU
+smoke 1.2s; Godot staging reused the build in 0.26s. These are macOS timings,
+not a GitHub benchmark. Workflow actionlint and diff whitespace checks passed.
+Hosted cache timings and the Linux import failure still require a GitHub rerun;
+these changes do not establish that the import failure is fixed.

@@ -5,6 +5,8 @@ import json
 import os
 from pathlib import Path
 import shutil
+import signal
+import sys
 import subprocess
 import tempfile
 
@@ -24,16 +26,36 @@ def run(command, capture=False):
                             timeout=180 if capture else None)
     if capture:
         print(result.stdout, end='')
+    if result.returncode < 0:
+        name = signal.Signals(-result.returncode).name
+        print(f'Command terminated by {name} ({-result.returncode}): {command[0]}', file=sys.stderr)
+        raise SystemExit(128 - result.returncode)
     if result.returncode or (capture and any(marker in result.stdout for marker in
                                             ('SCRIPT ERROR:', 'ERROR:'))):
         raise SystemExit(result.returncode or 1)
     return result.stdout
 
 
+def build_command(cargo, target, host, release=False, workspace_features=False):
+    if workspace_features and target != host:
+        raise ValueError('Full-workspace feature reuse is for host checks, not Android/cross-target builds')
+    command = [cargo, 'build', '--locked']
+    if workspace_features:
+        command += ['--workspace', '--all-targets', '--all-features']
+    else:
+        command += ['-p', 'xrbox-godot']
+    if target != host:
+        command += ['--target', target]
+    if release:
+        command.append('--release')
+    return command
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=['build', 'check', 'render', 'run'])
     parser.add_argument('--target', choices=TARGETS)
+    parser.add_argument('--workspace-features', action='store_true', help='Host build with the full workspace test feature graph')
     parser.add_argument('--release', action='store_true')
     parser.add_argument('--ui-preview', action='store_true', help='Show synthetic product pages without sign-in')
     parser.add_argument('--desktop', action='store_true', help='Preview without OpenXR')
@@ -50,12 +72,13 @@ def main():
         parser.error('Editor run/check uses debug libraries; --release is for exported builds.')
     platform, library = TARGETS[target]
     profile = 'release' if args.release else 'debug'
+    if args.workspace_features and args.action != 'build':
+        parser.error('--workspace-features applies only to build')
     if args.action == 'build':
-        command = [cargo, 'build', '--locked', '-p', 'xrbox-godot']
-        if target != host:
-            command += ['--target', target]
-        if args.release:
-            command.append('--release')
+        try:
+            command = build_command(cargo, target, host, args.release, args.workspace_features)
+        except ValueError as error:
+            parser.error(str(error))
         run(command)
         metadata = json.loads(subprocess.check_output(
             [cargo, 'metadata', '--locked', '--no-deps', '--format-version=1'], cwd=ROOT))
@@ -86,15 +109,17 @@ def main():
         parser.error('Expected pinned Godot 4.7.2 stable; found ' + version)
     if not (ROOT / 'xr' / 'native' / platform / profile / library).is_file():
         parser.error('Host native library missing. Run make xr-build first.')
-    common = [binary, '--audio-driver', 'Dummy', '--path', str(ROOT / 'xr'), '--log-file', str(ROOT / '.tools/godot-run.log')]
+    common = [binary, '--audio-driver', 'Dummy', '--path', str(ROOT / 'xr')]
+    def logged(name, arguments):
+        return common + ['--log-file', str(ROOT / '.tools' / name)] + arguments
     (ROOT / '.tools').mkdir(exist_ok=True)
     if args.action == 'check':
-        run(common + ['--headless', '--xr-mode', 'off', '--import'], capture=True)
-        run(common + ['--headless', '--xr-mode', 'off', '--script', 'res://tests/smoke.gd', '--', '--test'], capture=True)
+        run(logged('godot-import.log', ['--verbose', '--headless', '--xr-mode', 'off', '--import']), capture=True)
+        run(logged('godot-check.log', ['--headless', '--xr-mode', 'off', '--script', 'res://tests/smoke.gd', '--', '--test']), capture=True)
     elif args.action == 'render':
-        run(common + ['--xr-mode', 'off', '--script', 'res://tests/render.gd', '--', '--test', '--ui-preview'], capture=True)
+        run(logged('godot-render.log', ['--xr-mode', 'off', '--script', 'res://tests/render.gd', '--', '--test', '--ui-preview']), capture=True)
     else:
-        command = common + (['--xr-mode', 'off', '--', '--desktop'] if args.desktop else [])
+        command = logged('godot-run.log', ['--xr-mode', 'off', '--', '--desktop'] if args.desktop else [])
         if args.ui_preview:
             if '--' not in command:
                 command.append('--')

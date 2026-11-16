@@ -8,7 +8,7 @@ TEST_MAKE ?= $(MAKE)
 ARGS ?=
 VIDEO_FIXTURE := vendor/openxcloud/fixtures/testsrc_1080p60.h264
 
-.PHONY: help build release run test test-all test-rust-all test-python check check-all fmt fixture clean
+.PHONY: help build release run test test-all test-ci test-rust-all test-python check check-all fmt fixture clean
 
 help:
 	@printf '%s\n' \
@@ -18,6 +18,7 @@ help:
 	  'make test            Test core/session, bridge and protocol libraries' \
 	  'make check           Check formatting and lint core and bridge' \
 	  'make test-all        Run Rust, Python, Godot frontend and GPU smoke tests' \
+	  'make test-ci         Same full suite with aligned Godot/Rust features' \
 	  'make test-rust-all   Generate fixture and test every Rust crate/feature' \
 	  'make test-python     Run Python helper regression tests' \
 	  'make check-all       Check formatting and lint every crate/feature' \
@@ -26,6 +27,7 @@ help:
 	  'make clean           Remove project Rust artifacts; retain dependency caches' \
 	  'make xr-build        Build/stage extension (ARGS for target/profile)' \
 	  'make xr-check        Build extension and run native/headless Godot tests' \
+	  'make xr-ui-check     Headless UI only (native tests covered separately)' \
 	  'make xr-render       Run synthetic GPU smoke (opens a short-lived window)' \
 	  'make xr-run          Run host synthetic scene with OpenXR' \
 	  'make xr-preview      Run host synthetic scene without OpenXR' \
@@ -45,6 +47,10 @@ test:
 # Runner keeps stages sequential and captures stdout/stderr without terminal truncation.
 test-all:
 	@$(PYTHON) scripts/test_all.py --make "$(TEST_MAKE)"
+
+# Full Rust suite already runs the bridge unit tests; the UI stage need not repeat them.
+test-ci:
+	@$(PYTHON) scripts/test_all.py --ci --make "$(TEST_MAKE)"
 
 test-python:
 	$(PYTHON) -m unittest discover -s scripts -p 'test_*.py'
@@ -72,12 +78,16 @@ clean:
 	$(CARGO) clean -p xrbox-core -p xrbox-godot
 
 # Optional XR tools remain command-local; GODOT can be an absolute executable path.
-.PHONY: xr-build xr-check xr-render xr-run xr-preview
+.PHONY: xr-build xr-check xr-ui-check xr-render xr-run xr-preview
 xr-build:
 	$(PYTHON) scripts/godot.py build $(ARGS)
 
 xr-check: xr-build
 	$(CARGO) test --locked -p xrbox-godot --lib
+	$(PYTHON) scripts/godot.py check
+
+# UI-only entrypoint for the full CI runner, after test-rust-all covers native tests.
+xr-ui-check: xr-build
 	$(PYTHON) scripts/godot.py check
 
 xr-render: xr-build

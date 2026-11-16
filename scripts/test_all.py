@@ -56,14 +56,29 @@ def run_suites(suites, directory, cwd=ROOT):
     return 1 if any(code != 0 for _, _, _, code, _ in results) else 0
 
 
+def suite_commands(make, ci=False):
+    suites = []
+    for name, target in SUITES:
+        command = [make, '--no-print-directory', target]
+        if ci and target in ('xr-check', 'xr-render'):
+            # Match the earlier --workspace/--all-targets/--all-features Rust build.
+            # Bridge unit tests are already included in test-rust-all.
+            if target == 'xr-check':
+                command[-1] = 'xr-ui-check'
+            command.append('ARGS=--workspace-features')
+        suites.append((name, command))
+    return suites
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--make', default='make', help='Make executable (no shell evaluation)')
+    parser.add_argument('--ci', action='store_true', help='Reuse the full Rust feature graph for Godot; preserve all suite coverage')
     args = parser.parse_args()
     parent = ROOT / '.tools' / 'test-results'
     parent.mkdir(parents=True, exist_ok=True)
     directory = Path(tempfile.mkdtemp(prefix=datetime.now().strftime('%Y%m%d-%H%M%S-'), dir=parent))
-    suites = [(name, [args.make, '--no-print-directory', target]) for name, target in SUITES]
+    suites = suite_commands(args.make, args.ci)
     return run_suites(suites, directory)
 
 

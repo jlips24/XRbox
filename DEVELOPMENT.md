@@ -118,10 +118,12 @@ plans and results are preserved under `docs/history/`, not current instructions.
 
 ## GitHub Actions
 
-Workflows are committed locally; they have not run on GitHub until pushed.
+Inspect the workflow run for the tested commit before claiming CI passed.
+Local validation does not establish hosted runner or release build results.
 
-- **Test**: `pull_request` targeting `master`; formatting, full workspace Clippy
-  (`make check-all`) and `make test-all`. GPU smoke uses Xvfb/software Vulkan as
+- **Test**: `pull_request` targeting `master`, plus pushes to `master` to refresh
+  caches for future PRs; formatting, full workspace Clippy
+  (`make check-all`) and `make test-ci`. GPU smoke uses Xvfb/software Vulkan as
   a synthetic fixture, not Frame compatibility evidence. Logs are retained for
   seven days. Ignored credential/audio tests and real account/device tests remain off.
 - **Build**: a new pushed tag or published release whose tag exactly matches
@@ -144,3 +146,26 @@ Workflows are committed locally; they have not run on GitHub until pushed.
 The shared runner setup is `.github/actions/setup/action.yml`; `scripts/ci.py`
 handles checksum-verified editor/templates, isolated SDK setup, exact tag gating
 and artifact provenance. Dependabot covers action pins without auto-merging them.
+
+### CI compile reuse and failure logs
+
+`make test-ci` retains all four suites and all Rust targets/features/assertions.
+Its Godot stage uses `xr-ui-check` because bridge unit tests already ran in the
+full Rust suite. Godot staging uses `--workspace-features` to match that suite's
+Cargo feature graph rather than compiling a second, narrower dependency graph.
+Standalone `make xr-check` still runs the bridge unit tests; `make test-all`
+retains its existing local behavior. Cross-target/Android builds cannot use the
+host workspace mode.
+
+The Test workflow caches Cargo dependencies and workspace artifacts using the
+pinned Rust/compiler/manifests/lockfile/environment identity. Failed test runs
+also retain the cache; this never changes their failure status. Pushes to master
+seed a base cache that new PRs can restore. The first cache miss still compiles.
+Actual warm-run timings must be measured on GitHub; no speedup is assumed from
+local tests.
+
+Godot import, headless UI and GPU smoke write separate `godot-import.log`,
+`godot-check.log` and `godot-render.log` files under ignored `.tools/`; later
+rendering no longer overwrites failed-import diagnostics. Signal exits are named
+explicitly and still fail the suite. Verbose import logging helps investigate
+Linux editor aborts without weakening any assertions or suppressing errors.
