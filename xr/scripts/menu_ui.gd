@@ -96,6 +96,15 @@ func _init(owner: Node, settings: RefCounted, apply_screen: Callable, recenter: 
 	menu_surface.material_override = material
 	owner.add_child(menu_surface)
 
+func add_background_controls(settings: RefCounted, apply: Callable) -> void:
+	if not settings.passthrough_available:
+		add_description("Passthrough unavailable in this runtime")
+		return
+	add_button(column, "Toggle passthrough", func(): settings.passthrough = not settings.passthrough; apply.call())
+	var amount := add_description("Background darkness: %d%%" % roundi(settings.darkness * 100))
+	add_button(column, "Darken background", func(): settings.adjust_darkness(0.1); apply.call(); amount.text = "Background darkness: %d%%" % roundi(settings.darkness * 100))
+	add_button(column, "Lighten background", func(): settings.adjust_darkness(-0.1); apply.call(); amount.text = "Background darkness: %d%%" % roundi(settings.darkness * 100))
+
 func add_button(parent: Node, text: String, action: Callable) -> void:
 	var button := Button.new()
 	button.text = text

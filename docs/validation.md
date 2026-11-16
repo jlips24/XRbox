@@ -169,6 +169,44 @@ and missing-setting rejection. `make xr-check` passed bridge and fake-state UI
 checks. No new APK was built and no device was accessed; the configured version
 and code remain 0.0.1/11003.
 
+## Quest feedback and retest build — November 16, 2026
+
+User observation: Quest 3S boots and connects to the console. An 8BitDo Ultimate 2
+can navigate XRbox menus but does not control the Xbox. This does not establish
+moving video, audio, secure persistence, latency or battery acceptance.
+
+Branch `bug/quest-input-background-recenter` adds active-gamepad selection,
+non-secret sampled/routed activity counters and focus/menu/controller diagnostics.
+The root cause of the reported gameplay failure remains unconfirmed. A regression
+checks that menu suppression ends on resume and that focus loss neutralizes input.
+Passthrough is optional with 10% darkness adjustments, and the OpenXR recenter
+signal requests placement from the next valid tracked pose. Neither XR behavior
+has been accepted on a headset.
+
+- `make check` passed strict core/bridge lint and formatting.
+- `make test` passed: 223 tests, one ignored credential test. Initial sandbox
+  fake-HTTP socket failures passed on a scoped rerun with localhost access.
+- `make xr-check` passed four bridge tests and headless UI regressions, including
+  tracked recenter placement, darkness limits and active-pad selection/disconnect.
+  The scoped rerun avoided macOS certificate/socket sandbox restrictions.
+- `make xr-apk` passed six packaging regressions, ARM64 build, export, debug
+  signature and 16 KiB ZIP/native alignment validation. Gradle required a scoped
+  rerun outside the socket-restricted sandbox. Diff whitespace checks passed.
+- Artifact: `dist/xr/android/XRbox-0.0.4-quest-debug.apk`, version code 11006,
+  108,519,698 bytes. SHA256:
+  `db09632d86eb7543e24176990ba0a22ee9cbcd89495f7a25cc411982c0e730f9`.
+
+No device, console, saved credentials or live account was accessed by the agent.
+Follow [the targeted Quest retest](android.md#quest-controller-background-and-recenter-retest).
+
+### User retest follow-up
+
+After manually installing this APK on Quest 3S, the user reported “Works great”
+and requested commit/push. The installed package had a different signing key,
+so an in-place update was rejected; installation required removing the old app.
+This is positive user retest feedback for the build above, without separate
+measurements or itemized acceptance results. The precise cause of the earlier
+8BitDo routing failure remains unisolated.
 ## Linux ARM64 Flatpak packaging — November 16, 2026
 
 Implemented the complete Godot export/SDK-native compilation/Flatpak bundle path,

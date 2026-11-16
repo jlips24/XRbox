@@ -17,6 +17,7 @@ var remember: bool = true
 var key: String = ""
 var poll_time: float = 0.0
 var preview: bool = false
+var input_status: String = "No gamepad detected"
 var console_page: int = 0
 var code: String = ""
 var uri: String = ""
@@ -80,6 +81,7 @@ func _rebuild() -> void:
 		menu.add_button(column, "Screen farther", func(): settings.adjust_distance(0.2); apply_screen.call())
 		menu.add_button(column, "Screen nearer", func(): settings.adjust_distance(-0.2); apply_screen.call())
 		menu.add_button(column, "Recenter", recenter)
+		menu.add_background_controls(settings, apply_screen)
 		menu.add_button(column, "Flip video vertically", video.toggle_flip)
 		menu.add_button(column, "Back", func(): page = "home")
 	elif not code.is_empty():
@@ -140,7 +142,7 @@ func _open_auth() -> void:
 		OS.shell_open(uri)
 
 func _diagnostics() -> String:
-	return "Assembled %d · Decoded %d · Decoder errors %d\nGPU imports %d · Audio %s · Audio drops %d\nRoute: %s\nCodec: %s · status %d\nThese counters do not establish visible playback or end-to-end latency." % [
-		state.get("assembled", 0), state.get("decoded", 0), state.get("decoder_errors", 0),
+	return "Gamepad: %s\nInput ticks: sampled %d · routed %d · focus %s · menu %s\nStream controller: %s\nAssembled %d · Decoded %d · Decoder errors %d\nGPU imports %d · Audio %s · Audio drops %d\nRoute: %s\nCodec: %s · status %d\nThese counters do not establish visible playback or end-to-end latency." % [
+		input_status, state.get("sampled_input_ticks", 0), state.get("routed_input_ticks", 0), str(state.get("input_focused", false)), str(state.get("menu", true)), state.get("stream_controller", "waiting"), state.get("assembled", 0), state.get("decoded", 0), state.get("decoder_errors", 0),
 		state.get("gpu_imports", 0), "playing" if state.get("audio", false) else "waiting", state.get("audio_drops", 0),
 		state.get("route", "unknown"), state.get("codec", "unknown"), state.get("codec_status", 0)]

@@ -19,6 +19,7 @@ var focused: bool = true
 var initial_placement_pending: bool = false
 var live: RefCounted
 var xr_menu: RefCounted
+var background: MeshInstance3D
 
 func _ready() -> void:
 	_configure_input()
@@ -33,6 +34,7 @@ func _ready() -> void:
 	camera = XRCamera3D.new()
 	origin.add_child(camera)
 	camera.current = true
+	_create_background()
 	_create_screen()
 	menu = preload("res://scripts/menu_ui.gd").new(self, settings, _apply_screen, recenter, set_menu_open)
 	controller_input = preload("res://scripts/controller_input.gd").new(runtime)
@@ -47,6 +49,8 @@ func _ready() -> void:
 			for signal_name in ["session_visible", "session_stopping"]:
 				if xr_interface.has_signal(signal_name): xr_interface.connect(signal_name, _xr_focus_lost)
 			if xr_interface.has_signal("session_focussed"): xr_interface.connect("session_focussed", _xr_focus_returned)
+			if xr_interface.has_signal("pose_recentered"): xr_interface.connect("pose_recentered", _headset_recentered)
+	settings.passthrough_available = xr_running and XRInterface.XR_ENV_BLEND_MODE_ALPHA_BLEND in xr_interface.get_supported_environment_blend_modes()
 	# OpenXR failure is visible and still permits an explicitly labeled desktop preview.
 	menu.status_label.text = "OpenXR active" if xr_running else "Synthetic preview · no account or console access"
 	recenter()
@@ -73,6 +77,7 @@ func _process(_delta: float) -> void:
 		xr_menu.tick(_delta, focused and xr_running)
 	if live != null:
 		controller_input.sample(focused)
+		live.input_status = controller_input.status
 		live.tick(_delta)
 	_place_when_tracked(xr_interface != null and xr_interface.get_tracking_status() == XRInterface.XR_NORMAL_TRACKING)
 
@@ -108,12 +113,39 @@ func _create_screen() -> void:
 	cinema.material_override = material
 	add_child(cinema)
 
+func _headset_recentered() -> void:
+	# Wait for the next valid pose rather than using the pre-recenter camera.
+	initial_placement_pending = true
+
+func _create_background() -> void:
+	background = MeshInstance3D.new()
+	var sphere := SphereMesh.new()
+	sphere.radius = 50.0
+	sphere.height = 100.0
+	background.mesh = sphere
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.cull_mode = BaseMaterial3D.CULL_FRONT
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.albedo_color = Color.BLACK
+	background.material_override = material
+	camera.add_child(background)
+
+func _apply_background() -> void:
+	var enabled: bool = settings.passthrough and settings.passthrough_available
+	if xr_running:
+		xr_interface.environment_blend_mode = XRInterface.XR_ENV_BLEND_MODE_ALPHA_BLEND if enabled else XRInterface.XR_ENV_BLEND_MODE_OPAQUE
+	get_viewport().transparent_bg = enabled
+	background.visible = enabled and settings.darkness > 0.0
+	background.material_override.albedo_color = Color(0, 0, 0, settings.darkness)
+
 func recenter() -> void:
 	# Keep the screen level: headset pitch/roll must not tilt the cinema plane.
 	anchor = Transform3D(Basis(Vector3.UP, camera.global_rotation.y), camera.global_position)
 	_apply_screen()
 
 func _apply_screen() -> void:
+	_apply_background()
 	cinema.mesh.size = Vector2(settings.width, settings.width * 9.0 / 16.0)
 	cinema.transform = anchor * Transform3D(Basis.IDENTITY, Vector3(0, 0, -settings.distance))
 	menu.place(anchor)
@@ -125,6 +157,7 @@ func set_menu_open(open: bool) -> void:
 	menu.set_open(open)
 
 func _input(event: InputEvent) -> void:
+	if focused and controller_input != null: controller_input.handle_event(event)
 	if live != null:
 		controller_input.sample(focused)
 		if live.state.get("active", false) and not menu_open:

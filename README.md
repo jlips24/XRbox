@@ -87,7 +87,8 @@ XR controller input is never forwarded as Xbox gameplay input.
 - Screen size, distance, recenter and vertical-flip controls are available;
   screen adjustments currently last only for the session. Full settings and
   custom hotkey editing have not been ported to XR.
-- Steam Frame media integration, passthrough and other-headset compatibility
+- Screen settings includes optional passthrough and background darkness controls;
+  Quest acceptance remains pending. Steam Frame media integration and other-headset compatibility
   remain unfinished. Host/Linux Godot previews show synthetic content.
 - Hardware decoding, XR output, secure sign-in restoration, audio and physical
   controls still need device acceptance. Latency, battery life and zero-copy
