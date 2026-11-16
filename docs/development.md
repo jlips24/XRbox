@@ -1,10 +1,10 @@
 # Development and validation
 
-## Android live build — November 12, 2026
+## Android development build
 
-`make xr-apk` builds/signs/verifies **0.1.10-xr.2** using local tools; it never
+`make xr-apk` builds/signs/verifies **0.0.1** using local tools; it never
 installs or launches on a headset. `make xr-apk-check` verifies the existing APK.
-See [xr/ANDROID.md](xr/ANDROID.md) for prerequisites, manual console testing and
+See [Android guide](android.md) for prerequisites, manual console testing and
 known limits. `make xr-check` runs native bridge tests plus fake-state headless
 Godot scene/UI checks without credentials. Host previews stay synthetic; live
 streaming is Android-only in Godot for now. The standalone desktop streaming frontend is retired.
@@ -63,8 +63,8 @@ make check-all
 Network tests bind localhost; some GPU tests need an adapter. Report sandbox
 restrictions separately from failures. Never authorize an account or operate a
 console merely to test a refactor. Existing environment overrides are inherited,
-including command-local `CARGO_TARGET_DIR`. See [xr/README.md](xr/README.md) for
-Linux export prerequisites and [xr/ANDROID.md](xr/ANDROID.md) for Android tooling.
+including command-local `CARGO_TARGET_DIR`. See [XR development guide](xr-development.md) for
+Linux export prerequisites and [Android guide](android.md) for Android tooling.
 
 ## Dependency updates on GitHub
 
@@ -106,15 +106,15 @@ GPU smoke still briefly opens a window. Exit status, not log text, determines su
 
 ## Finding code and evidence
 
-[ARCHITECTURE.md](ARCHITECTURE.md#source-ownership-map) maps responsibilities to
+[architecture](architecture.md#source-ownership-map) maps responsibilities to
 modules. Keep private Rust regressions beside the owning module (large test bodies
 may use sibling files); Python helper tests stay beside scripts. Godot's smoke
 entrypoint groups navigation, placement, live pages, video material lifetime and
 shutdown scenarios. Every new scenario must remain reachable from `make xr-check`.
 
-[Plan.md](Plan.md) and [XR_PLAN.md](XR_PLAN.md) track unfinished product/engineering
-work; [VALIDATION.md](VALIDATION.md) indexes observed evidence. Superseded desktop
-plans and results are preserved under `docs/history/`, not current instructions.
+[product plan](plan.md) and [XR engineering gates](xr-plan.md) track unfinished product/engineering
+work; [validation evidence](validation.md) indexes observed evidence. Superseded desktop
+plans and results remain in Git history.
 
 ## GitHub Actions
 

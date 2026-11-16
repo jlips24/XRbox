@@ -13,18 +13,18 @@ reintroduce it by default. macOS remains a development host for Godot previews,
 headless tests and Android builds, not a product target. Existing upstream Mac
 backends are retained as library code, not a shipping desktop application.
 
-Read README.md, ARCHITECTURE.md, VALIDATION.md and relevant Plan.md sections before
-architectural changes. Keep one repository with separate components:
+Read README.md, docs/architecture.md, docs/validation.md and relevant
+docs/plan.md sections before architectural changes. Keep one repository with separate components:
 `crates/xrbox-core` is engine-independent; `crates/xrbox-godot` embeds it through
 an in-process GDExtension; `xr/` owns Godot scene/UI and Android platform glue.
 The core must never depend on Godot. Shared session services use the `session`
 feature. Host previews remain synthetic and do not start auth or streaming.
-Android build 0.1.10-xr.2 implements live streaming, but actual sign-in, Keystore,
+Android build 0.0.1 implements live streaming, but actual sign-in, Keystore,
 video/audio/controller and XR behavior still need hardware acceptance.
 Linux ARM64 decoding/import, Flatpak and battery performance remain unvalidated.
-Follow XR_PLAN.md and xr/ANDROID.md; do not infer hardware results from builds.
+Follow docs/xr-plan.md and docs/android.md; do not infer hardware results from builds.
 Read the core version from crates/xrbox-core/Cargo.toml and APK version from the
-Godot configuration; old desktop documentation is historical and indexed under docs/history/.
+Godot configuration; superseded desktop documentation remains in Git history.
 
 ## Respect the user's machine
 
@@ -192,7 +192,7 @@ SDK/NDK and self-contained Godot. `make xr-apk-check` verifies an existing artif
 The helper must never edit global Godot settings, install SDK tools automatically,
 poll/install/launch on headsets or use a production signing key. The preset is not
 runnable in the editor to disable device polling. Preserve local debug keys in
-ignored .tools; never commit them or APKs. Read xr/ANDROID.md for tool pins and the
+ignored .tools; never commit them or APKs. Read docs/android.md for tool pins and the
 manual device gate. Android has its own Compatibility renderer override; do not
 change Linux rendering defaults to accommodate the Android test.
 

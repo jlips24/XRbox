@@ -1,5 +1,26 @@
 # Validation evidence
 
+## v0.0.1 release preparation — November 16, 2026
+
+- APK display version is **0.0.1**, version code **11003**; internal core remains
+  **0.1.10**. The numeric code preserves upgrade ordering from prototype 11002.
+- `make xr-apk` passed: ARM64 build, debug signature, native/ZIP 16 KiB alignment,
+  Java/JNI bootstrap, Internet/Quest manifest requirements and sensor/key exclusion.
+- Local artifact: `dist/xr/android/XRbox-0.0.1-quest-debug.apk`, **108,516,142 bytes**.
+  SHA256: `25a0f3728e46f0f28f6b9faa656c7baf792a254f9ffe0b98a1a482b3d41a020e`.
+  This identifies the locally signed APK, not a future CI-signed release asset.
+- `make xr-check` passed, including four native bridge tests and the fake-state
+  headless UI/Meta-input/material/focus/shutdown scenarios. Thirteen Python helper
+  tests passed. Local documentation link targets and whitespace checks passed.
+- APK manifest verification now checks the configured version rather than a
+  historical hardcoded version. CI artifact metadata rejects a tag/app mismatch.
+- Historical snapshots were removed; Git retains earlier records. Guides moved
+  under `docs/`, with root/component entrypoints and legal/provenance files kept.
+- No account authorization, stored credentials, console or headset was accessed.
+  No GitHub tag/release was created or branch pushed; the user will create v0.0.1.
+
+Follow [the release guide](releases.md) and [Quest test procedure](android.md#install-and-test).
+
 ## GitHub Actions configuration — November 16, 2026
 
 - Test workflow targets PRs against master and invokes full lint/synthetic suites.
@@ -25,8 +46,8 @@
   Meta/Frame input, headset, account or console behavior was validated.
 - Experimental Vulkan probe, Docker build/packaging helpers, downloaded Linux
   source/cache and staged artifacts were discarded. Stock Godot remains unchanged.
-- [Wednesday test plan](xr/FRAME_TEST_PLAN.md) and
-  [results template](xr/FRAME_RESULTS_TEMPLATE.md) explicitly gate live testing on
+- [Wednesday test plan](frame-test-plan.md) and
+  [results template](frame-results-template.md) explicitly gate live testing on
   GPU-native local video. Linux live streaming remains unimplemented/disabled.
 
 ## Maintainability reorganization — November 16, 2026
@@ -63,7 +84,7 @@ Version **0.1.10-xr.2**, version code **11002** (unchanged):
 `dist/xr/android/XRbox-0.1.10-xr.2-quest-debug.apk`, **108,508,208 bytes**.
 SHA256: `010da3cafde1b24a1a879dfc385582406883e26a3e50d0e47f2740f11b987bad`.
 This checksum distinguishes the reorganization build from the earlier xr.2 APK.
-Follow the [reorganization retest](xr/ANDROID.md#reorganization-retest) manually.
+Follow the [reorganization retest](android.md#reorganization-retest) manually.
 
 ## Baseline recorded November 12, 2026
 
@@ -76,17 +97,16 @@ These are prior recorded results, not a fresh run of the reorganized source:
 - APK 0.1.10-xr.2 was built/signature/ABI/alignment checked. Its recorded SHA256 is
   `6e9bd35d001f78224331d313335d68283d39ddc1a2b29e1bf76eb79a767bcd5a`.
 
-The exact environments, suite scope and older results are preserved in the
-[validation history](docs/history/2026-11-12-VALIDATION.md). Historical desktop
-observations do not establish headset playback.
+Earlier detailed environments, suite scope and results remain in Git history.
+Historical desktop observations do not establish headset playback.
 
 ## Open acceptance
 
 Quest/console sign-in, Keystore, moving XR video, audio, physical controls and
 lifecycle remain unaccepted. Linux ARM64 decoding/import, Frame, Flatpak, direct
 LAN routing, zero-copy, latency and battery remain independently unvalidated.
-Follow [xr/ANDROID.md](xr/ANDROID.md) for manual device checks and
-[DEVELOPMENT.md](DEVELOPMENT.md) for automated commands.
+Follow [Android guide](android.md) for manual device checks and
+[development guide](development.md) for automated commands.
 
 ## CI compile reuse — November 16, 2026
 

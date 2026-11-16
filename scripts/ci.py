@@ -103,16 +103,25 @@ def setup_android():
     environment('XRBOX_ANDROID_SDK', sdk)
 
 
+def validate_release_version(tag, app_version):
+    if not valid_tag(tag) or tag[1:] != app_version:
+        raise ValueError('Release tag must match the Godot APK version (without the v prefix)')
+
+
 def metadata(directory):
     directory.mkdir(parents=True, exist_ok=True)
     core = re.search(r'^version\s*=\s*"([^"]+)"', (ROOT / 'crates/xrbox-core/Cargo.toml').read_text(), re.M).group(1)
     app = re.search(r'^config/version="([^"]+)"', (ROOT / 'xr/project.godot').read_text(), re.M).group(1)
+    validate_release_version(os.environ['XRBOX_TAG'], app)
+    target = {'linux-arm64-extension': 'aarch64-unknown-linux-gnu',
+              'android-development-apk': 'aarch64-linux-android'}[os.environ['XRBOX_BUILD_KIND']]
     info = {
         'tag': os.environ['XRBOX_TAG'],
         'kind': os.environ['XRBOX_BUILD_KIND'],
         'source_revision': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
         'core_version': core, 'app_version': app,
-        'architecture': platform.machine(),
+        'architecture': 'aarch64', 'target': target,
+        'build_host_architecture': platform.machine(),
         'hardware_validated': False,
         'sha256': {str(path.relative_to(directory)): digest(path, 'sha256')
                    for path in sorted(directory.rglob('*')) if path.is_file() and path.name != 'build.json'},

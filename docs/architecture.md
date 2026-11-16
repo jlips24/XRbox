@@ -58,7 +58,7 @@ latency, pacing and energy cost require device measurements. Audio uses upstream
 Opus/CPAL. Godot gamepad samples feed the existing deferred shortcut recognizer;
 physical Guide remains host-reserved. Focus loss disconnects active streaming.
 
-Next gate: follow [xr/ANDROID.md](xr/ANDROID.md) on Quest 3S with a real Xbox.
+Next gate: follow [Android guide](android.md) on Quest 3S with a real Xbox.
 Validate actual moving video, audio, controls, storage, lifecycle and XR separately.
 Do not infer successful presentation from packet, decode or GPU import counters.
 Full XR settings/hotkey editor, passthrough, Linux hardware media, Flatpak and
@@ -112,5 +112,5 @@ behind `xr/tests/smoke.gd`; `xr/tests/render.gd` is the synthetic GPU check.
 
 Build helpers remain under `scripts/`. APK byte/ELF inspection lives in
 `android_validation.py`; `package_android.py` owns build/export/signature tooling.
-Current guidance is in root documents; superseded narratives are linked from
-those documents into `docs/history/`. Vendored source layout is preserved.
+Current guidance is organized under `docs/`; superseded narratives remain in
+Git history. Vendored source layout is preserved.

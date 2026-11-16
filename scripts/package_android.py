@@ -120,7 +120,7 @@ def main():
     for path in [java / 'bin/java', tools / 'apksigner', tools / 'aapt2', tools / 'zipalign',
                  sdk / ('platforms/android-' + str(pins['android_sdk_ndk']['compile_sdk'])) / 'android.jar', toolbin / 'llvm-strip']:
         if not path.is_file():
-            parser.error('Missing prerequisite (see xr/ANDROID.md): ' + str(path))
+            parser.error('Missing prerequisite (see docs/android.md): ' + str(path))
     if not args.verify_only:
         godot = Path(os.environ.get('GODOT', ROOT / '.tools/godot/Godot.app/Contents/MacOS/Godot')).resolve()
         if not godot.is_relative_to((ROOT / '.tools').resolve()):
@@ -132,7 +132,7 @@ def main():
             parser.error('Pinned Godot 4.7.2 stable is required')
         editor = ROOT / '.tools/godot/editor_data/editor_settings-4.7.tres'
         if not editor.is_file():
-            parser.error('Initialize the self-contained editor first (see xr/ANDROID.md)')
+            parser.error('Initialize the self-contained editor first (see docs/android.md)')
         stage_vendor(pins['openxr_vendors_plugin'])
         updated = configure_editor_text(editor.read_text(), sdk, java)
         temporary = editor.with_suffix('.tmp')
