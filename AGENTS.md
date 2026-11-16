@@ -24,7 +24,7 @@ video/audio/controller and XR behavior still need hardware acceptance.
 Linux ARM64 decoding/import, Flatpak and battery performance remain unvalidated.
 Follow XR_PLAN.md and xr/ANDROID.md; do not infer hardware results from builds.
 Read the core version from crates/xrbox-core/Cargo.toml and APK version from the
-Godot configuration; old desktop documentation is historical.
+Godot configuration; old desktop documentation is historical and indexed under docs/history/.
 
 ## Respect the user's machine
 
@@ -58,7 +58,7 @@ Godot configuration; old desktop documentation is historical.
 - `vendor/openxcloud/crates/xcloud-media/src/android.rs`: bounded MediaCodec /
   PRIVATE ImageReader hardware buffers; opaque output size is not a CPU pixel count.
 - `crates/xrbox-core/src/auth.rs`: credential-store selection and console-only token acquisition.
-- `crates/xrbox-core/src/session.rs`: bounded commands, session ownership, cancellation, input and recovery.
+- `crates/xrbox-core/src/session/`: bounded commands, session ownership, cancellation, input and recovery.
 - `crates/xrbox-core/src/controller.rs` and `xr/scripts/`: shared physical sampling, menu/game input
   routing, spatial focus and controller repeat. After stream-menu resume, only
   View/Menu wait for release; other gameplay input must resume immediately.
