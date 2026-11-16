@@ -76,7 +76,8 @@ stay in memory. Sign out to remove remembered credentials.
 For shortcuts, hold the combination and release the **first Select/Start button
 pressed** to trigger it. The physical Xbox/Guide button stays reserved to the
 headset. B remains game input during streaming; use the menu shortcut to return
-to XRbox. The stream menu includes resume, disconnect and screen adjustments. Meta menus use
+to XRbox. The stream menu includes resume, disconnect and grouped settings. A persistent
+navigation rail opens Screen, Environment, Account and connection details. Meta menus use
 either thumbstick to move, A/X to select, B/Y to go back and stick click for the menu.
 XR controller input is never forwarded as Xbox gameplay input.
 
@@ -84,7 +85,8 @@ XR controller input is never forwarded as Xbox gameplay input.
 
 - Opening the headset system menu, removing the headset or losing XR focus
   disconnects an active stream. Reconnect manually on return.
-- Screen size, distance, recenter and vertical-flip controls are available;
+- Screen width/distance, Personal/Lounge/Cinema presets, height/horizontal
+  placement, recenter and vertical-flip controls are available;
   screen adjustments currently last only for the session. Full settings and
   custom hotkey editing have not been ported to XR.
 - Screen settings includes optional passthrough and background darkness controls;

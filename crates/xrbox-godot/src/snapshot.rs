@@ -3,9 +3,11 @@ use godot::prelude::*;
 use std::sync::atomic::Ordering;
 pub(super) fn dictionary(
     s: &xrbox_core::session::Session,
-    _video: &crate::video::Video,
+    video: &crate::video::Video,
 ) -> VarDictionary {
     let mut out = VarDictionary::new();
+    out.set("video_width", video.decoded_size.x as i64);
+    out.set("video_height", video.decoded_size.y as i64);
 
     let state = s.state.lock();
     out.set("status", state.status.as_str());
@@ -42,7 +44,7 @@ pub(super) fn dictionary(
         out.set("codec_status", xcloud_media::android::status());
     }
     #[cfg(target_os = "android")]
-    if let Some(p) = &_video.presenter {
+    if let Some(p) = &video.presenter {
         out.set("gpu_imports", p.imported.load(Ordering::Relaxed) as i64);
         out.set("gpu_error", p.failed.load(Ordering::Acquire));
     }

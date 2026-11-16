@@ -1,5 +1,5 @@
 extends RefCounted
-## Session-only prototype controls. Does not modify desktop settings or credentials.
+## Session-only spatial controls. No credential or runtime-service dependencies.
 
 var passthrough_available: bool = false
 var passthrough: bool = false
@@ -10,6 +10,14 @@ func adjust_darkness(delta: float) -> void:
 
 var width: float = 2.4
 var distance: float = 2.0
+var height: float = 0.0
+var horizontal: float = 0.0
+
+func adjust_height(delta: float) -> void:
+	height = clampf(height + delta, -1.5, 1.5)
+
+func adjust_horizontal(delta: float) -> void:
+	horizontal = clampf(horizontal + delta, -2.0, 2.0)
 
 func adjust_width(delta: float) -> void:
 	width = clampf(width + delta, 1.0, 5.0)
@@ -20,3 +28,5 @@ func adjust_distance(delta: float) -> void:
 func reset() -> void:
 	width = 2.4
 	distance = 2.0
+	height = 0.0
+	horizontal = 0.0

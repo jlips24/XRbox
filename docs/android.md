@@ -237,3 +237,83 @@ Passthrough uses the vendor extension and alpha environment blending described i
 Headset recenter handling follows the
 [OpenXR reference-space signal](https://docs.godotengine.org/en/stable/tutorials/xr/openxr_settings.html#reference-space).
 Builds and synthetic tests do not establish Quest behavior.
+
+## Spatial interface retest — 0.0.5 / 11007
+
+This build replaces the action-list interface with a wide panel, persistent
+navigation rail, grouped settings, visible adjustment values and a framed screen.
+Quest and Steam Frame remain the targets; Vision Pro is a visual reference only.
+Direct grabbing, hand tracking, custom hotkey editing and full streaming settings
+are not implemented. Spatial settings last for the session.
+
+1. Manually install `dist/xr/android/XRbox-0.0.5-quest-debug.apk` using
+   `adb install -r`, then verify 0.0.5 in the fixed footer. Do not uninstall if
+   a signature mismatch appears without considering the loss of saved app data.
+2. Navigate Play, Screen, Environment, Account and Help & details with the physical
+   controller and Meta controller. Verify readable text, visible focus and access
+   to every control. Check that B/Y backs out through settings without activating
+   a console or quitting. Inspect the panel's apparent size and comfort in stereo.
+3. Connect to the Xbox and confirm moving video, audio and gameplay. Open the
+   XRbox menu with the existing shortcut. In Screen, adjust width and distance;
+   try Personal, Lounge and Cinema. Verify 16:9 geometry and updated numeric values.
+4. Open Position & orientation. Adjust height and horizontal position, then choose
+   Center screen in front of me. Verify it clears those offsets. Restore defaults
+   and test vertical flip twice to restore the original orientation.
+5. Look around: the screen must stay anchored. Test headset recenter. Resume and
+   verify the menu disappears, gameplay resumes immediately, and the frame does
+   not cover or crop video. Repeat disconnect/reconnect and verify the idle card.
+6. On a passthrough-capable runtime, verify Show my room and room darkness display
+   their current state and update immediately. Recheck focus loss, controller
+   disconnect, sign-in restoration and sign-out using the existing lifecycle gate.
+
+Host screenshots are synthetic layout evidence, not headset acceptance. Report
+APK SHA256, headset/runtime versions, comfort/readability, navigation and streaming
+observations separately. No device operation is part of the build/check helpers.
+
+## Startup placement retest — 0.0.6 / 11008
+
+This build addresses a report that the UI opens behind the user. Initial placement
+now waits for OpenXR session focus and a valid `head/default` pose, rather than
+using general interface tracking status. It uses the adjusted tracked head
+transform and a horizontal projection of its forward direction. Screen and menu
+remain hidden until initial placement completes; normal head movement does not
+move the placed screen. The precise hardware cause remains unconfirmed.
+
+1. Manually update with `adb install -r dist/xr/android/XRbox-0.0.6-quest-debug.apk`.
+   Check the footer says 0.0.6. SHA256:
+   `51e181e6bdd0c066d6430f973f94de305378a36925a17de2f385d49a950062dc`.
+2. Fully exit and launch XRbox while facing forward, then repeat while facing
+   roughly 180 degrees away from the headset's saved room-forward direction.
+   The menu must appear in front of your launch-time view, at eye height.
+3. Look left/right and verify the screen/menu stay anchored. Use the headset's
+   system recenter and verify they move ahead of your new view without tilting.
+4. Repeat launch after the headset was asleep or removed. Confirm placement waits
+   until tracking/focus returns. Check console playback and menu resume as usual.
+
+Report launch orientation, whether placement is correct, and headset OS version.
+These checks require the headset; the build and synthetic tests do not prove them.
+
+## Room darkness and picture retest — 0.0.7 / 11009
+
+1. Update manually using `adb install -r dist/xr/android/XRbox-0.0.7-quest-debug.apk`
+   and confirm 0.0.7 in the footer. Use the checksum in validation.md to identify
+   this local debug build.
+2. Enable Show my room. With the menu open, adjust room darkness through 0%, 50%
+   and 100%. Only the surroundings should change; check the entire settings panel,
+   including its edges beyond the console screen. Resume and repeat for the picture.
+3. Compare Xbox dashboard text, diagonal lines and the floating screen's outer
+   edges at the same screen size/distance as before. Android now uses 4x MSAA for
+   geometry edges; video uses explicit linear, nonrepeating texture sampling.
+   MSAA does not add source detail or remove aliasing already in the Xbox image.
+4. During playback open Help & details and record **Decoded source**. This comes
+   from received decoded frames, not the placeholder texture or requested mode.
+   Before frames arrive and after disconnect it should say waiting for video.
+   A 1920 × 1080 source can still appear soft from compression or XR projection;
+   note whether the problem is internal picture detail, outer edges, or both.
+5. Reconnect, recheck playback/audio/input, and watch for frame pacing changes with
+   4x MSAA. Report headset/runtime version, source dimensions, image comparison
+   and any new stutter. No performance or quality improvement is assumed yet.
+
+The stream request remains 1080p. No CPU video copy, sharpening pass, supersampling
+or new protocol/media implementation is introduced. Linux rendering defaults are
+unchanged. Device acceptance is required for both reported symptoms.

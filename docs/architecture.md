@@ -108,7 +108,14 @@ In `xr/scripts/`, `main.gd` composes the scene and coordinates XR lifecycle,
 renders session state. Helpers receive explicit objects and callables.
 `controller_input.gd` supplies physical samples; `video_surface.gd` assigns and
 restores screen materials using `xr/shaders/video.gdshader`. `screen_settings.gd`
-contains session-only screen geometry settings. Headless smoke scenarios remain
+contains bounded, session-only screen geometry settings. The floating screen
+has a separate frame and a once-rendered idle card; live video retains its existing
+native texture path. Menu pages share a navigation rail, inline value controls
+and a fixed version footer. Opaque menu pixels use alpha-scissor depth protection;
+transparent corners reveal the room, and the dimmer has the lowest render priority.
+Android uses 4x MSAA for geometry edges and explicit linear/clamped sampling of
+the native external video texture. Snapshots expose submitted decoded-frame
+dimensions, clearing them when video is released. Size and placement are separate settings pages. Headless smoke scenarios remain
 behind `xr/tests/smoke.gd`; `xr/tests/render.gd` is the synthetic GPU check.
 
 Build helpers remain under `scripts/`. APK byte/ELF inspection lives in
