@@ -35,6 +35,7 @@ jobs:
           cache-workspace-crates: 'true'
           cache-bin: 'false'
       - name: Formatting and full workspace lint
+        shell: bash
         run: |
           mkdir -p .tools/test-results
           make check-all 2>&1 | tee .tools/test-results/check-all.log

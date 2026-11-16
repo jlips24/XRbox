@@ -37,7 +37,8 @@ Do not authorize an account or connect a console for this synthetic Linux gate.
 ## Build
 
 Use a Linux ARM64 development host with the project-pinned Rust toolchain,
-Cargo.lock, `flatpak` and `flatpak-builder`. Install these prerequisites yourself;
+Cargo.lock, `flatpak`, `flatpak-builder` and `elfutils` (`eu-strip` and
+`eu-elfcompress`). Install these prerequisites yourself;
 `make xr-flatpak` never installs host tools/runtimes or the application. Prepare
 the build runtime and SDK explicitly if they are not already available:
 

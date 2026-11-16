@@ -8,7 +8,7 @@ runs:
       run: |
         test "$GITHUB_ACTIONS" = true
         sudo apt-get update
-        sudo apt-get install --no-install-recommends -y flatpak flatpak-builder
+        sudo apt-get install --no-install-recommends -y flatpak flatpak-builder elfutils
         runtime="$(python3 -c 'import json; print(json.load(open("xr/toolchain.json"))["flatpak"]["runtime_version"])')"
         flatpak --user remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
         flatpak --user install --noninteractive -y flathub "org.freedesktop.Platform/aarch64/$runtime" "org.freedesktop.Sdk/aarch64/$runtime"

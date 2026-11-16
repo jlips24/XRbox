@@ -2,6 +2,7 @@
 from pathlib import Path
 import json
 import tempfile
+import textwrap
 import subprocess
 import unittest
 from unittest.mock import patch
@@ -10,6 +11,23 @@ import ci
 
 
 class CiTests(unittest.TestCase):
+    def test_lint_workflow_preserves_exit_status_and_captured_output(self):
+        workflow = (ci.ROOT / '.github/workflows/test.yml').read_text()
+        step = workflow.split('      - name: Formatting and full workspace lint\n', 1)[1].split('      - name:', 1)[0]
+        self.assertIn('        shell: bash\n', step)
+        script = textwrap.dedent(step.split('        run: |\n', 1)[1])
+        # GitHub supplies pipefail when the workflow explicitly selects bash.
+        for code in [0, 23]:
+            with self.subTest(exit_code=code), tempfile.TemporaryDirectory() as temporary:
+                fake_make = "make() { printf 'synthetic lint output\\n'; return %d; }\n" % code
+                result = subprocess.run(
+                    ['bash', '--noprofile', '--norc', '-eo', 'pipefail', '-c', fake_make + script],
+                    cwd=temporary, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                self.assertEqual(result.returncode, code, result.stdout)
+                self.assertIn('synthetic lint output', result.stdout)
+                self.assertIn('synthetic lint output',
+                              (Path(temporary) / '.tools/test-results/check-all.log').read_text())
+
     def test_release_names_accept_only_two_or_three_numeric_components(self):
         for tag in ['v0.1', 'v1.2.3', 'v12.300.4', 'v1.99']:
             self.assertTrue(ci.valid_tag(tag), tag)

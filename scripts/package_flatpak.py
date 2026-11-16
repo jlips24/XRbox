@@ -108,7 +108,7 @@ def inside_sdk():
 def build():
     if platform.system() != 'Linux' or platform.machine() not in ('aarch64', 'arm64'):
         raise ValueError('Build on Linux ARM64 with Flatpak/SDK prerequisites; see docs/linux.md')
-    for tool in ['flatpak', 'flatpak-builder', 'cargo', 'rustc']:
+    for tool in ['flatpak', 'flatpak-builder', 'cargo', 'rustc', 'eu-strip', 'eu-elfcompress']:
         if not shutil.which(tool):
             raise ValueError('Missing prerequisite: ' + tool + ' (see docs/linux.md)')
     pins = json.loads((ROOT / 'xr/toolchain.json').read_text())
