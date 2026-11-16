@@ -13,7 +13,7 @@ import sys
 import urllib.request
 import zipfile
 
-from android_validation import validate_native
+from android_validation import validate_native, validate_manifest
 
 ROOT = Path(__file__).resolve().parents[1]
 APK_VERSION = re.search(r'^config/version="([0-9A-Za-z.\-]+)"$',
@@ -206,13 +206,7 @@ def main():
     run([tools / 'apksigner', 'verify', '--verbose', apk], env)
     run([tools / 'zipalign', '-c', '-P', '16', '4', apk], env)
     manifest = run([tools / 'aapt2', 'dump', 'xmltree', apk, '--file', 'AndroidManifest.xml'], env, capture=True)
-    for required in ['org.xrbox.prototype', 'android.permission.INTERNET', 'quest3|quest3s', 'com.oculus.intent.category.VR',
-                     'org.khronos.openxr.intent.category.IMMERSIVE_HMD', '0.1.10-xr.2']:
-        if required not in manifest:
-            raise ValueError('Missing APK manifest entry: ' + required)
-    if any(permission in manifest for permission in ['android.permission.CAMERA', 'android.permission.RECORD_AUDIO',
-                                                     'android.permission.ACCESS_FINE_LOCATION']):
-        raise ValueError('Streaming app requests an unnecessary sensor/location permission')
+    validate_manifest(manifest, APK_VERSION)
     checksum = digest(apk)
     apk.with_suffix('.apk.sha256').write_text(checksum + '  ' + apk.name + '\n')
     print('Verified development APK:', apk)

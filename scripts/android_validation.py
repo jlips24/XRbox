@@ -1,6 +1,7 @@
 """Pure APK/native inspection; no SDK, editor or device access."""
 from pathlib import Path
 import struct
+import re
 import zipfile
 
 
@@ -40,3 +41,15 @@ def validate_native(apk):
         return {n: validate_elf(archive.read(n)) for n in libraries}
 
 
+def validate_manifest(manifest, expected_version):
+    required_entries = ['org.xrbox.prototype', 'android.permission.INTERNET', 'quest3|quest3s',
+                        'com.oculus.intent.category.VR', 'org.khronos.openxr.intent.category.IMMERSIVE_HMD']
+    for required in required_entries:
+        if required not in manifest:
+            raise ValueError('Missing APK manifest entry: ' + required)
+    version = re.search(r'android:versionName(?:\([^)]*\))?="([^"]+)"', manifest)
+    if version is None or version.group(1) != expected_version:
+        raise ValueError('APK versionName does not match the Godot project version')
+    if any(permission in manifest for permission in ['android.permission.CAMERA', 'android.permission.RECORD_AUDIO',
+                                                     'android.permission.ACCESS_FINE_LOCATION']):
+        raise ValueError('Streaming app requests an unnecessary sensor/location permission')
