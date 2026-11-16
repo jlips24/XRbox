@@ -67,3 +67,21 @@ Hack-Regular from epaint_default_fonts 0.37.0; its complete license/copyright te
 is preserved in xr/fonts/Hack-Regular.txt and assets/legal/Hack-LICENSE.txt.
 Android HTTPS uses the locked webpki-roots Mozilla trust anchors with standard
 Rustls certificate/hostname verification; no certificate validation is bypassed.
+
+## Linux Flatpak
+
+The experimental ARM64 Flatpak bundles Godot 4.7.2 (MIT), the locked Rust native
+core, and FFmpeg 8.1.3 built as shared libraries without GPL/nonfree components.
+FFmpeg is configured with H.264 decoder/parser/demuxer, file protocol, avcodec,
+avformat and swscale; programs, other codecs, autodetection, avfilter, avdevice
+and swresample are disabled. The source URL/checksum are pinned in
+`xr/toolchain.json`; the exact options are in
+`packaging/flatpak/io.github.jlips24.XRbox.json`. The build includes FFmpeg's
+COPYING.LGPLv2.1 and Godot's LICENSE/COPYRIGHT alongside the existing dependency
+notices under `/app/share/licenses/io.github.jlips24.XRbox/`.
+
+The Flatpak manifest is retained as `/app/manifest.json`. Build instructions and
+corresponding-source dependency URLs are in `docs/linux.md`, Cargo.lock and the
+toolchain configuration. The Freedesktop runtime is installed separately by
+Flatpak; its components retain their own licenses. This packaging implementation
+has not received hardware acceptance or a complete distribution-license audit.

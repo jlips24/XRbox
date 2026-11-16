@@ -1,0 +1,14 @@
+name: XRbox Flatpak toolchain
+description: Prepare Flatpak and its SDK on an ephemeral GitHub Linux ARM64 runner.
+runs:
+  using: composite
+  steps:
+    - name: Install Flatpak prerequisites on CI runner
+      shell: bash
+      run: |
+        test "$GITHUB_ACTIONS" = true
+        sudo apt-get update
+        sudo apt-get install --no-install-recommends -y flatpak flatpak-builder
+        runtime="$(python3 -c 'import json; print(json.load(open("xr/toolchain.json"))["flatpak"]["runtime_version"])')"
+        flatpak --user remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+        flatpak --user install --noninteractive -y flathub "org.freedesktop.Platform/aarch64/$runtime" "org.freedesktop.Sdk/aarch64/$runtime"

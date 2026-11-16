@@ -18,3 +18,5 @@ The root [README](../README.md) introduces the product; [AGENTS.md](../AGENTS.md
 contains contribution instructions. Legal files stay at the root, and vendored
 provenance stays in [vendor/README.md](../vendor/README.md). Superseded documents
 remain available through Git history rather than a checked-in history directory.
+
+- [Linux ARM64 Flatpak build and installation](linux.md)

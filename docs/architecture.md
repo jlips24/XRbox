@@ -61,8 +61,9 @@ physical Guide remains host-reserved. Focus loss disconnects active streaming.
 Next gate: follow [Android guide](android.md) on Quest 3S with a real Xbox.
 Validate actual moving video, audio, controls, storage, lifecycle and XR separately.
 Do not infer successful presentation from packet, decode or GPU import counters.
-Full XR settings/hotkey editor, passthrough, Linux hardware media, Flatpak and
-battery optimization remain later work. No hardware performance claims are made.
+Full XR settings/hotkey editor, passthrough, Linux hardware media and
+battery optimization remain later work. Flatpak packaging is now implemented
+(see [Linux guide](linux.md)); its Linux build and runtime acceptance remain pending. No hardware performance claims are made.
 
 ## Shared session guarantees
 

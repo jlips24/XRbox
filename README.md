@@ -6,9 +6,15 @@ through Xbox Remote Play, without a relay PC or an embedded browser runtime.
 
 **Early development:** the Android streaming implementation builds, but playback
 on a real console and headset still needs validation. Meta Quest 3S is the first
-Android test target. Steam Frame / Linux ARM64 support is in development; there
-is no ready-to-install Frame or Flatpak release yet. Xbox Cloud Gaming is not
+Android test target. Steam Frame / Linux ARM64 support is in development; Flatpak packaging is implemented but awaits its first Linux CI build and
+Frame hardware qualification. Xbox Cloud Gaming is not
 supported.
+
+## Install on Linux ARM64
+
+Linux releases target an installable Flatpak of the synthetic XR frontend.
+Linux console streaming is not enabled yet. See the [Linux guide](docs/linux.md)
+for build status, installation and the Frame validation boundary.
 
 ## Install on Meta Quest
 
@@ -111,6 +117,7 @@ make xr-preview  # synthetic preview, no account or console access
 make test        # Rust core, bridge and selected protocol tests
 make check       # formatting and core/bridge lint
 make test-all    # all Rust, Python, headless Godot and GPU smoke tests
+make xr-flatpak  # build/verify the Linux ARM64 Flatpak on a Linux ARM64 host
 make xr-apk      # build/sign/verify Android APK; does not install it
 ```
 
