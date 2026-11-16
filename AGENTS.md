@@ -133,6 +133,13 @@ standalone app's smoke/auth-probe/macOS package tasks no longer exist. Use
 
 ## Dependencies and repository changes
 
+Before implementing each new feature or bug fix, create a new purpose-specific
+branch: `feat/<short-description>` for a feature or `bug/<short-description>` for
+a fix. Do not implement features/fixes directly on `master` or reuse an unrelated
+branch. Preserve uncommitted user work when changing branches. This rule does not
+authorize pushing branches, opening PRs or publishing releases.
+
+
 Dependabot configuration lives in .github/dependabot.yml: Cargo updates are checked
 daily at 09:00 America/New_York, with related graphics/WebRTC groups and at most
 five open version-update PRs. Keep schedule documentation consistent with the YAML.
@@ -141,9 +148,12 @@ Godot/JNI compatibility), hardware decode/import paths, native runtime libraries
 and license compatibility; 0.x minor upgrades may be breaking changes.
 
 The pinned Rust toolchain and vendored OpenXCloud source revision require manual
-updates. Dependabot does not update that source snapshot. There are currently no
-GitHub Actions checks; do not claim that a dependency PR has passed CI just because
-it was opened by Dependabot. Add action dependency coverage if workflows are added.
+updates. Dependabot does not update that source snapshot. The Test workflow is
+configured for full synthetic checks on PRs targeting master and pushes to master
+(the latter refreshes the base build cache). The Build workflow
+builds the Linux ARM64 extension and Android development APK for version tags/releases. Inspect actual workflow results before claiming CI passed; opening
+a Dependabot PR alone establishes nothing. GitHub Actions updates are checked
+daily at 09:00 America/New_York, with at most two open action-update PRs.
 
 Keep commits grouped by purpose and avoid unrelated user changes. Do not commit
 build output, generated video fixtures, local logs or credentials; preserve the
@@ -196,3 +206,11 @@ unrun suites. Individual suite targets retain their normal verbose output.
 Logs are kept across runs; remove old result directories manually when no longer
 needed. The runner does not authorize accounts or operate devices. The synthetic
 GPU smoke still briefly opens a window. Exit status, not log text, determines success.
+
+## CI build reuse
+
+`make test-ci` runs the same full suite coverage as `make test-all`, with a common
+host workspace feature graph for Rust tests and Godot staging. Its UI stage avoids
+repeating bridge unit tests already covered by the full Rust suite. Keep the normal
+`make xr-check` native tests and Android/cross-target feature boundaries intact.
+Cache hits and software-Vulkan smoke are not hardware or test-result evidence.

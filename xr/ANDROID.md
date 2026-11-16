@@ -1,6 +1,7 @@
 # Meta Quest 3S Remote Play development APK
 
-Build **0.1.10-xr.2**, package **org.xrbox.prototype**, version code **11002**.
+Current source: **0.1.10-xr.3**, package **org.xrbox.prototype**, version code **11003**.
+The xr.3 UI adds Meta menu controls; its new APK has not yet been built or device-tested.
 The APK now includes Xbox console Remote Play: supported Microsoft device-code
 sign-in, console discovery, native WebRTC, MediaCodec video, Opus/CPAL audio and
 Bluetooth gamepad input. These paths build successfully but **have not been run
@@ -12,14 +13,14 @@ on a headset or against a console**. No PC or relay service is part of runtime.
    console awake for this first test, and put both devices on the same LAN.
    Start a game or moving console screen so a frozen image is easy to recognize.
 2. Enable Quest developer mode and USB debugging using Meta's supported setup.
-   Pair a Bluetooth Xbox controller. Touch controllers/hand interaction are not
-   implemented. Install manually from the repository root:
+   Pair a Bluetooth Xbox controller. Meta Touch controllers navigate XRbox menus with stick/A-X/B-Y/stick click;
+   gameplay still requires the Bluetooth Xbox controller. Hand interaction is not implemented. Install manually from the repository root:
 
    ```sh
-   adb install -r dist/xr/android/XRbox-0.1.10-xr.2-quest-debug.apk
+   adb install -r dist/xr/android/XRbox-0.1.10-xr.3-quest-debug.apk
    ```
 
-3. Launch **XRbox XR Prototype** from **Unknown Sources**. Confirm build xr.2,
+3. Launch **XRbox** from **Unknown Sources**. Confirm build xr.3,
    android/aarch64 and **OpenXR active**; confirm stereo and head tracking.
 4. Select **Sign in**, copy the displayed code or enter it on another device at
    the displayed Microsoft verification URL. The browser action is optional;
@@ -61,7 +62,7 @@ No headset is polled, installed or launched by our build commands.
 
 ## Reorganization retest
 
-The November 16 reorganization keeps version 0.1.10-xr.2/code 11002. Identify its
+The earlier November 16 reorganization artifact uses version 0.1.10-xr.2/code 11002. Identify its
 APK by the checksum in [VALIDATION.md](../VALIDATION.md#rebuilt-artifact), not the
 version label alone. From the repository root, verify it before manual installation:
 

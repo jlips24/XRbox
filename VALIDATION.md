@@ -1,5 +1,34 @@
 # Validation evidence
 
+## GitHub Actions configuration — November 16, 2026
+
+- Test workflow targets PRs against master and invokes full lint/synthetic suites.
+  Build workflow gates new version tags/published releases and produces a Linux
+  ARM64 extension plus an Android development APK as Actions artifacts.
+- Local validation: actionlint 1.7.12 passed; workflow/composite/Dependabot YAML
+  parsed; ten Python helper regressions passed, including exact version-tag
+  filtering, output-injection rejection and download-checksum rejection.
+- Action SHAs and the Linux Godot editor checksum were checked against their
+  public release metadata. `git diff --check` passed. GitHub Actions itself has
+  **not run**: no branch was pushed and no PR/tag/release was created.
+- Hosted software-Vulkan tests will remain synthetic. Building artifacts cannot
+  establish headset playback, Frame compatibility or hardware acceptance.
+
+## Shared UI and Wednesday test preparation — November 16, 2026
+
+- Source xr.3/code 11003 adds styled controller-first menus, a fixed footer,
+  diagnostics page and explicit Meta Touch menu action bindings. Gameplay still
+  requires a physical Xbox controller; hand tracking is not implemented.
+- `make xr-check` passed with fake Meta input/repeat/focus recovery and idle-scroll
+  regression coverage. Seven Python helper tests and shell syntax checks passed.
+- A synthetic GPU UI render was inspected. No new APK was built and no actual
+  Meta/Frame input, headset, account or console behavior was validated.
+- Experimental Vulkan probe, Docker build/packaging helpers, downloaded Linux
+  source/cache and staged artifacts were discarded. Stock Godot remains unchanged.
+- [Wednesday test plan](xr/FRAME_TEST_PLAN.md) and
+  [results template](xr/FRAME_RESULTS_TEMPLATE.md) explicitly gate live testing on
+  GPU-native local video. Linux live streaming remains unimplemented/disabled.
+
 ## Maintainability reorganization — November 16, 2026
 
 - `make check`: formatting and strict core/bridge Clippy passed.
@@ -58,3 +87,38 @@ lifecycle remain unaccepted. Linux ARM64 decoding/import, Frame, Flatpak, direct
 LAN routing, zero-copy, latency and battery remain independently unvalidated.
 Follow [xr/ANDROID.md](xr/ANDROID.md) for manual device checks and
 [DEVELOPMENT.md](DEVELOPMENT.md) for automated commands.
+
+## CI compile reuse — November 16, 2026
+
+Hosted [run 43821987015](https://github.com/jlips24/XRbox/actions/runs/43821987015)
+passed Rust, Python and GPU smoke, but failed the Godot frontend stage during
+headless editor import. Rust took 539 seconds, including 520 seconds compiling;
+Godot built a separate feature graph for another 97 seconds. The captured import
+log did not establish the cause of the abnormal exit. The successful render
+screenshot does not establish that the headless UI suite ran.
+
+The CI runner now retains build caches after failures, stages Godot with the full
+workspace feature graph, and avoids repeating bridge tests already run by Rust.
+It retains all four suites and separate import/UI/render logs. Local macOS
+`make test-ci` passed all four suites, including 15 Python helper regressions.
+A warm local run recorded Rust 17.7s, Python 0.1s, Godot frontend 3.1s and GPU
+smoke 1.2s; Godot staging reused the build in 0.26s. These are macOS timings,
+not a GitHub benchmark. Workflow actionlint and diff whitespace checks passed.
+Hosted cache timings and the Linux import failure still require a GitHub rerun;
+these changes do not establish that the import failure is fixed.
+
+## Cold-import crash investigation — November 16, 2026
+
+Run 43829070998 captured SIGSEGV on the original import process's main thread,
+after `EditorSettings: Save OK!`. Engine frames lack function symbols; this does
+not establish an exact failing function. The evidence closely matches Godot's
+confirmed [GDExtension documentation shutdown race](https://github.com/godotengine/godot/issues/111048),
+including earlier clean diagnostic reruns after a failed cold import. The helper
+now applies the upstream frame-delay workaround (1000ms) to editor import only.
+Crash diagnostics, nonzero exit checks and UI/render assertions remain enabled.
+
+Local `make xr-check` passed the four bridge regressions and headless UI smoke.
+A fresh-cache import in a temporary project copy also passed on macOS.
+Python helpers passed 17 tests; one Linux-only GDB integration check was skipped
+on macOS. Diff whitespace checks passed. Linux CI must validate the timing
+workaround; this is not a symbolicated root-cause confirmation or engine fix.

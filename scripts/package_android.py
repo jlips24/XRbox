@@ -16,7 +16,9 @@ import zipfile
 from android_validation import validate_native
 
 ROOT = Path(__file__).resolve().parents[1]
-APK_NAME = 'XRbox-0.1.10-xr.2-quest-debug.apk'
+APK_VERSION = re.search(r'^config/version="([0-9A-Za-z.\-]+)"$',
+                        (ROOT / 'xr/project.godot').read_text(), re.M).group(1)
+APK_NAME = f'XRbox-{APK_VERSION}-quest-debug.apk'
 
 
 def digest(path, algorithm='sha256'):

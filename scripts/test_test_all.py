@@ -11,6 +11,18 @@ import test_all
 
 
 class TestAllTests(unittest.TestCase):
+    def test_ci_keeps_all_suites_and_reuses_rust_coverage_for_godot(self):
+        local = test_all.suite_commands('make')
+        ci = test_all.suite_commands('make', ci=True)
+        self.assertEqual([name for name, _ in local], [name for name, _ in ci])
+        self.assertEqual(ci[:2], local[:2])
+        self.assertIn('test-rust-all', ci[0][1])
+        self.assertIn('xr-check', local[2][1])
+        self.assertIn('xr-ui-check', ci[2][1])
+        self.assertIn('xr-render', ci[3][1])
+        for _, command in ci[2:]:
+            self.assertIn('ARGS=--workspace-features', command)
+
     def test_retains_output_continues_after_failure_and_reports_failure(self):
         with tempfile.TemporaryDirectory() as temporary:
             directory = Path(temporary)

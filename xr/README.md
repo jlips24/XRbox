@@ -6,7 +6,7 @@ Host/Linux previews remain synthetic and never start authentication. The standal
 
 Implemented: in-process Rust GDExtension version/target diagnostics, optional OpenXR
 initialization with labeled desktop fallback, an unshaded test-pattern screen,
-controller/keyboard menu navigation, session-only width/distance controls,
+controller/keyboard and Meta Touch menu navigation, session-only width/distance controls,
 level recentering, focus recovery and hidden-menu redraw suppression.
 
 ## Tools and local preview
@@ -40,7 +40,7 @@ Select + Start + LB + RB also opens the prototype menu. Physical Guide is unused
 The prototype does not send game input; live streaming will use the extracted
 core's deferred shortcut recognizer, not a second gameplay recognizer in GDScript.
 Screen adjustments currently last only for this scene/session. The 3D menu
-uses keyboard/controller navigation; pointer picking is not implemented.
+uses keyboard/gamepad/Meta Touch button navigation; pointer picking is not implemented.
 
 make xr-build honors CARGO_TARGET_DIR and stages only the selected target/profile
 under ignored native/ directories. `make build` now aliases the host extension build.
@@ -122,3 +122,11 @@ The Android debug APK builds and passes package checks. No Linux/Android
 executable launch, Flatpak, headset XR presentation, hardware video, real
 controller, audio or battery result is established by these tests.
 See ../XR_PLAN.md and ../VALIDATION.md for progress and evidence.
+
+## Wednesday hardware session
+
+Use [FRAME_TEST_PLAN.md](FRAME_TEST_PLAN.md) and copy
+[FRAME_RESULTS_TEMPLATE.md](FRAME_RESULTS_TEMPLATE.md) before testing. The manual
+collector is `scripts/frame_collect.sh` at the repository root; it does not install
+tools or start a decoder/camera/account session. Linux playback remains disabled.
+No engine fork has been chosen. Mac/Docker results do not determine Frame GPU support.
