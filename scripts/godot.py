@@ -19,6 +19,35 @@ TARGETS = {
 }
 
 
+def capture_crash_backtrace(command):
+    """Diagnostic rerun only; never replace the original failing exit status."""
+    if os.environ.get('XRBOX_GODOT_CRASH_BACKTRACE') != '1' or sys.platform != 'linux':
+        return
+    directory = ROOT / '.tools'
+    directory.mkdir(exist_ok=True)
+    rerun = list(command)
+    phase = 'godot-crash'
+    if '--log-file' in rerun:
+        index = rerun.index('--log-file') + 1
+        phase = Path(rerun[index]).stem
+        rerun[index] = str(directory / (phase + '-debugger-rerun.log'))
+    path = directory / (phase + '-backtrace.log')
+    print(f'Diagnostic rerun under GDB (original failure retained): {path}', flush=True)
+    debugger = ['gdb', '--batch', '-q',
+                '-ex', 'set pagination off', '-ex', 'set confirm off',
+                '-ex', 'set debuginfod enabled off',
+                '-ex', 'run', '-ex', 'thread apply all bt full',
+                '-ex', 'info sharedlibrary', '--args']
+    try:
+        with path.open('w') as output:
+            output.write('Diagnostic rerun after signal exit; original test remains failed.\n')
+            output.flush()
+            subprocess.run(debugger + rerun, cwd=ROOT, text=True,
+                           stdout=output, stderr=subprocess.STDOUT, timeout=120)
+    except (OSError, subprocess.TimeoutExpired) as error:
+        print(f'Backtrace capture incomplete: {error}', file=sys.stderr)
+
+
 def run(command, capture=False):
     result = subprocess.run(command, cwd=ROOT, text=True,
                             stdout=subprocess.PIPE if capture else None,
@@ -29,6 +58,8 @@ def run(command, capture=False):
     if result.returncode < 0:
         name = signal.Signals(-result.returncode).name
         print(f'Command terminated by {name} ({-result.returncode}): {command[0]}', file=sys.stderr)
+        if capture:
+            capture_crash_backtrace(command)
         raise SystemExit(128 - result.returncode)
     if result.returncode or (capture and any(marker in result.stdout for marker in
                                             ('SCRIPT ERROR:', 'ERROR:'))):

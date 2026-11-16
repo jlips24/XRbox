@@ -25,6 +25,8 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           godot: 'true'
+      - name: Install crash debugger on CI runner
+        run: sudo apt-get install --no-install-recommends -y gdb
       - name: Restore Rust build cache
         uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
@@ -40,6 +42,7 @@ jobs:
         env:
           LIBGL_ALWAYS_SOFTWARE: '1'
           WGPU_BACKEND: vulkan
+          XRBOX_GODOT_CRASH_BACKTRACE: '1'
         run: |
           export XDG_RUNTIME_DIR="$RUNNER_TEMP/xrbox-runtime"
           mkdir -p "$XDG_RUNTIME_DIR"
