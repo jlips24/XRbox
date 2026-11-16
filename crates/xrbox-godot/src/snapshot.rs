@@ -1,6 +1,5 @@
 //! Godot dictionary contract; keep keys stable for scripts.
 use godot::prelude::*;
-#[cfg(target_os = "android")]
 use std::sync::atomic::Ordering;
 pub(super) fn dictionary(
     s: &xrbox_core::session::Session,
@@ -13,6 +12,11 @@ pub(super) fn dictionary(
     out.set("active", state.active);
     out.set("busy", state.busy);
     out.set("menu", s.controller.menu());
+    let (sampled, routed) = s.controller.input_activity();
+    out.set("sampled_input_ticks", sampled as i64);
+    out.set("routed_input_ticks", routed as i64);
+    out.set("input_focused", s.focused.load(Ordering::Acquire));
+    out.set("stream_controller", state.controller.as_str());
     let mut names = PackedStringArray::new();
     for console in &state.consoles {
         names.push(console.device_name.as_str());

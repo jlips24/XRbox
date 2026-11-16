@@ -24,6 +24,7 @@ func run_tests() -> void:
 	_test_navigation(scene)
 	_test_meta_input(scene)
 	_test_placement(scene)
+	_test_quest_controls(scene)
 	_test_video_surface(scene)
 	_test_focus(scene)
 	await _test_live_pages(scene)
@@ -224,3 +225,32 @@ func _test_meta_input(scene: Node) -> void:
 		for binding in profile.bindings:
 			verify(not binding.binding_path.contains("/menu/") and not binding.binding_path.contains("/system/"), "System-reserved buttons are never bound")
 	verify(not scene.menu.scroll.is_ancestor_of(scene.menu.footer), "Version footer stays outside scrolling actions")
+
+func _test_quest_controls(scene: Node) -> void:
+	scene.settings.adjust_darkness(2.0)
+	verify(scene.settings.darkness == 1.0, "Background darkness upper bound")
+	scene.settings.adjust_darkness(-3.0)
+	verify(scene.settings.darkness == 0.0, "Background darkness lower bound")
+	scene.settings.passthrough = true
+	scene._apply_screen()
+	verify(not scene.get_viewport().transparent_bg, "Unsupported passthrough retains opaque preview")
+	scene.settings.passthrough = false
+	var previous: Transform3D = scene.anchor
+	scene._headset_recentered()
+	scene.camera.position = Vector3(2, 1.6, 1)
+	scene._place_when_tracked(false)
+	verify(scene.anchor == previous, "Headset recenter waits for tracking")
+	scene._place_when_tracked(true)
+	verify(scene.anchor.origin.is_equal_approx(scene.camera.global_position), "Headset recenter uses updated pose")
+	var event := InputEventJoypadButton.new()
+	event.device = 5
+	event.button_index = JOY_BUTTON_A
+	event.pressed = true
+	scene.controller_input.handle_event(event)
+	verify(scene.controller_input.pad_id == 5, "Active physical gamepad replaces first enumerated device")
+	event.device = 6
+	event.button_index = JOY_BUTTON_GUIDE
+	scene.controller_input.handle_event(event)
+	verify(scene.controller_input.pad_id == 5, "Reserved Guide cannot select another pad")
+	scene.controller_input._joy_changed(5, false)
+	verify(scene.controller_input.pad_id == -1, "Selected pad disconnect clears selection")

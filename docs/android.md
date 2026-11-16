@@ -197,3 +197,43 @@ Template preparation mirrors Godot installation metadata: `xr/android/.build_ver
 identifies the pinned template, `xr/android/build/.gdignore` excludes generated
 sources from asset scanning, and archive executable permissions are preserved
 for the Gradle wrapper.
+
+## Quest controller, background and recenter retest
+
+The November 16 Quest 3S report confirms app startup and console connection;
+Bluetooth gameplay input failed with an 8BitDo Ultimate 2, although its D-pad/A
+can navigate XRbox menus. That report does not establish audio, moving
+video, persistence, or performance acceptance.
+
+The retest build uses release.json's 0.0.4/code 11006. Controller selection now
+follows the device producing gamepad events instead of always using device zero
+in the enumerated list. This addresses a possible selection failure; the actual
+Quest failure is not yet isolated. Diagnostics shows the selected gamepad name,
+device number and held-button count. Physical Guide remains reserved.
+
+1. Install the newly built `dist/xr/android/XRbox-0.0.4-quest-debug.apk` manually
+   with `adb install -r`. Record its SHA256 to distinguish this local build.
+2. Use the Bluetooth controller's D-pad/A in XRbox menus. In Diagnostics, hold
+   a face button and verify the held-button count changes. Record controller
+   model and whether menu navigation works if gameplay still fails. After trying
+   gameplay, reopen Diagnostics and record sampled/routed input ticks, focus, menu
+   and stream-controller status. Sampled ticks without routed ticks indicate local
+   suppression; routed ticks do not prove packet delivery or console acceptance.
+3. Connect, resume and check both sticks, D-pad, face buttons, bumpers and
+   triggers on the console. Test deferred View/Menu singles and both shortcuts.
+   Disconnect the controller while holding input, reconnect and verify no stuck
+   input or deferred shortcut crosses devices.
+4. In Screen settings, select Toggle passthrough. Darken/Lighten background
+   adjusts darkness in 10% steps from clear to black. Verify screen/menu brightness
+   stays unchanged. Toggle back to the opaque background. These settings are
+   session-only; unsupported runtimes display an unavailable message.
+5. Turn toward another direction and use the headset's system recenter gesture.
+   The screen/menu should return ahead of the new view, level and at eye height.
+   Ordinary head motion must keep the screen anchored. If system UI causes focus
+   loss, reconnect manually under the existing lifecycle policy.
+
+Passthrough uses the vendor extension and alpha environment blending described in
+[Godot's passthrough guide](https://docs.godotengine.org/en/4.7/tutorials/xr/ar_passthrough.html).
+Headset recenter handling follows the
+[OpenXR reference-space signal](https://docs.godotengine.org/en/stable/tutorials/xr/openxr_settings.html#reference-space).
+Builds and synthetic tests do not establish Quest behavior.

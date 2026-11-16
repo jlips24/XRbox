@@ -334,3 +334,31 @@ fn changing_bindings_cancels_pending_input_and_invalid_bindings_leave_current_ma
     poll(B::NONE, 32);
     assert!(controller.menu());
 }
+
+#[test]
+fn input_activity_distinguishes_menu_sampling_from_gameplay_routing() {
+    let controller = Controller::default();
+    let mut sampler: Sampler = Box::new(|| NativeGamepadSample {
+        connected: true,
+        state: raw(B::A),
+        ..Default::default()
+    });
+    let ctx = crate::Notify::default();
+    controller.set_menu(true);
+    controller.poll(&mut sampler, true, true, Duration::ZERO, &ctx);
+    assert_eq!(controller.input_activity(), (1, 0));
+    assert_eq!(
+        controller.stream_sampler()().state,
+        RawGamepadState::default()
+    );
+    controller.set_menu(false);
+    controller.poll(&mut sampler, true, true, Duration::from_millis(8), &ctx);
+    assert_eq!(controller.input_activity(), (2, 1));
+    assert_eq!(controller.stream_sampler()().state.buttons, B::A);
+    controller.poll(&mut sampler, true, false, Duration::from_millis(16), &ctx);
+    assert_eq!(controller.input_activity(), (3, 1));
+    assert_eq!(
+        controller.stream_sampler()().state,
+        RawGamepadState::default()
+    );
+}

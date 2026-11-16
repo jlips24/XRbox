@@ -22,6 +22,8 @@ struct Shared {
     sample: NativeGamepadSample,
     routed: RawGamepadState,
     hotkeys: Hotkeys,
+    sampled_input_ticks: u64,
+    routed_input_ticks: u64,
 }
 #[derive(Clone, Default)]
 pub struct Controller {
@@ -31,6 +33,11 @@ pub struct Controller {
 impl Controller {
     pub fn sample(&self) -> NativeGamepadSample {
         self.state.lock().sample.clone()
+    }
+    /// Non-secret activity counters; routing does not prove console receipt.
+    pub fn input_activity(&self) -> (u64, u64) {
+        let shared = self.state.lock();
+        (shared.sampled_input_ticks, shared.routed_input_ticks)
     }
     pub fn menu(&self) -> bool {
         self.menu.load(Ordering::Relaxed)
@@ -66,6 +73,12 @@ impl Controller {
         );
         if open {
             self.set_menu(true);
+        }
+        if next.connected && next.state != RawGamepadState::default() {
+            shared.sampled_input_ticks = shared.sampled_input_ticks.saturating_add(1);
+        }
+        if routed != RawGamepadState::default() {
+            shared.routed_input_ticks = shared.routed_input_ticks.saturating_add(1);
         }
         shared.routed = routed;
         let changed = shared.sample != next;
