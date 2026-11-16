@@ -9,6 +9,8 @@ use {
 };
 #[derive(Default)]
 pub(super) struct Video {
+    // Dimensions of the latest decoded frame submitted, not the placeholder texture.
+    pub(super) decoded_size: Vector2i,
     #[cfg(target_os = "android")]
     pub(super) presenter: Option<Arc<android_video::Presenter>>,
     #[cfg(target_os = "android")]
@@ -53,12 +55,14 @@ impl Video {
             if let Some(reader) = reader
                 && let Some(frame) = reader.lock().take_latest()
             {
+                self.decoded_size = Vector2i::new(frame.width as i32, frame.height as i32);
                 texture.set_size(Vector2::new(frame.width as f32, frame.height as f32));
                 presenter.submit(frame, texture.get_external_texture_id() as u32);
             }
         }
     }
     pub(super) fn clear(&mut self) {
+        self.decoded_size = Vector2i::ZERO;
         #[cfg(target_os = "android")]
         if let Some(p) = self.presenter.take() {
             p.close();
@@ -67,5 +71,19 @@ impl Video {
         {
             self.texture = None;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn source_dimensions_wait_for_a_frame_and_reset_on_clear() {
+        let mut video = Video::default();
+        assert_eq!(video.decoded_size, Vector2i::ZERO);
+        video.decoded_size = Vector2i::new(1280, 720);
+        video.clear();
+        assert_eq!(video.decoded_size, Vector2i::ZERO);
     }
 }

@@ -220,3 +220,88 @@ AppStream XML, source staging isolation, package-only release output, Make dry r
 and whitespace checks passed. This Mac lacks Flatpak/SDK tooling, so no actual
 Flatpak build, installation, Linux launch or hardware acceptance was performed.
 The first published-release Linux job must pass before a Flatpak is attached. See [Linux guide](linux.md).
+
+## Spatial UI overhaul — November 16, 2026
+
+Branch `feat/spatial-ui-overhaul`, app 0.0.5/code 11007. Implements a wider rounded
+control panel with persistent navigation, separate settings pages, inline numeric
+adjustments, three screen presets, bounded height/horizontal placement, a screen
+frame and a once-rendered idle card. Existing native media and deferred input paths
+are unchanged. Screen/room adjustments remain session-only; direct grabbing, hand
+tracking and full settings/custom hotkey editing are outside this change.
+
+`make check` passed. `make test` passed 223 tests with one ignored credential test
+on a scoped localhost-enabled run; the initial restricted run could not bind fake
+HTTP fixtures. Four bridge unit tests passed during `make xr-check`; its first
+Godot phase was blocked by macOS sandbox certificate/socket restrictions. The
+scoped Godot check passed after script/layout corrections. Synthetic GPU captures
+were inspected for home, screen, placement, environment and account. Additional
+captures cover settings, consoles and the idle screen. No live credentials,
+console, headset or account were accessed. Final headless regressions passed, including supported-runtime room controls,
+preset resizing, placement reset and page navigation. The synthetic GPU run
+captured eight pages successfully. `make xr-apk` passed six packaging regressions,
+ARM64 compilation, export, debug-signature verification and 16 KiB native/ZIP
+alignment verification after rerunning with Gradle socket access.
+
+Artifact: `dist/xr/android/XRbox-0.0.5-quest-debug.apk`, 108,526,266 bytes. SHA256:
+`f00cd4de120966ba9f02266c94a204c656bd486a1953a355d74425e6f0656b74`. Follow the [spatial interface retest](android.md#spatial-interface-retest--005--11007).
+
+## Startup UI placement fix — November 16, 2026
+
+User reported that the redesigned UI appears behind them at app launch.
+`bug/startup-ui-placement` preserves the uncommitted UI overhaul and adds a
+focused-session/valid-head-pose startup gate. Placement uses the tracker's adjusted
+transform in the XR origin's world space, and projects forward onto the floor
+instead of extracting Euler yaw. Initial surfaces remain hidden until placement;
+ordinary head motion preserves the anchor. This addresses an identified startup
+readiness gap; the device root cause and fix acceptance remain unconfirmed.
+
+`make xr-check` passed four bridge tests and headless UI regressions. New synthetic
+coverage includes missing/stale head poses, a valid pose before session focus,
+a backward-facing tilted headset with a deliberately stale scene camera, initial
+placement completion, level placement, vertical-gaze deferral and world anchoring.
+Implementation follows Godot 4.7's [adjusted-pose contract](https://docs.godotengine.org/en/4.7/classes/class_xrpose.html#class-xrpose-method-get-adjusted-transform)
+and the pinned [camera pose integration](https://github.com/godotengine/godot/blob/4.7.2-stable/scene/3d/xr/xr_nodes.cpp).
+
+`make xr-apk` passed packaging regressions, ARM64 build/export, debug signature
+and 16 KiB alignment verification. Artifact:
+`dist/xr/android/XRbox-0.0.6-quest-debug.apk`, code 11008, 108,527,222 bytes.
+SHA256: `51e181e6bdd0c066d6430f973f94de305378a36925a17de2f385d49a950062dc`.
+No headset, console, account or stored credentials were accessed. Follow the
+[startup placement retest](android.md#startup-placement-retest--006--11008).
+
+## Room darkness and picture quality — November 16, 2026
+
+User reports room darkness affecting settings and a low-resolution/jagged Xbox
+picture. Branch `bug/room-darkness-picture-quality` keeps the existing UI/startup
+work. The menu now renders opaque pixels with alpha-scissor depth protection and
+transparent rounded corners; the room sphere has the lowest render priority.
+Video explicitly requests linear/clamped external sampling. Android alone enables
+4x MSAA for geometry edges. The existing 1080p console request is unchanged.
+Diagnostics report decoded-frame dimensions from the latest submitted frame,
+not the placeholder texture; release clears these dimensions.
+
+`make check` passed. `make test` passed 224 tests with one ignored credential test.
+`make xr-check` passed five bridge tests and headless UI regressions, including
+resolution reporting/reset and material/Android AA policy checks. Synthetic GPU
+regressions passed in both host Mobile/Metal and OpenGL Compatibility renderers:
+50%/100% darkness changes the synthetic room while preserving menu and idle-screen
+pixels. Samples include menu portions beyond the screen silhouette. Tests force
+the dimmer to draw last, exposing the original alpha-blended menu's vulnerability;
+a scoped mutation removing depth protection was rejected by the regression.
+The initial normal-order host simulation did not reproduce the reported device
+symptom. The stricter test caught insufficient depth-prepass protection before
+switching to opaque alpha-scissor rendering. No claim of device acceptance follows.
+
+`make xr-apk` passed six packaging regressions, host/Android native compilation,
+export, debug-signature and 16 KiB ZIP/native alignment verification.
+Artifact: `dist/xr/android/XRbox-0.0.7-quest-debug.apk`, code 11009,
+108,528,050 bytes. SHA256:
+`935c7574f84b636f43a80dfcf4ec33793c2a33457538a4bd60f518dfa354d345`.
+No account, stored credentials, console or headset was accessed. Actual decoded
+source resolution, visible sharpness, stereo behavior and performance remain
+hardware checks. Follow the [targeted retest](android.md#room-darkness-and-picture-retest--007--11009).
+
+Godot documents [opaque alpha-scissor rendering](https://docs.godotengine.org/en/4.7/classes/class_basematerial3d.html)
+and [MSAA's geometry-only scope](https://docs.godotengine.org/en/4.7/classes/class_projectsettings.html#class-projectsettings-property-rendering-anti-aliasing-quality-msaa-3d).
+No image postprocessing, supersampling or native media/protocol change was added.

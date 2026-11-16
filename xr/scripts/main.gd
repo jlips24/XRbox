@@ -6,11 +6,13 @@ var settings = ScreenSettings.new()
 var runtime: RefCounted
 var origin: XROrigin3D
 var camera: XRCamera3D
+var screen_frame: MeshInstance3D
 var cinema: MeshInstance3D
 var menu: RefCounted
 var controller_input: RefCounted
 var video: RefCounted
 var xr_running: bool = false
+var xr_session_focused: bool = false
 var xr_interface: XRInterface
 var menu_open: bool = true
 var anchor: Transform3D = Transform3D.IDENTITY
@@ -55,6 +57,9 @@ func _ready() -> void:
 	menu.status_label.text = "OpenXR active" if xr_running else "Synthetic preview · no account or console access"
 	recenter()
 	initial_placement_pending = xr_running
+	if xr_running:
+		cinema.hide()
+		screen_frame.hide()
 	set_process(true)
 	set_menu_open(true)
 	if runtime.call("streaming_supported") and not args.has("--test"):
@@ -66,10 +71,10 @@ func _ready() -> void:
 			live = null
 			menu.status_label.text = "Android services failed to initialize; check app logs"
 
-	if args.has("--ui-preview"):
+	if args.has("--ui-preview") or (live == null and not args.has("--test")):
 		live = load("res://scripts/live_ui.gd").new(runtime, menu, video, settings, _apply_screen, recenter, set_menu_open, func(): get_tree().quit(), false)
 		live.preview = true
-		live.state = {"status": "Interface preview · synthetic consoles, no network access", "consoles": PackedStringArray(["Living room Xbox", "Office Xbox"])}
+		live.state = {"status": "Synthetic preview · no account or console access", "consoles": PackedStringArray(["Living room Xbox", "Office Xbox"]) if args.has("--ui-preview") else PackedStringArray()}
 		live._rebuild()
 
 func _process(_delta: float) -> void:
@@ -79,15 +84,17 @@ func _process(_delta: float) -> void:
 		controller_input.sample(focused)
 		live.input_status = controller_input.status
 		live.tick(_delta)
-	_place_when_tracked(xr_interface != null and xr_interface.get_tracking_status() == XRInterface.XR_NORMAL_TRACKING)
+	_place_when_tracked(xr_session_focused and _tracked_head_pose() != null)
 
 func _place_when_tracked(tracking_valid: bool) -> void:
 	# Startup can precede the first headset pose. Place at eye height once a
 	# tracked pose exists; following head movement must not drag the screen.
 	if initial_placement_pending and tracking_valid:
-		recenter()
-		initial_placement_pending = false
-		set_process(true)
+		if recenter():
+			initial_placement_pending = false
+			cinema.show()
+			screen_frame.show()
+			menu.set_open(menu_open)
 
 func _configure_input() -> void:
 	# Godot 4.7 desktop defaults omit A/B from accept/cancel. Add explicit
@@ -104,14 +111,42 @@ func _create_screen() -> void:
 	cinema.mesh = QuadMesh.new()
 	var material := StandardMaterial3D.new()
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	var image := Image.create(640, 360, false, Image.FORMAT_RGB8)
-	var colors := [Color.WHITE, Color.YELLOW, Color.CYAN, Color.GREEN, Color.MAGENTA, Color.RED, Color.BLUE, Color.BLACK]
-	for x in range(640):
-		for y in range(360):
-			image.set_pixel(x, y, colors[x / 80] if y < 300 else Color(float(x) / 639.0, float(x) / 639.0, float(x) / 639.0))
-	material.albedo_texture = ImageTexture.create_from_image(image)
+	# Render the idle card once. Live playback replaces only the cinema material.
+	var idle := SubViewport.new()
+	idle.size = Vector2i(1280, 720)
+	idle.render_target_update_mode = SubViewport.UPDATE_ONCE
+	add_child(idle)
+	var panel := PanelContainer.new()
+	panel.size = Vector2(1280, 720)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("111b25")
+	style.border_color = Color("334a50")
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(28)
+	panel.add_theme_stylebox_override("panel", style)
+	idle.add_child(panel)
+	var center := CenterContainer.new()
+	panel.add_child(center)
+	var words := VBoxContainer.new()
+	words.add_theme_constant_override("separation", 24)
+	center.add_child(words)
+	for line in [["X R B O X", 30, Color("b3edc5")], ["A space for your Xbox.", 54, Color("f2f5fa")], ["Your console appears here when you connect.", 26, Color("a2adbd")]]:
+		var label := Label.new()
+		label.text = line[0]
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.add_theme_font_size_override("font_size", line[1])
+		label.add_theme_color_override("font_color", line[2])
+		words.add_child(label)
+	material.albedo_texture = idle.get_texture()
 	cinema.material_override = material
 	add_child(cinema)
+	screen_frame = MeshInstance3D.new()
+	screen_frame.mesh = QuadMesh.new()
+	var frame_material := StandardMaterial3D.new()
+	frame_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	frame_material.albedo_color = Color("293640")
+	screen_frame.material_override = frame_material
+	add_child(screen_frame)
 
 func _headset_recentered() -> void:
 	# Wait for the next valid pose rather than using the pre-recenter camera.
@@ -127,34 +162,68 @@ func _create_background() -> void:
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	material.cull_mode = BaseMaterial3D.CULL_FRONT
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	# The room sphere is transparent and camera-centered. Distance sorting alone
+	# can draw it over alpha-blended foregrounds despite its much larger radius.
+	material.render_priority = Material.RENDER_PRIORITY_MIN
 	material.albedo_color = Color.BLACK
 	background.material_override = material
 	camera.add_child(background)
 
 func _apply_background() -> void:
 	var enabled: bool = settings.passthrough and settings.passthrough_available
-	if xr_running:
+	if xr_running and xr_interface != null:
 		xr_interface.environment_blend_mode = XRInterface.XR_ENV_BLEND_MODE_ALPHA_BLEND if enabled else XRInterface.XR_ENV_BLEND_MODE_OPAQUE
 	get_viewport().transparent_bg = enabled
 	background.visible = enabled and settings.darkness > 0.0
 	background.material_override.albedo_color = Color(0, 0, 0, settings.darkness)
 
-func recenter() -> void:
-	# Keep the screen level: headset pitch/roll must not tilt the cinema plane.
-	anchor = Transform3D(Basis(Vector3.UP, camera.global_rotation.y), camera.global_position)
+func _tracked_head_pose() -> XRPose:
+	var tracker := XRServer.get_tracker("head") as XRPositionalTracker
+	if tracker == null or not tracker.has_pose("default"):
+		return null
+	var pose := tracker.get_pose("default")
+	if pose == null or not pose.has_tracking_data or pose.tracking_confidence == XRPose.XR_TRACKING_CONFIDENCE_NONE:
+		return null
+	return pose
+
+func recenter() -> bool:
+	var head: Transform3D = camera.global_transform
+	if xr_running:
+		var pose := _tracked_head_pose()
+		if not xr_session_focused or pose == null:
+			initial_placement_pending = true
+			return false
+		# Match XRCamera3D's adjusted tracking space, including origin and world scale.
+		head = origin.global_transform * pose.get_adjusted_transform()
+	return _place_from_head(head)
+
+func _place_from_head(head: Transform3D) -> bool:
+	# Project the actual gaze direction onto the floor; Euler yaw can be
+	# ambiguous when the headset is tilted. Do not guess while looking vertically.
+	var forward := -head.basis.z
+	forward.y = 0.0
+	if forward.length_squared() < 0.0001:
+		return false
+	forward = forward.normalized()
+	anchor = Transform3D(Basis(forward.cross(Vector3.UP), Vector3.UP, -forward), head.origin)
 	_apply_screen()
+	return true
 
 func _apply_screen() -> void:
 	_apply_background()
 	cinema.mesh.size = Vector2(settings.width, settings.width * 9.0 / 16.0)
-	cinema.transform = anchor * Transform3D(Basis.IDENTITY, Vector3(0, 0, -settings.distance))
+	cinema.transform = anchor * Transform3D(Basis.IDENTITY, Vector3(settings.horizontal, settings.height, -settings.distance))
+	screen_frame.mesh.size = cinema.mesh.size + Vector2(0.035, 0.035)
+	screen_frame.transform = cinema.transform
+	screen_frame.position += anchor.basis.z * -0.005
 	menu.place(anchor)
+	menu.refresh_values()
 	menu.metrics_label.text = "Screen %.1f m wide · %.1f m away" % [settings.width, settings.distance]
 
 func set_menu_open(open: bool) -> void:
 	menu_open = open
 	if runtime != null: runtime.call("set_menu", open)
-	menu.set_open(open)
+	menu.set_open(open and not initial_placement_pending)
 
 func _input(event: InputEvent) -> void:
 	if focused and controller_input != null: controller_input.handle_event(event)
@@ -174,17 +243,19 @@ func _input(event: InputEvent) -> void:
 		if not Input.is_joy_button_pressed(pad, JOY_BUTTON_BACK) and not Input.is_joy_button_pressed(pad, JOY_BUTTON_START):
 			menu_combo_armed = true
 	if event.is_action_pressed("ui_cancel"):
-		set_menu_open(not menu_open)
+		_xr_back()
 	elif menu_open:
 		menu.navigate(event)
 
 func _xr_focus_lost() -> void:
+	xr_session_focused = false
 	focused = false
 	if runtime != null:
 		runtime.call("set_focused", false)
 		if live != null and live.state.get("active", false): runtime.call("disconnect_stream")
 
 func _xr_focus_returned() -> void:
+	xr_session_focused = true
 	focused = true
 	if runtime != null: runtime.call("set_focused", true)
 	set_menu_open(true)
@@ -226,7 +297,7 @@ func _xr_back() -> void:
 	if not focused:
 		return
 	if live != null and menu_open and live.page != "home":
-		live.page = "home"
+		live.page = {"display": "settings", "placement": "display", "environment": "settings", "account": "settings", "diagnostics": "settings", "signout": "account"}.get(live.page, "home")
 		live.key = ""
 	else:
 		set_menu_open(not menu_open)
