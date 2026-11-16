@@ -187,3 +187,8 @@ Primary references: [Godot ExternalTexture](https://docs.godotengine.org/en/stab
 [Android MediaCodec](https://developer.android.com/reference/android/media/MediaCodec),
 [Android Keystore](https://developer.android.com/privacy-and-security/keystore),
 [Godot Android OpenXR](https://docs.godotengine.org/en/stable/tutorials/xr/deploying_to_android.html).
+
+The export preset sets `gradle_build/gradle_build_directory` to `res://android`.
+Godot appends `build` to custom Gradle directories, so this resolves to
+`xr/android/build`, where the packaging helper extracts `android_source.zip`
+and stages the Java bootstrap under `src/main/java`.
