@@ -142,3 +142,16 @@ A fresh-cache import in a temporary project copy also passed on macOS.
 Python helpers passed 17 tests; one Linux-only GDB integration check was skipped
 on macOS. Diff whitespace checks passed. Linux CI must validate the timing
 workaround; this is not a symbolicated root-cause confirmation or engine fix.
+
+## Automatic release attachments — November 16, 2026
+
+The Build workflow now runs on release publication only. It checks numeric tag/APK
+version agreement and master ancestry, pins both builds to the validated commit,
+and attaches verified outputs after both jobs succeed. The release guide describes
+the complete GitHub UI process. The final job alone has repository write access.
+
+Local Python regressions cover source ancestry, version mismatch, artifact source
+and tag mismatch, tampering rejection, archive contents and final checksums.
+Workflow actionlint and whitespace checks passed. No release was published, assets
+uploaded or devices accessed during implementation; the actual hosted build and
+attachment path require the first published release to validate end to end.

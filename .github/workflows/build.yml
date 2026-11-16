@@ -1,8 +1,6 @@
 name: Build
 
 on:
-  push:
-    tags: ['v*']
   release:
     types: [published]
 
@@ -10,26 +8,27 @@ permissions:
   contents: read
 
 concurrency:
-  group: build-${{ github.event.release.tag_name || github.ref_name }}
+  group: build-${{ github.event.release.tag_name }}
   cancel-in-progress: false
 
 jobs:
   version:
     name: Validate release/tag name
-    if: github.event_name == 'release' || github.event.created
     runs-on: ubuntu-24.04
     outputs:
       eligible: ${{ steps.version.outputs.eligible }}
       tag: ${{ steps.version.outputs.tag }}
+      revision: ${{ steps.version.outputs.revision }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.release.tag_name || github.ref }}
+          ref: ${{ github.event.release.tag_name }}
+          fetch-depth: 0
           persist-credentials: false
       - id: version
         env:
-          XRBOX_TAG: ${{ github.event.release.tag_name || github.ref_name }}
-        run: python3 scripts/ci.py tag
+          XRBOX_TAG: ${{ github.event.release.tag_name }}
+        run: python3 scripts/ci.py release-source
 
   linux:
     name: Linux ARM64 extension
@@ -40,7 +39,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ needs.version.outputs.tag }}
+          ref: ${{ needs.version.outputs.revision }}
           persist-credentials: false
       - uses: ./.github/actions/setup
       - name: Build the optimized native extension
@@ -71,7 +70,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ needs.version.outputs.tag }}
+          ref: ${{ needs.version.outputs.revision }}
           persist-credentials: false
       - uses: ./.github/actions/setup
         with:
@@ -94,3 +93,39 @@ jobs:
           path: dist/ci/android/
           if-no-files-found: error
           retention-days: 30
+
+  publish:
+    name: Attach release assets
+    needs: [version, linux, android]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.version.outputs.revision }}
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: xrbox-${{ needs.version.outputs.tag }}-linux-arm64-extension
+          path: dist/download/linux
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: xrbox-${{ needs.version.outputs.tag }}-android-development-apk
+          path: dist/download/android
+      - name: Verify provenance and package release assets
+        env:
+          XRBOX_TAG: ${{ needs.version.outputs.tag }}
+          XRBOX_REVISION: ${{ needs.version.outputs.revision }}
+        run: python3 scripts/ci.py release-assets --linux dist/download/linux --android dist/download/android --output dist/release
+      - name: Attach assets to the published release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          XRBOX_TAG: ${{ needs.version.outputs.tag }}
+          XRBOX_REVISION: ${{ needs.version.outputs.revision }}
+        run: |
+          # Refuse to attach to a tag that moved while the builds ran.
+          test "$(gh api "repos/$GH_REPO/commits/$XRBOX_TAG" --jq .sha)" = "$XRBOX_REVISION"
+          gh release upload "$XRBOX_TAG" dist/release/* --clobber
