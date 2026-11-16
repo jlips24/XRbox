@@ -1,5 +1,5 @@
 extends Node3D
-## Linux-first XR bring-up scene. Synthetic pixels only, never Xbox media.
+## Scene composition and XR lifecycle. Host previews remain synthetic.
 const ScreenSettings = preload("res://scripts/screen_settings.gd")
 
 var settings = ScreenSettings.new()
@@ -7,13 +7,9 @@ var runtime: RefCounted
 var origin: XROrigin3D
 var camera: XRCamera3D
 var cinema: MeshInstance3D
-var menu_surface: MeshInstance3D
-var menu_viewport: SubViewport
-var menu_panel: Control
-var status_label: Label
-var metrics_label: Label
-var buttons: Array[Button] = []
-var focus_index: int = 0
+var menu: RefCounted
+var controller_input: RefCounted
+var video: RefCounted
 var xr_running: bool = false
 var xr_interface: XRInterface
 var menu_open: bool = true
@@ -37,7 +33,9 @@ func _ready() -> void:
 	origin.add_child(camera)
 	camera.current = true
 	_create_screen()
-	_create_menu()
+	menu = preload("res://scripts/menu_ui.gd").new(self, settings, _apply_screen, recenter, set_menu_open)
+	controller_input = preload("res://scripts/controller_input.gd").new(runtime)
+	video = preload("res://scripts/video_surface.gd").new(runtime, cinema)
 	var args := OS.get_cmdline_user_args()
 	if not args.has("--desktop") and not args.has("--test"):
 		xr_interface = XRServer.find_interface("OpenXR")
@@ -48,7 +46,7 @@ func _ready() -> void:
 				if xr_interface.has_signal(signal_name): xr_interface.connect(signal_name, _xr_focus_lost)
 			if xr_interface.has_signal("session_focussed"): xr_interface.connect("session_focussed", _xr_focus_returned)
 	# OpenXR failure is visible and still permits an explicitly labeled desktop preview.
-	status_label.text = "XRbox %s · core %s\n%s\n%s\nSynthetic screen only · Xbox media integration pending" % [
+	menu.status_label.text = "XRbox %s · core %s\n%s\n%s\nSynthetic screen only · Xbox media integration pending" % [
 		ProjectSettings.get_setting("application/config/version"),
 		runtime.call("core_version"), runtime.call("native_target"),
 		"OpenXR active" if xr_running else "Desktop preview · no XR presentation verified"]
@@ -57,15 +55,18 @@ func _ready() -> void:
 	set_process(initial_placement_pending)
 	set_menu_open(true)
 	if runtime.call("streaming_supported") and not args.has("--test"):
-		live = load("res://scripts/live_ui.gd").new(self)
+		live = load("res://scripts/live_ui.gd").new(runtime, menu, video, settings, _apply_screen, recenter, set_menu_open, func(): get_tree().quit())
 		if live.start():
+			controller_input.start()
 			set_process(true)
 		else:
 			live = null
-			status_label.text = "Android services failed to initialize; check app logs"
+			menu.status_label.text = "Android services failed to initialize; check app logs"
 
 func _process(_delta: float) -> void:
-	if live != null: live.tick(_delta)
+	if live != null:
+		controller_input.sample(focused)
+		live.tick(_delta)
 	_place_when_tracked(xr_interface != null and xr_interface.get_tracking_status() == XRInterface.XR_NORMAL_TRACKING)
 
 func _place_when_tracked(tracking_valid: bool) -> void:
@@ -100,65 +101,6 @@ func _create_screen() -> void:
 	cinema.material_override = material
 	add_child(cinema)
 
-func _create_menu() -> void:
-	menu_viewport = SubViewport.new()
-	menu_viewport.size = Vector2i(1024, 1024)
-	menu_viewport.transparent_bg = false
-	menu_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	add_child(menu_viewport)
-	menu_panel = PanelContainer.new()
-	menu_panel.size = Vector2(1024, 1024)
-	menu_viewport.add_child(menu_panel)
-	var margin := MarginContainer.new()
-	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 40)
-	menu_panel.add_child(margin)
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 12)
-	margin.add_child(column)
-	var heading := Label.new()
-	heading.text = "XRbox · XR foundation"
-	heading.add_theme_font_size_override("font_size", 34)
-	column.add_child(heading)
-	status_label = Label.new()
-	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	status_label.add_theme_font_size_override("font_size", 22)
-	column.add_child(status_label)
-	metrics_label = Label.new()
-	metrics_label.add_theme_font_size_override("font_size", 24)
-	column.add_child(metrics_label)
-	_add_button(column, "View test screen / Back", func(): set_menu_open(false))
-	_add_button(column, "Screen wider", func(): settings.adjust_width(0.2); _apply_screen())
-	_add_button(column, "Screen narrower", func(): settings.adjust_width(-0.2); _apply_screen())
-	_add_button(column, "Screen farther", func(): settings.adjust_distance(0.2); _apply_screen())
-	_add_button(column, "Screen nearer", func(): settings.adjust_distance(-0.2); _apply_screen())
-	_add_button(column, "Recenter screen and menu", recenter)
-	_add_button(column, "Reset screen", func(): settings.reset(); recenter())
-	_add_button(column, "Quit", func(): get_tree().quit())
-	var help := Label.new()
-	help.text = "D-pad / arrows: navigate · A / Enter: select\nB / Escape: back · Select + Start + LB + RB: menu\nSession-only screen settings · no sign-in or network access"
-	help.add_theme_font_size_override("font_size", 20)
-	column.add_child(help)
-	menu_surface = MeshInstance3D.new()
-	var quad := QuadMesh.new()
-	quad.size = Vector2(1.5, 1.5)
-	menu_surface.mesh = quad
-	var material := StandardMaterial3D.new()
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	material.albedo_texture = menu_viewport.get_texture()
-	menu_surface.material_override = material
-	add_child(menu_surface)
-
-func _add_button(parent: Node, text: String, action: Callable) -> void:
-	var button := Button.new()
-	button.text = text
-	button.clip_text = true
-	button.custom_minimum_size.y = 60
-	button.add_theme_font_size_override("font_size", 26)
-	button.pressed.connect(action)
-	parent.add_child(button)
-	buttons.append(button)
-
 func recenter() -> void:
 	# Keep the screen level: headset pitch/roll must not tilt the cinema plane.
 	anchor = Transform3D(Basis(Vector3.UP, camera.global_rotation.y), camera.global_position)
@@ -167,25 +109,17 @@ func recenter() -> void:
 func _apply_screen() -> void:
 	cinema.mesh.size = Vector2(settings.width, settings.width * 9.0 / 16.0)
 	cinema.transform = anchor * Transform3D(Basis.IDENTITY, Vector3(0, 0, -settings.distance))
-	menu_surface.transform = anchor * Transform3D(Basis.IDENTITY, Vector3(0, 0, -1.4))
-	metrics_label.text = "Screen %.1f m wide · %.1f m away" % [settings.width, settings.distance]
+	menu.place(anchor)
+	menu.metrics_label.text = "Screen %.1f m wide · %.1f m away" % [settings.width, settings.distance]
 
 func set_menu_open(open: bool) -> void:
 	menu_open = open
 	if runtime != null: runtime.call("set_menu", open)
-	menu_surface.visible = open
-	# Freeze the menu texture while hidden; video/XR submissions remain independent.
-	menu_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS if open else SubViewport.UPDATE_DISABLED
-	if open:
-		_select_focus(0)
-
-func _select_focus(index: int) -> void:
-	focus_index = wrapi(index, 0, buttons.size())
-	buttons[focus_index].grab_focus()
+	menu.set_open(open)
 
 func _input(event: InputEvent) -> void:
 	if live != null:
-		live._sample_pad()
+		controller_input.sample(focused)
 		if live.state.get("active", false) and not menu_open:
 			if event is InputEventKey and event.is_action_pressed("ui_cancel"): set_menu_open(true)
 			return
@@ -202,12 +136,7 @@ func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		set_menu_open(not menu_open)
 	elif menu_open:
-		if event.is_action_pressed("ui_down"):
-			_select_focus(focus_index + 1)
-		elif event.is_action_pressed("ui_up"):
-			_select_focus(focus_index - 1)
-		elif event.is_action_pressed("ui_accept"):
-			buttons[focus_index].pressed.emit()
+		menu.navigate(event)
 
 func _xr_focus_lost() -> void:
 	focused = false
@@ -229,11 +158,12 @@ func _notification(what: int) -> void:
 	elif what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_APPLICATION_RESUMED:
 		focused = true
 		if runtime != null: runtime.call("set_focused", true)
-		if menu_surface != null:
+		if menu != null:
 			set_menu_open(true)
 
 func _exit_tree() -> void:
-	if live != null: live.dispose()
+	if controller_input != null: controller_input.dispose()
+	if video != null: video.dispose()
 	if runtime != null: runtime.call("shutdown")
 	if xr_running and xr_interface != null:
 		get_viewport().use_xr = false
