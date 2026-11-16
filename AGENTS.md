@@ -133,6 +133,13 @@ standalone app's smoke/auth-probe/macOS package tasks no longer exist. Use
 
 ## Dependencies and repository changes
 
+Before implementing each new feature or bug fix, create a new purpose-specific
+branch: `feat/<short-description>` for a feature or `bug/<short-description>` for
+a fix. Do not implement features/fixes directly on `master` or reuse an unrelated
+branch. Preserve uncommitted user work when changing branches. This rule does not
+authorize pushing branches, opening PRs or publishing releases.
+
+
 Dependabot configuration lives in .github/dependabot.yml: Cargo updates are checked
 daily at 09:00 America/New_York, with related graphics/WebRTC groups and at most
 five open version-update PRs. Keep schedule documentation consistent with the YAML.
