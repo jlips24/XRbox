@@ -1,7 +1,8 @@
 # Meta Quest 3S Remote Play development APK
 
-Current source: **0.1.10-xr.3**, package **org.xrbox.prototype**, version code **11003**.
-The xr.3 UI adds Meta menu controls; its new APK has not yet been built or device-tested.
+Current source: **0.0.1**, package **org.xrbox.prototype**, version code **11003**.
+The UI adds Meta menu controls. The APK has been built and statically verified;
+actual device acceptance remains pending. See [validation evidence](validation.md).
 The APK now includes Xbox console Remote Play: supported Microsoft device-code
 sign-in, console discovery, native WebRTC, MediaCodec video, Opus/CPAL audio and
 Bluetooth gamepad input. These paths build successfully but **have not been run
@@ -17,11 +18,11 @@ on a headset or against a console**. No PC or relay service is part of runtime.
    gameplay still requires the Bluetooth Xbox controller. Hand interaction is not implemented. Install manually from the repository root:
 
    ```sh
-   adb install -r dist/xr/android/XRbox-0.1.10-xr.3-quest-debug.apk
+   adb install -r dist/xr/android/XRbox-0.0.1-quest-debug.apk
    ```
 
-3. Launch **XRbox** from **Unknown Sources**. Confirm build xr.3,
-   android/aarch64 and **OpenXR active**; confirm stereo and head tracking.
+3. Launch **XRbox** from **Unknown Sources**. Confirm version **0.0.1**, stereo
+   output and head tracking. Record the visible XR/renderer state if startup fails.
 4. Select **Sign in**, copy the displayed code or enter it on another device at
    the displayed Microsoft verification URL. The browser action is optional;
    return to XRbox after approval. Never share codes or tokens in a bug report.
@@ -63,7 +64,7 @@ No headset is polled, installed or launched by our build commands.
 ## Reorganization retest
 
 The earlier November 16 reorganization artifact uses version 0.1.10-xr.2/code 11002. Identify its
-APK by the checksum in [VALIDATION.md](../VALIDATION.md#rebuilt-artifact), not the
+APK by the checksum in [validation evidence](validation.md#rebuilt-artifact), not the
 version label alone. From the repository root, verify it before manual installation:
 
 ```sh

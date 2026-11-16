@@ -25,9 +25,9 @@ supported.
 
 ### Install the APK
 
-The current development source is **0.1.10-xr.3** (new UI; APK rebuild pending). APKs are build outputs, not
+The current development APK is **0.0.1**. APKs are build outputs, not
 included in this repository. If you do not already have one, follow the
-[Android build instructions](xr/ANDROID.md#rebuild-on-this-mac) before continuing.
+[Android build instructions](docs/android.md#rebuild-on-this-mac) before continuing.
 No public download is assumed by these instructions.
 
 Connect the Quest by USB, accept the debugging prompt inside the headset, then
@@ -35,12 +35,12 @@ run these commands from the repository root:
 
 ```sh
 adb devices
-adb install -r dist/xr/android/XRbox-0.1.10-xr.3-quest-debug.apk
+adb install -r dist/xr/android/XRbox-0.0.1-quest-debug.apk
 ```
 
 If `adb devices` shows `unauthorized`, check the headset for its permission prompt.
 Open **XRbox** from the Quest's **Unknown Sources** app library.
-Confirm the displayed version and **OpenXR active** status. The computer can be
+Confirm the displayed version, stereo output and head tracking. The computer can be
 disconnected after installation; it is not part of the streaming pipeline.
 
 ## Connect and play
@@ -90,7 +90,7 @@ XR controller input is never forwarded as Xbox gameplay input.
 If connection or playback fails, record the app version, headset OS, visible
 error and media-stage counters. Counters alone do not prove visible playback.
 Never share sign-in codes, tokens, raw SDP or account details. See the
-[Quest testing and diagnostic guide](xr/ANDROID.md#install-and-test) for lifecycle
+[Quest testing and diagnostic guide](docs/android.md#install-and-test) for lifecycle
 checks and app-only log capture.
 
 ## Build and contribute
@@ -100,8 +100,8 @@ supported as a development host for synthetic previews and Android builds; the
 standalone 2D desktop app is retired. Linux and Android remain the product targets.
 No helper installs system tools or changes PATH/defaults.
 
-Start with [DEVELOPMENT.md](DEVELOPMENT.md) for prerequisites and checks,
-[xr/ANDROID.md](xr/ANDROID.md) for APK tooling, and [xr/README.md](xr/README.md)
+Start with [development guide](docs/development.md) for prerequisites and checks,
+[Android guide](docs/android.md) for APK tooling, and [XR development guide](docs/xr-development.md)
 for Godot preview and Linux export instructions.
 
 ```sh
@@ -128,14 +128,17 @@ for individual test and build targets.
 | `xr/` | Godot scenes, controller UI, OpenXR and Android platform glue |
 | `vendor/openxcloud/` | Pinned reusable protocol/media libraries |
 | `scripts/` | Build, packaging and validation helpers |
+| `docs/` | Development, release, architecture and device-test guides |
 
 The core has no Godot dependency. These components share a repository so interface
 changes and tests can land together. Read [AGENTS.md](AGENTS.md) before automated
 contributions.
 
-For design and project status, see [ARCHITECTURE.md](ARCHITECTURE.md),
-[XR_PLAN.md](XR_PLAN.md), [ROADMAP.md](ROADMAP.md) and
-[VALIDATION.md](VALIDATION.md).
+See the [documentation index](docs/README.md) and [release guide](docs/releases.md).
+
+For design and project status, see [architecture](docs/architecture.md),
+[XR engineering gates](docs/xr-plan.md), [roadmap](docs/roadmap.md) and
+[validation evidence](docs/validation.md).
 
 ## License
 

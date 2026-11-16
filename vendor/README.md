@@ -61,5 +61,5 @@ New GPU imports/lease retirement and Android Keystore/VM bootstrap live in XRbox
 own core/extension, not the upstream transport or protocol code. No Xbox signaling,
 SDP/ICE, auth flow, packet codec or Xbox security control is replaced. Host fake
 service/regression tests, Android compile/lint and APK checks are recorded in
-VALIDATION.md; they do not establish hardware playback, native color/crop correctness
+[validation evidence](../docs/validation.md); they do not establish hardware playback, native color/crop correctness
 or zero-copy. The source snapshot revision above remains unchanged.

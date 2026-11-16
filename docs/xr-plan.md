@@ -16,10 +16,7 @@ Preserve deferred shortcuts, bounded queues, refresh-only secure persistence and
 nonblocking UI teardown. Do not infer presentation from network or decode counters.
 Full settings/hotkey UI and passthrough follow basic runtime acceptance.
 
-Build commands and prerequisites belong in [DEVELOPMENT.md](DEVELOPMENT.md).
-Android packaging and exact manual checks belong in [xr/ANDROID.md](xr/ANDROID.md).
-Record observations in [VALIDATION.md](VALIDATION.md); architecture belongs in
-[ARCHITECTURE.md](ARCHITECTURE.md).
-
-[Historical XR design](docs/history/2026-11-12-XR_PLAN.md) retains earlier proposals,
-references and superseded milestone definitions, including the retired desktop harness.
+Build commands and prerequisites belong in [development guide](development.md).
+Android packaging and exact manual checks belong in [Android guide](android.md).
+Record observations in [validation evidence](validation.md); architecture belongs in
+[architecture](architecture.md).

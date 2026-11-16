@@ -27,7 +27,7 @@ engine is not yet selected or proven necessary.
 
 Timebox the first session to about two hours. Start with the shipped stock engine
 and observed device capabilities; do not select an engine patch from Mac/Docker
-behavior. Keep [FRAME_RESULTS_TEMPLATE.md](FRAME_RESULTS_TEMPLATE.md) alongside
+behavior. Keep [results template](frame-results-template.md) alongside
 the identified candidate and mark every case PASS / FAIL / NOT RUN.
 
 1. **0–15 minutes:** deploy, confirm native launch and actual headset stereo/XR.
@@ -36,7 +36,7 @@ the identified candidate and mark every case PASS / FAIL / NOT RUN.
    signs in, installs tools or changes device configuration. Missing tools are
    reported as unavailable. Review the output before sharing it.
 3. **30–50 minutes:** exercise UI, controls, geometry and lifecycle. On Android,
-   repeat the Meta-only navigation cases using the matching xr.3 APK.
+   repeat the Meta-only navigation cases using the matching 0.0.1 APK.
 4. **Hardware-video gate:** if the native candidate is unavailable or fails,
    record the exact missing capability and stop before auth/live streaming.
    Bring that evidence back for a small targeted implementation/retest. Do not

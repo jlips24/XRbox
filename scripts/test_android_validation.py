@@ -19,6 +19,18 @@ def elf(machine=183, alignment=16384):
 
 
 class AndroidValidationTests(unittest.TestCase):
+    def test_manifest_matches_configured_version_and_rejects_old_versions(self):
+        manifest = ('org.xrbox.prototype android.permission.INTERNET quest3|quest3s '
+                    'com.oculus.intent.category.VR org.khronos.openxr.intent.category.IMMERSIVE_HMD\n'
+                    'A: android:versionName(0x0101021c)="0.0.1"')
+        validation.validate_manifest(manifest, '0.0.1')
+        with self.assertRaisesRegex(ValueError, 'versionName'):
+            validation.validate_manifest(manifest, '0.1.10-xr.3')
+        with self.assertRaisesRegex(ValueError, 'versionName'):
+            validation.validate_manifest(manifest.replace('versionName', 'otherName'), '0.0.1')
+        with self.assertRaisesRegex(ValueError, 'sensor'):
+            validation.validate_manifest(manifest + ' android.permission.CAMERA', '0.0.1')
+
     def test_elf_checks_architecture_alignment_and_program_bounds(self):
         self.assertEqual(validation.validate_elf(elf()), [16384])
         wrong_class = elf()

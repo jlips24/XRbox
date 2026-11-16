@@ -13,11 +13,6 @@ The standalone desktop frontend is retired; macOS is a synthetic development hos
 4. Port settings/custom hotkey editing and qualify additional Android headsets.
 5. Measure presentation timing, power and thermals before optimization claims.
 
-See [XR_PLAN.md](XR_PLAN.md) for engineering gates, [ROADMAP.md](ROADMAP.md) for
-priority, [ARCHITECTURE.md](ARCHITECTURE.md) for ownership and
-[VALIDATION.md](VALIDATION.md) for evidence. No cloud gaming, relay PC or second frontend.
-
-## History
-
-[Earlier implementation plan](docs/history/2026-11-12-Plan.md) preserves desktop-era
-work and superseded proposals; it does not authorize restoring that product.
+See [XR engineering gates](xr-plan.md) for engineering gates, [roadmap](roadmap.md) for
+priority, [architecture](architecture.md) for ownership and
+[validation evidence](validation.md) for evidence. No cloud gaming, relay PC or second frontend.
