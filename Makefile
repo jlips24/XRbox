@@ -8,10 +8,11 @@ TEST_MAKE ?= $(MAKE)
 ARGS ?=
 VIDEO_FIXTURE := vendor/openxcloud/fixtures/testsrc_1080p60.h264
 
-.PHONY: help build release run test test-all test-ci test-rust-all test-python check check-all fmt fixture clean
+.PHONY: help build release run test test-all test-ci test-rust-all test-python check check-all fmt fixture clean version
 
 help:
 	@printf '%s\n' \
+	  'make version         Sync Godot version fields from release.json' \
 	  'make build           Build/stage the host Godot extension' \
 	  'make release         Build/stage an optimized host Godot extension' \
 	  'make run             Run the host synthetic Godot preview' \
@@ -33,6 +34,9 @@ help:
 	  'make xr-preview      Run host synthetic scene without OpenXR' \
 	  'make xr-apk          Build/sign/verify Quest development APK' \
 	  'make xr-apk-check    Verify existing APK (no device access)'
+
+version:
+	$(PYTHON) scripts/release_version.py
 
 build: xr-build
 

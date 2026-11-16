@@ -1,3 +1,4 @@
+; Version fields are derived from release.json by scripts/release_version.py.
 ; Godot 4.7.2, single shared Linux/Android project.
 config_version=5
 

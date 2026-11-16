@@ -49,7 +49,7 @@ def validate_manifest(manifest, expected_version):
             raise ValueError('Missing APK manifest entry: ' + required)
     version = re.search(r'android:versionName(?:\([^)]*\))?="([^"]+)"', manifest)
     if version is None or version.group(1) != expected_version:
-        raise ValueError('APK versionName does not match the Godot project version')
+        raise ValueError('APK versionName does not match the configured release version')
     if any(permission in manifest for permission in ['android.permission.CAMERA', 'android.permission.RECORD_AUDIO',
                                                      'android.permission.ACCESS_FINE_LOCATION']):
         raise ValueError('Streaming app requests an unnecessary sensor/location permission')

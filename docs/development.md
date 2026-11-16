@@ -187,3 +187,14 @@ workaround, to allow deferred extension-documentation callbacks to run before
 shutdown. This is a timing workaround, not an engine fix; keep crash diagnostics
 and fail on nonzero exits or engine errors. UI tests and rendering do not inherit
 the delay. Linux CI must confirm whether it resolves XRbox's matching failure.
+
+### Release version source
+
+Edit only root `release.json` for the public app version and Android version code.
+Godot build/preview/check helpers and APK packaging synchronize the derived version
+fields in `xr/project.godot` and `xr/export_presets.cfg` automatically. These
+checked-in copies support editor use; `make version` refreshes them without a build
+or launch. A config bump can therefore update those derived files locally, but
+only `release.json` needs editing in the GitHub release-preparation PR. CI tag
+checks, artifact names and metadata read that same config. The Rust library version
+is separate. See [releases.md](releases.md) for the GitHub UI process.

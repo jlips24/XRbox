@@ -155,3 +155,16 @@ and tag mismatch, tampering rejection, archive contents and final checksums.
 Workflow actionlint and whitespace checks passed. No release was published, assets
 uploaded or devices accessed during implementation; the actual hosted build and
 attachment path require the first published release to validate end to end.
+
+## Single release-version config — November 16, 2026
+
+`release.json` now owns public app version and Android version code. Build/preview/
+check and APK helpers synchronize derived Godot settings and filenames; CI tag
+validation and provenance read the config directly. Rust core version is separate.
+Config-only edits through GitHub require no manual edits to derived version fields.
+
+Local Python tests passed 25 tests with one Linux-only GDB skip, including version
+bump synchronization, unrelated-setting preservation, idempotence, invalid config
+and missing-setting rejection. `make xr-check` passed bridge and fake-state UI
+checks. No new APK was built and no device was accessed; the configured version
+and code remain 0.0.1/11003.

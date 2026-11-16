@@ -23,8 +23,9 @@ Android build 0.0.1 implements live streaming, but actual sign-in, Keystore,
 video/audio/controller and XR behavior still need hardware acceptance.
 Linux ARM64 decoding/import, Flatpak and battery performance remain unvalidated.
 Follow docs/xr-plan.md and docs/android.md; do not infer hardware results from builds.
-Read the core version from crates/xrbox-core/Cargo.toml and APK version from the
-Godot configuration; superseded desktop documentation remains in Git history.
+Read the core version from crates/xrbox-core/Cargo.toml and public app/APK
+version plus Android version code from release.json. Godot version fields are
+derived copies synchronized by scripts/release_version.py; superseded desktop documentation remains in Git history.
 
 ## Respect the user's machine
 

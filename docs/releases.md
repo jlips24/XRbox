@@ -14,13 +14,23 @@ extension, not a complete Linux streaming app. Linux live video remains disabled
 
 1. In GitHub, create a new `feat/<description>` or `bug/<description>` branch
    and use the file editor or web editor to prepare the changes.
-2. Update `xr/project.godot` → `application/config/version` and the Android preset
-   in `xr/export_presets.cfg` → `version/name` and `export_path`. Keep the APK
-   version equal to the intended tag without `v`. The packaging helper derives
-   its filename and manifest check from the Godot project version.
-3. Increase Android `version/code` for each subsequent APK release. It must not
-   decrease even when the display version changes. For `0.0.1`, retain **11003**
-   to upgrade the earlier prototype (**11002**) using the same signing key.
+2. Edit only the root **`release.json`** for version settings. For example:
+
+   ```json
+   {
+     "version": "0.0.2",
+     "android_version_code": 11004
+   }
+   ```
+
+   `version` must match the intended tag without `v` (`v0.0.2` → `0.0.2`).
+   Increase `android_version_code` for each later release; the prepared `0.0.1`
+   uses **11003**, so the next code is **11004**. Do not put credentials here.
+3. Do not manually edit version fields in `xr/project.godot` or
+   `xr/export_presets.cfg`: they are derived copies. Build/preview/check helpers
+   automatically synchronize the app/footer version, APK version/code and export
+   filename. CI validates tags and generates metadata from `release.json`.
+   Local editor users can run `make version` to sync without building or launching.
 4. Update release notes and relevant [validation evidence](validation.md). State
    what was tested, what is implemented and which device checks remain unrun.
 5. Commit the changes through the GitHub editor and open a PR against `master`.

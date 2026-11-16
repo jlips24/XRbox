@@ -41,7 +41,7 @@ class CiTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / 'xr').mkdir()
-            (root / 'xr/project.godot').write_text('config/version="0.0.1"\n')
+            (root / 'release.json').write_text(json.dumps(dict(version='0.0.1', android_version_code=11003)))
             core = root / 'crates/xrbox-core'
             core.mkdir(parents=True)
             (core / 'Cargo.toml').write_text('version = "0.1.10"\n')
@@ -58,6 +58,7 @@ class CiTests(unittest.TestCase):
             self.assertEqual(info['target'], 'aarch64-linux-android')
             self.assertEqual(info['build_host_architecture'], 'x86_64')
             self.assertEqual(info['app_version'], '0.0.1')
+            self.assertEqual(info['android_version_code'], 11003)
             self.assertFalse(info['hardware_validated'])
             self.assertEqual(info['sha256']['test.apk'], ci.digest(artifact / 'test.apk', 'sha256'))
 
@@ -65,7 +66,7 @@ class CiTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / 'xr').mkdir()
-            (root / 'xr/project.godot').write_text('config/version="0.0.1"\n')
+            (root / 'release.json').write_text(json.dumps(dict(version='0.0.1', android_version_code=11003)))
             def git(*arguments):
                 return subprocess.check_output(['git', '-c', 'user.name=XRbox test', '-c',
                                                 'user.email=test@example.invalid', *arguments], cwd=root, text=True).strip()
