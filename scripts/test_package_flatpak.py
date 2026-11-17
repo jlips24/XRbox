@@ -109,9 +109,74 @@ class FlatpakTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'ARM64 ELF'):
                 packaging.validate_export(directory)
 
+    def test_runtime_validation_checks_loadable_files_and_excludes_debug_companions(self):
+        self._runtime_validation_case('clean', 0)
+
+    def test_runtime_validation_rejects_ldd_failure_and_missing_dependencies(self):
+        for mode in ['crash', 'missing']:
+            with self.subTest(mode=mode):
+                self._runtime_validation_case(mode, 1)
+
+    def _runtime_validation_case(self, mode, expected):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / 'app with spaces'
+            for name in ['lib/xrbox/xrbox.arm64', 'lib/xrbox/xrbox.pck',
+                         'lib/xrbox/libxrbox_godot.so', 'lib/libavcodec.so.62.1',
+                         'lib/debug/lib/xrbox/libxrbox_godot.so.debug',
+                         'lib/debug/libhidden.so', 'lib/libother.so.debug', 'lib/libversioned.so.1.debug']:
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text('synthetic')
+            ldd = Path(temporary) / 'fake-ldd'
+            ldd.write_text("#!/bin/sh\n" +
+                           "case \"$1\" in *debug*) echo 'Unexpected debug companion'; exit 135;; esac\n" +
+                           ("case \"$1\" in *libxrbox_godot.so) echo 'synthetic loader crash' >&2; exit 135;; esac\n" if mode == 'crash' else '') +
+                           ("case \"$1\" in *libxrbox_godot.so) echo 'libmissing.so => not found'; exit 0;; esac\n" if mode == 'missing' else '') +
+                           "echo 'libc.so.6 => /usr/lib/libc.so.6'\n")
+            ldd.chmod(0o755)
+            result = subprocess.run(['sh', str(packaging.ROOT / 'scripts/validate_flatpak_runtime.sh'),
+                                     str(root), str(ldd)], text=True,
+                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            self.assertEqual(result.returncode, expected, result.stdout)
+            self.assertIn('xrbox.arm64', result.stdout)
+            self.assertIn('libxrbox_godot.so', result.stdout)
+            self.assertIn('libavcodec.so.62.1', result.stdout)
+            self.assertNotIn('.debug', result.stdout)
+            self.assertNotIn('libhidden', result.stdout)
+            if mode == 'crash':
+                self.assertIn('ldd failed with exit 135', result.stdout)
+            if mode == 'missing':
+                self.assertIn('libmissing.so => not found', result.stdout)
+
+    def test_font_configuration_is_build_only_and_avoids_host_font_include(self):
+        config = packaging.ROOT / 'packaging/flatpak/build-fonts.conf'
+        tree = ET.parse(config)
+        self.assertEqual(tree.getroot().tag, 'fontconfig')
+        self.assertIn('/usr/share/fonts', [item.text for item in tree.findall('dir')])
+        self.assertFalse(tree.findall('include'))
+        with patch.dict(packaging.os.environ, {'FONTCONFIG_FILE': 'original-font-config'}):
+            env = packaging.godot_build_env()
+            self.assertEqual(env['FONTCONFIG_FILE'], str(config))
+            self.assertEqual(packaging.os.environ['FONTCONFIG_FILE'], 'original-font-config')
+        self.assertNotIn('FONTCONFIG_FILE', (packaging.ROOT / 'packaging/flatpak/xrbox').read_text())
+
+    def test_font_smoke_wrapper_preserves_exit_status_and_removes_temporary_config(self):
+        content = (packaging.ROOT / 'packaging/flatpak/build-fonts.conf').read_text()
+        for code in [0, 17]:
+            with self.subTest(exit_code=code), tempfile.TemporaryDirectory() as temporary:
+                record = Path(temporary) / 'config-path'
+                command = 'printf \"%s\\n\" \"$FONTCONFIG_FILE\" > \"$1\"; cat \"$FONTCONFIG_FILE\"; exit \"$2\"'
+                result = subprocess.run(['sh', str(packaging.ROOT / 'scripts/flatpak_godot_smoke.sh'),
+                                         'sh', '-c', command, 'synthetic-godot', str(record), str(code)],
+                                        input=content, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                self.assertEqual(result.returncode, code, result.stdout)
+                self.assertEqual(result.stdout, content)
+                self.assertFalse(Path(record.read_text().strip()).exists())
+
     def test_godot_errors_fail_even_with_zero_process_exit(self):
         packaging.check_output('Synthetic smoke completed')
-        for output in ['ERROR: GDExtension failed to load', 'SCRIPT ERROR: Parse error']:
+        for output in ['ERROR: GDExtension failed to load', 'SCRIPT ERROR: Parse error',
+                       'Fontconfig error: Cannot load config file /run/host/font-dirs.xml']:
             with self.assertRaises(ValueError):
                 packaging.check_output(output)
 

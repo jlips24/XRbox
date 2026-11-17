@@ -9,7 +9,11 @@ func capture() -> void:
 	root.add_child(scene)
 	var result := OK
 	# Each product page uses synthetic state; never initialize a session.
-	for page in ["home", "settings", "display", "placement", "environment", "account", "consoles", "screen"]:
+	for page in ["home", "settings", "display", "placement", "environment", "account", "signin", "consoles", "screen"]:
+		scene.live.state["code"] = "0O1I-TEST" if page == "signin" else ""
+		scene.live.state["uri"] = "https://microsoft.com/link" if page == "signin" else ""
+		scene.live.code = scene.live.state["code"]
+		scene.live.uri = scene.live.state["uri"]
 		if page == "screen":
 			scene.set_menu_open(false)
 		else:

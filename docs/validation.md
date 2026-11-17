@@ -390,3 +390,46 @@ publish-job guard. Workflow YAML parsed successfully and diff whitespace checks
 passed. No hosted workflow was dispatched and no package/app was built locally.
 The manual trigger must first land on the default branch before GitHub exposes
 Run workflow; see the [manual build guide](releases.md#manual-diagnostic-builds-no-release-needed).
+
+## Pre-Frame packaging checks and warning audit — November 17, 2026
+
+[Manual Linux job 134013303939](https://github.com/jlips24/XRbox/actions/runs/44075762930/job/134013303939)
+compiled Rust/FFmpeg, exported Godot, completed a headless synthetic launch and
+uploaded `XRbox-0.0.6-linux-arm64.flatpak`. Android and release attachment were
+correctly skipped. The old dependency scan included debug companions and did not
+propagate every ldd status; therefore its green result was incomplete validation.
+The font message matches Flatpak's [missing build-time host font include](https://github.com/flatpak/flatpak/issues/6137).
+No headset or Linux streaming acceptance follows from this successful package.
+
+Branch `bug/flatpak-preflight-validation` replaces the broad scan with a labeled
+runtime check of engine/shared libraries that excludes debug files and fails on
+any ldd error (including 135) or missing dependency. Tests execute the real shell
+checker against synthetic libraries in paths with spaces; debug companions are
+excluded and both loader failures and missing-library output reject the build.
+
+A CI-only Fontconfig XML lists SDK/app font directories without importing host
+configuration. It is scoped to Godot import/export and passed via a temporary file
+for runtime synthetic smoke. Both success and failure remove that file and preserve
+the app's exit code. No host or installed-app font defaults are changed. Fontconfig
+errors now reject Godot checks. A local fc-match check of the same configuration
+structure with the bundled-font directory resolved Hack successfully; it does not
+establish the SDK's system-font inventory. The synthetic render now captures a
+fake sign-in page, and CI retains all page captures. Its default text and bundled
+monospaced code were visually inspected on the host preview.
+
+The exact checksum-pinned FFmpeg source was reviewed. The specific val16[3–5]
+warning conflicts with the three-symbol recursion bound; the only callers of the
+multi-symbol initializer are disabled Ut Video/MagicYUV decoders. An unchanged
+function harness passed 78 ASan/UBSan cases at both maximum symbol depths on the
+Mac. No FFmpeg patch or warning suppression was added. See [the scoped audit](ffmpeg-vlc-audit.md)
+for provenance, reasoning, commands and limitations.
+
+Validation: 44 Python helper tests passed with one Linux-only skip; `make xr-check`
+passed five bridge tests and headless Godot checks; synthetic GPU capture passed
+nine pages plus room-darkness isolation. Shell syntax and diff whitespace checks
+passed. Source version remains 0.0.6/code 11008. No account, stored credentials,
+console or headset was accessed. No actual Flatpak build or hosted workflow was
+run for this change; the next Linux-only manual run must validate strict dependency
+checks and font configuration inside the real SDK/Platform. On Frame arrival,
+manually install that identified artifact and perform native launch, stereo,
+placement and text-readability gates before considering further hardware tests.

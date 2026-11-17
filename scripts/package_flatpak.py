@@ -41,8 +41,13 @@ def copy_sources(destination):
 
 
 def check_output(text):
-    if 'ERROR:' in text or 'SCRIPT ERROR:' in text:
+    if 'ERROR:' in text or 'SCRIPT ERROR:' in text or 'Fontconfig error:' in text:
         raise ValueError('Godot export/smoke reported an error; see captured output')
+
+
+def godot_build_env():
+    # Scope this to build/import processes; never override the installed app's fonts.
+    return dict(os.environ, FONTCONFIG_FILE=str(ROOT / 'packaging/flatpak/build-fonts.conf'))
 
 
 def validate_export(directory):
@@ -107,7 +112,7 @@ def inside_sdk():
     for args in [['--editor', '--import', '--quit', '--frame-delay', '1000'],
                  ['--export-release', 'Linux ARM64', '/app/lib/xrbox/xrbox.arm64']]:
         result = subprocess.run([str(p) for p in base + args], cwd=ROOT, text=True,
-                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=godot_build_env())
         print(result.stdout, flush=True)
         result.check_returncode()
         check_output(result.stdout)
@@ -182,19 +187,15 @@ def build():
          '--state-dir=' + str(work / 'state'), '--repo=' + str(repo), build_dir, path])
     validate_export(build_dir / 'files/lib/xrbox')
     # Inspect under the runtime, not host Ubuntu: missing transitive libraries fail here.
-    validation = """set -eu
-    test -s /app/lib/xrbox/xrbox.arm64
-    test -s /app/lib/xrbox/xrbox.pck
-    find /app -name '*.so*' -type f -exec ldd '{}' ';' > /tmp/xrbox-ldd.txt
-    ldd /app/lib/xrbox/xrbox.arm64 >> /tmp/xrbox-ldd.txt
-    cat /tmp/xrbox-ldd.txt
-    ! grep -q 'not found' /tmp/xrbox-ldd.txt
-    """
-    run(['flatpak', 'build', '--runtime', '--nofilesystem=host', build_dir, 'sh', '-c', validation])
-    smoke = subprocess.run(['flatpak', 'build', '--runtime', '--nofilesystem=host', str(build_dir), '/app/bin/xrbox',
+    validation = (ROOT / 'scripts/validate_flatpak_runtime.sh').read_text()
+    run(['flatpak', 'build', '--runtime', '--nofilesystem=host', build_dir,
+         'sh', '-c', validation, 'xrbox-runtime-validation', '/app'])
+    smoke_script = (ROOT / 'scripts/flatpak_godot_smoke.sh').read_text()
+    smoke = subprocess.run(['flatpak', 'build', '--runtime', '--nofilesystem=host', str(build_dir),
+                            'sh', '-c', smoke_script, 'xrbox-synthetic-smoke', '/app/bin/xrbox',
                             '--headless', '--audio-driver', 'Dummy', '--xr-mode', 'off', '--quit-after', '10',
                             '--', '--test'], cwd=ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                           timeout=120)
+                           input=(ROOT / 'packaging/flatpak/build-fonts.conf').read_text(), timeout=120)
     print(smoke.stdout, flush=True)
     smoke.check_returncode()
     check_output(smoke.stdout)
