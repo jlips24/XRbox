@@ -366,3 +366,27 @@ libclang, required API presence and failure before version synchronization/Cargo
 Diff whitespace checks passed. No tools were installed on this Mac, no full Linux
 ARM64 build/CI rerun occurred, and release version 0.0.6/code 11008 is unchanged.
 SDK compilation, export and runtime checks still require a corrected Linux run.
+
+## Manual diagnostic packaging — November 17, 2026
+
+Branch `feat/manual-diagnostic-builds` adds workflow_dispatch to Build with Linux
+(default), Android or both as targets. The selected ref resolves once to a commit;
+manual runs do not require a release tag or master ancestry. Release events retain
+the numeric tag/version/master-history gate. Builds reuse the existing jobs and
+read-only permissions. The attachment job is explicitly release-event-only.
+
+Manual artifacts have unique run/attempt labels, record their exact source commit,
+mark trigger=workflow_dispatch and tag=null, and retain version 0.0.6/code 11008.
+Release verification also rejects manual provenance. Flatpak diagnostic log names
+include attempt numbers so failed-job retries can retain fresh logs without a
+same-run artifact-name collision. Package artifact retention remains 30 days;
+Flatpak logs remain seven days. No release/tag is created or changed.
+
+The complete Python helper suite passed 40 tests with one Linux-only skip. CI
+helper regressions also passed under a simulated pull_request environment.
+Coverage includes unmerged manual source selection, preserved release gates,
+manual metadata, refusal to publish manual artifacts, platform selection and
+publish-job guard. Workflow YAML parsed successfully and diff whitespace checks
+passed. No hosted workflow was dispatched and no package/app was built locally.
+The manual trigger must first land on the default branch before GitHub exposes
+Run workflow; see the [manual build guide](releases.md#manual-diagnostic-builds-no-release-needed).

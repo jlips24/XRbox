@@ -68,7 +68,7 @@ class CiTests(unittest.TestCase):
             with patch.object(ci, 'ROOT', root), \
                     patch.object(ci.platform, 'machine', return_value='x86_64'), \
                     patch.object(ci.subprocess, 'check_output', return_value='source-commit\n'), \
-                    patch.dict(ci.os.environ, {'XRBOX_TAG': 'v0.0.1', 'XRBOX_BUILD_KIND': 'android-development-apk'}):
+                    patch.dict(ci.os.environ, {'GITHUB_EVENT_NAME': 'release', 'XRBOX_TAG': 'v0.0.1', 'XRBOX_BUILD_KIND': 'android-development-apk'}):
                 ci.metadata(artifact)
             info = json.loads((artifact / 'build.json').read_text())
             self.assertEqual(info['architecture'], 'aarch64')
@@ -78,6 +78,19 @@ class CiTests(unittest.TestCase):
             self.assertEqual(info['android_version_code'], 11003)
             self.assertFalse(info['hardware_validated'])
             self.assertEqual(info['sha256']['test.apk'], ci.digest(artifact / 'test.apk', 'sha256'))
+            with patch.object(ci, 'ROOT', root), \
+                    patch.object(ci.subprocess, 'check_output', return_value='manual-commit\n'), \
+                    patch.dict(ci.os.environ, {'GITHUB_EVENT_NAME': 'workflow_dispatch',
+                                              'XRBOX_TAG': 'v0.0.1', 'XRBOX_BUILD_LABEL': 'manual-123-1',
+                                              'XRBOX_BUILD_KIND': 'android-development-apk'}):
+                ci.metadata(artifact)
+            manual = json.loads((artifact / 'build.json').read_text())
+            self.assertIsNone(manual['tag'])
+            self.assertEqual(manual['trigger'], 'workflow_dispatch')
+            self.assertEqual(manual['build_label'], 'manual-123-1')
+            self.assertEqual(manual['source_revision'], 'manual-commit')
+            self.assertEqual(manual['app_version'], '0.0.1')
+
 
     def test_release_source_requires_matching_version_and_master_ancestry(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -99,6 +112,12 @@ class CiTests(unittest.TestCase):
                 git('commit', '--allow-empty', '-m', 'unmerged synthetic change')
                 with self.assertRaises(subprocess.CalledProcessError):
                     ci.release_source('v0.0.1')
+                with patch.dict(ci.os.environ, {'GITHUB_EVENT_NAME': 'workflow_dispatch',
+                                                'GITHUB_RUN_ID': '123', 'GITHUB_RUN_ATTEMPT': '2'}):
+                    fields = ci.build_source()
+                self.assertEqual(fields, dict(eligible='true', tag='v0.0.1',
+                                              revision=git('rev-parse', 'HEAD'), label='manual-123-2'))
+
 
     def test_release_assets_verify_both_builds_before_packaging(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -119,6 +138,16 @@ class CiTests(unittest.TestCase):
                              {'XRbox-0.0.1-linux-arm64.flatpak', 'XRbox-0.0.1-quest-debug.apk'})
             self.assertEqual((output / 'XRbox-0.0.1-linux-arm64.flatpak').read_bytes(),
                              (linux / 'XRbox-0.0.1-linux-arm64.flatpak').read_bytes())
+
+            info_path = linux / 'build.json'
+            original = info_path.read_text()
+            manual = json.loads(original)
+            manual['trigger'] = 'workflow_dispatch'
+            info_path.write_text(json.dumps(manual))
+            with self.assertRaisesRegex(ValueError, 'provenance'):
+                ci.release_assets(linux, android, root / 'manual-rejected', 'v0.0.1', 'abc')
+            self.assertFalse((root / 'manual-rejected').exists())
+            info_path.write_text(original)
             for revision, tag in [('wrong-source', 'v0.0.1'), ('abc', 'v0.0.2')]:
                 with self.assertRaisesRegex(ValueError, 'provenance'):
                     ci.release_assets(linux, android, root / 'rejected', tag, revision)
@@ -127,6 +156,30 @@ class CiTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'checksum'):
                 ci.release_assets(linux, android, root / 'rejected', 'v0.0.1', 'abc')
             self.assertFalse((root / 'rejected').exists())
+
+    def test_build_source_keeps_release_gates_and_rejects_other_events(self):
+        with patch.dict(ci.os.environ, {'GITHUB_EVENT_NAME': 'release', 'XRBOX_TAG': 'v0.0.6'}), \
+                patch.object(ci, 'release_source', return_value='release-commit') as gate:
+            self.assertEqual(ci.build_source(), dict(eligible='true', tag='v0.0.6',
+                                                     revision='release-commit', label='v0.0.6'))
+        gate.assert_called_once_with('v0.0.6')
+        with patch.dict(ci.os.environ, {'GITHUB_EVENT_NAME': 'push'}), \
+                self.assertRaisesRegex(ValueError, 'Unsupported build trigger'):
+            ci.build_source()
+
+    def test_manual_workflow_artifacts_cannot_run_publish_job(self):
+        workflow = (ci.ROOT / '.github/workflows/build.yml').read_text()
+        self.assertIn('  workflow_dispatch:', workflow)
+        publish = workflow.split('  publish:\n', 1)[1]
+        self.assertIn("    if: github.event_name == 'release'\n", publish)
+        self.assertEqual(workflow.count('contents: write'), 1)
+        self.assertIn('python3 scripts/ci.py build-source', workflow)
+        for target in ['linux', 'android']:
+            job = workflow.split('  ' + target + ':\n', 1)[1].split('    runs-on:', 1)[0]
+            self.assertIn("inputs.target == '" + target + "'", job)
+            self.assertIn("inputs.target == 'all'", job)
+            self.assertIn("github.event_name == 'release'", job)
+        self.assertEqual(workflow.count('name: xrbox-${{ needs.version.outputs.label }}-'), 4)
 
     def test_verified_cache_is_reused_but_mismatched_download_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:

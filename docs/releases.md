@@ -62,8 +62,39 @@ No local Git commands or artifact downloads are required for the release flow.
 
 The workflow validates the tag format, APK version match and that the tagged
 commit belongs to `master` history. Both builds use that exact validated commit.
-It runs only when a release is published; creating/pushing a tag alone does not
-start another build. Keep published tags fixed.
+Automatic release builds run when a release is published; creating/pushing a tag
+alone does not start another build. Manual diagnostic builds are also available
+as described below. Keep published tags fixed.
+
+## Manual diagnostic builds (no release needed)
+
+Once the workflow-dispatch change is merged into `master`, use GitHub's
+**Actions → Build → Run workflow** button. Select the branch to test and choose
+`linux` (default), `android`, or `all`, then select **Run workflow**. The selected
+branch must contain the manual-build workflow. This also permits testing an
+unmerged fix branch without changing a tag or creating a release.
+
+For the current Flatpak issues, choose `linux` to avoid an unrelated APK build.
+When it succeeds, download the ZIP under **Artifacts** at the bottom of the run.
+Artifacts use `xrbox-manual-RUN_ID-ATTEMPT-PLATFORM` names and retain the existing
+package version from `release.json`; no version bump is required per diagnostic
+run. Packages, checksums, source commit and notices are included. Metadata marks
+`trigger` as `workflow_dispatch` and `tag` as null. Artifacts expire after 30 days;
+Flatpak failure logs are retained for seven days.
+
+Manual runs never create a release or attach assets to one. The publishing job
+runs only for release events, and release verification rejects manual artifacts.
+Only the existing release publishing job has repository write permission.
+
+The equivalent CLI command, after the workflow is on `master`, is:
+
+```sh
+gh workflow run build.yml --ref YOUR_BRANCH -f target=linux
+```
+
+Use the Actions run page to inspect results before claiming success. Installation
+and headset/console testing remain manual; Android diagnostic APKs still use
+fresh development signing keys and may not update an earlier installation.
 
 ## 3. Automatically attached assets
 
