@@ -341,3 +341,28 @@ actual workflow body was run under GitHub's Bash flags with synthetic make exits
 0 and 23: each status propagated and output remained both visible and logged.
 Eight CI helper tests and seven Flatpak helper tests passed; diff whitespace
 checks passed. No app rebuild or remote workflow run was needed/performed.
+
+## Flatpak SDK libclang — November 16, 2026
+
+[Release job 133301426942](https://github.com/jlips24/XRbox/actions/runs/43867973680/job/133301426942)
+passed toolchain staging and FFmpeg compilation, then failed in ffmpeg-sys-next's
+bindgen because no libclang shared library was available inside the SDK sandbox.
+Host Ubuntu's libclang package does not supply sandbox build dependencies. The
+Rust DWARF/debugedit warnings were nonfatal in this run. Pipeline failure now
+correctly fails the build step and preserves diagnostics.
+
+Branch `bug/flatpak-sdk-libclang` adds build-only
+`org.freedesktop.Sdk.Extension.llvm20` to the manifest and CI SDK installation,
+using the pinned runtime branch. The build environment points LIBCLANG_PATH and
+its library search path at `/usr/lib/sdk/llvm20/lib`, and exposes the extension's
+compiler tools. A preflight loads libclang and checks its API before Cargo starts.
+No LLVM runtime extension or host-library bind mount is added to the app.
+This follows the [LLVM SDK extension's build configuration](https://github.com/flathub/org.freedesktop.Sdk.Extension.llvm20#usage)
+and [Flatpak SDK-extension model](https://docs.flatpak.org/en/latest/extension.html).
+
+Ten Flatpak helper tests and eight CI helper tests passed. Coverage includes
+manifest/search-path consistency, CI extension installation, missing/unloadable
+libclang, required API presence and failure before version synchronization/Cargo.
+Diff whitespace checks passed. No tools were installed on this Mac, no full Linux
+ARM64 build/CI rerun occurred, and release version 0.0.6/code 11008 is unchanged.
+SDK compilation, export and runtime checks still require a corrected Linux run.

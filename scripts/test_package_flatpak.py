@@ -6,7 +6,7 @@ import subprocess
 import tempfile
 import textwrap
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 import xml.etree.ElementTree as ET
 
 import package_flatpak as packaging
@@ -29,6 +29,46 @@ class FlatpakTests(unittest.TestCase):
         self.assertNotIn('--filesystem=home', manifest['finish-args'])
         self.assertNotIn('--socket=session-bus', manifest['finish-args'])
         self.assertEqual(packaging.bundle_name('0.0.4'), 'XRbox-0.0.4-linux-arm64.flatpak')
+
+    def test_sdk_llvm_extension_matches_bindgen_paths_and_ci_install(self):
+        manifest = json.loads((packaging.ROOT / 'packaging/flatpak' / (packaging.APP_ID + '.json')).read_text())
+        extension = 'org.freedesktop.Sdk.Extension.llvm20'
+        self.assertIn(extension, manifest['sdk-extensions'])
+        options = manifest['build-options']
+        self.assertEqual(options['env']['LIBCLANG_PATH'], '/usr/lib/sdk/llvm20/lib')
+        self.assertEqual(options['prepend-ld-library-path'], options['env']['LIBCLANG_PATH'])
+        self.assertEqual(options['append-path'], '/usr/lib/sdk/llvm20/bin')
+        setup = (packaging.ROOT / '.github/actions/setup-flatpak/action.yml').read_text()
+        self.assertIn(extension + '/aarch64/$runtime', setup)
+        self.assertNotIn('add-extensions', manifest)
+
+    def test_sdk_libclang_preflight_rejects_missing_or_unloadable_library(self):
+        with patch.dict(packaging.os.environ, {'LIBCLANG_PATH': ''}), \
+                self.assertRaisesRegex(ValueError, 'requires LIBCLANG_PATH'):
+            packaging.check_sdk_libclang()
+        with tempfile.TemporaryDirectory() as temporary, \
+                patch.dict(packaging.os.environ, {'LIBCLANG_PATH': temporary}):
+            with self.assertRaisesRegex(ValueError, 'Cannot load libclang'):
+                packaging.check_sdk_libclang()
+            (Path(temporary) / 'libclang.so').touch()
+            with patch.object(packaging.ctypes, 'CDLL', side_effect=OSError('missing LLVM dependency')), \
+                    self.assertRaisesRegex(ValueError, 'Cannot load libclang'):
+                packaging.check_sdk_libclang()
+            with patch.object(packaging.ctypes, 'CDLL', return_value=object()), \
+                    self.assertRaisesRegex(ValueError, 'Cannot load libclang'):
+                packaging.check_sdk_libclang()
+            with patch.object(packaging.ctypes, 'CDLL', return_value=Mock()) as load:
+                packaging.check_sdk_libclang()
+                load.assert_called_once_with(str(Path(temporary) / 'libclang.so'))
+
+    def test_inside_sdk_checks_libclang_before_cargo_or_version_updates(self):
+        with patch.object(packaging, 'check_sdk_libclang', side_effect=ValueError('missing libclang')), \
+                patch.object(packaging.release_version, 'sync') as sync, \
+                patch.object(packaging, 'run') as run, \
+                self.assertRaisesRegex(ValueError, 'missing libclang'):
+            packaging.inside_sdk()
+        sync.assert_not_called()
+        run.assert_not_called()
 
     def test_staging_excludes_ignored_credentials_outputs_and_git_database(self):
         with tempfile.TemporaryDirectory() as temporary:

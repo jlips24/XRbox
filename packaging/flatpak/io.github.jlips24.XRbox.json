@@ -3,6 +3,7 @@
   "runtime": "org.freedesktop.Platform",
   "runtime-version": "25.08",
   "sdk": "org.freedesktop.Sdk",
+  "sdk-extensions": ["org.freedesktop.Sdk.Extension.llvm20"],
   "command": "xrbox",
   "default-branch": "stable",
   "finish-args": [
@@ -19,9 +20,12 @@
       "CARGO": "/app/rust/bin/cargo",
       "RUSTC": "/app/rust/bin/rustc",
       "CARGO_HOME": "/run/build/xrbox/.cargo-home",
-      "CARGO_NET_OFFLINE": "true"
+      "CARGO_NET_OFFLINE": "true",
+      "LIBCLANG_PATH": "/usr/lib/sdk/llvm20/lib"
     },
-    "prepend-path": "/app/rust/bin"
+    "prepend-path": "/app/rust/bin",
+    "append-path": "/usr/lib/sdk/llvm20/bin",
+    "prepend-ld-library-path": "/usr/lib/sdk/llvm20/lib"
   },
   "cleanup": ["/rust", "/include", "/lib/pkgconfig", "/share/man"],
   "modules": [
