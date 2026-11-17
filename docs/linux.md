@@ -6,7 +6,9 @@ FFmpeg shared libraries. It uses the Freedesktop 25.08 runtime, with a desktop
 launcher and bundled license/third-party notices. No separately configured XRbox
 service or relay computer is needed.
 
-**Status:** the packaging implementation is awaiting its first Linux CI build.
+**Status:** manual run 44075762930 built/uploaded a 0.0.6 Flatpak and completed
+a headless synthetic launch. That run exposed a dependency-audit gap now addressed
+in source; the strengthened checks still need their next Linux CI run.
 This is an installable-package target for the existing synthetic Linux XR
 prototype, not working Linux console Remote Play. Linux decoding/import and
 Frame OpenXR, controller and audio behavior still require implementation or
@@ -71,10 +73,19 @@ credentials, native output, Android templates or editor caches.
 Before creating the bundle the helper checks exported executable/PCK presence,
 transitive ELF dependencies under the **Platform** runtime, and a bounded
 headless synthetic startup with `--test`, dummy audio and XR disabled. Error
-markers and nonzero exits fail the build. It never opens credentials or starts
-live auth/streaming. Only the release workflow runs this full packaging command automatically;
+markers and nonzero exits fail the build. The dependency audit checks the engine
+and regular shared-library files, excludes debug companions, labels each target,
+and fails on every unexpected ldd exit or missing dependency. Shared libraries do
+not need executable permission; the checker does not change their modes. It never
+opens credentials or starts live auth/streaming. Godot import/export and synthetic smoke use a scoped
+Fontconfig configuration listing only SDK/app font directories. It avoids the
+build sandbox's missing `/run/host/font-dirs.xml` include, and font configuration
+errors now fail those checks. The installed launcher/font configuration is unchanged.
+
+Full packaging runs for published releases or explicit manual workflow dispatch;
 PRs and pushes to master run the normal synthetic checks without building a
-Flatpak. Packaging logs are retained in Actions.
+Flatpak. Packaging logs are retained in Actions. See the [VLC warning audit](ffmpeg-vlc-audit.md)
+for the investigated upstream FFmpeg array-bounds diagnostic; warnings remain enabled.
 
 ## Sandbox and hardware boundary
 
