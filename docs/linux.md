@@ -44,9 +44,14 @@ the build runtime and SDK explicitly if they are not already available:
 
 ```sh
 flatpak --user remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-flatpak --user install flathub org.freedesktop.Platform/aarch64/25.08 org.freedesktop.Sdk/aarch64/25.08
+flatpak --user install flathub org.freedesktop.Platform/aarch64/25.08 org.freedesktop.Sdk/aarch64/25.08 org.freedesktop.Sdk.Extension.llvm20/aarch64/25.08
 make xr-flatpak
 ```
+
+The LLVM 20 SDK extension supplies build-time libclang for FFmpeg bindgen. The
+manifest mounts it and sets LIBCLANG_PATH plus the build-only library search path;
+a host-installed libclang is not visible inside the SDK sandbox. The helper checks
+that libclang loads before starting Cargo. LLVM is not added to the app runtime.
 
 The helper copies nonignored repository sources, vendors the locked Cargo graph,
 and stages the existing pinned compiler into an ignored build input directory.

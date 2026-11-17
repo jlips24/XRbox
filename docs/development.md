@@ -127,13 +127,15 @@ Local validation does not establish hosted runner or release build results.
   a synthetic fixture, not Frame compatibility evidence. Logs are retained for
   seven days. Ignored credential/audio tests and real account/device tests remain off.
 - **Build**: publishing a release with a numeric `vX.X` or `vX.X.X` tag builds
-  the optimized Linux ARM64 extension and verified Android development APK.
-  Tags must match the APK version and point into `master` history. Invalid
-  source/version choices fail validation. Tag pushes alone do not start builds.
-- After both builds succeed, a final job verifies provenance/checksums and attaches
-  the APK, Linux archive, metadata, checksums and notices to that release. Actions
-  artifacts are also retained for 30 days. The Linux output is an extension, not
-  an exported Linux app or proof of streaming compatibility.
+  the Linux ARM64 Flatpak and verified Android development APK. Tags must match
+  the app version and point into `master` history. Tag pushes alone do not build.
+- **Manual builds**: Actions → Build → Run workflow lets you choose a branch and
+  `linux`, `android` or `all`. These reuse the packaging jobs and upload uniquely
+  named diagnostic artifacts without publishing. No release/version bump is needed.
+  The workflow must first be merged into `master`; see the [release guide](releases.md#manual-diagnostic-builds-no-release-needed).
+- Release events attach only the APK and Flatpak after both builds and provenance
+  verification pass. Metadata/checksums/notices remain in Actions artifacts, retained
+  for 30 days. Neither package validation nor synthetic smoke proves Frame support.
 - Create the tag and publish the release through GitHub's UI using the
   [release guide](releases.md). No manual artifact attachment is required.
 - Actions use pinned commit SHAs. Builds use read-only repository permissions;

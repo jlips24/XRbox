@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Build a Linux ARM64 Flatpak; never installs host tools, runtimes or the app."""
 import argparse
+import ctypes
 import json
 import os
 from pathlib import Path
@@ -58,8 +59,27 @@ def validate_export(directory):
             raise ValueError('Linux export must contain ARM64 ELF binaries: ' + str(path))
 
 
+def check_sdk_libclang():
+    """Check the build-sandbox library, never a host compiler or runtime dependency."""
+    directory = os.environ.get('LIBCLANG_PATH')
+    if not directory:
+        raise ValueError('Flatpak SDK requires LIBCLANG_PATH from the LLVM SDK extension; see docs/linux.md')
+    candidates = sorted(set(Path(directory).glob('libclang.so*')) |
+                        set(Path(directory).glob('libclang-*.so*')))
+    for candidate in candidates:
+        try:
+            library = ctypes.CDLL(str(candidate))
+            getattr(library, 'clang_getClangVersion')
+            return
+        except (OSError, AttributeError):
+            continue
+    raise ValueError('Cannot load libclang from ' + directory +
+                     '; install/mount org.freedesktop.Sdk.Extension.llvm20 for the pinned SDK branch; see docs/linux.md')
+
+
 def inside_sdk():
     """Compile against the actual runtime SDK, then export the complete Godot app."""
+    check_sdk_libclang()
     config = release_version.sync(ROOT)
     cargo = os.environ.get('CARGO', 'cargo')
     rustc = os.environ.get('RUSTC', 'rustc')

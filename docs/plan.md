@@ -9,7 +9,7 @@ The standalone desktop frontend is retired; macOS is a synthetic development hos
 1. Accept Android sign-in, secure restoration, moving video, audio, controls and
    lifecycle on Quest 3S with a real Xbox; fix observed failures first.
 2. Implement and qualify Linux ARM64 native decoding/import and Frame deployment.
-3. Validate the release-only Flatpak build, then qualify runtime permissions and
+3. Validate the Flatpak build using manual diagnostic runs, then qualify runtime permissions and
    headset installation independently of native compilation. See [Linux guide](linux.md).
 4. Port settings/custom hotkey editing and qualify additional Android headsets.
 5. Measure presentation timing, power and thermals before optimization claims.

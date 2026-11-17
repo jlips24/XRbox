@@ -341,3 +341,52 @@ actual workflow body was run under GitHub's Bash flags with synthetic make exits
 0 and 23: each status propagated and output remained both visible and logged.
 Eight CI helper tests and seven Flatpak helper tests passed; diff whitespace
 checks passed. No app rebuild or remote workflow run was needed/performed.
+
+## Flatpak SDK libclang — November 16, 2026
+
+[Release job 133301426942](https://github.com/jlips24/XRbox/actions/runs/43867973680/job/133301426942)
+passed toolchain staging and FFmpeg compilation, then failed in ffmpeg-sys-next's
+bindgen because no libclang shared library was available inside the SDK sandbox.
+Host Ubuntu's libclang package does not supply sandbox build dependencies. The
+Rust DWARF/debugedit warnings were nonfatal in this run. Pipeline failure now
+correctly fails the build step and preserves diagnostics.
+
+Branch `bug/flatpak-sdk-libclang` adds build-only
+`org.freedesktop.Sdk.Extension.llvm20` to the manifest and CI SDK installation,
+using the pinned runtime branch. The build environment points LIBCLANG_PATH and
+its library search path at `/usr/lib/sdk/llvm20/lib`, and exposes the extension's
+compiler tools. A preflight loads libclang and checks its API before Cargo starts.
+No LLVM runtime extension or host-library bind mount is added to the app.
+This follows the [LLVM SDK extension's build configuration](https://github.com/flathub/org.freedesktop.Sdk.Extension.llvm20#usage)
+and [Flatpak SDK-extension model](https://docs.flatpak.org/en/latest/extension.html).
+
+Ten Flatpak helper tests and eight CI helper tests passed. Coverage includes
+manifest/search-path consistency, CI extension installation, missing/unloadable
+libclang, required API presence and failure before version synchronization/Cargo.
+Diff whitespace checks passed. No tools were installed on this Mac, no full Linux
+ARM64 build/CI rerun occurred, and release version 0.0.6/code 11008 is unchanged.
+SDK compilation, export and runtime checks still require a corrected Linux run.
+
+## Manual diagnostic packaging — November 17, 2026
+
+Branch `feat/manual-diagnostic-builds` adds workflow_dispatch to Build with Linux
+(default), Android or both as targets. The selected ref resolves once to a commit;
+manual runs do not require a release tag or master ancestry. Release events retain
+the numeric tag/version/master-history gate. Builds reuse the existing jobs and
+read-only permissions. The attachment job is explicitly release-event-only.
+
+Manual artifacts have unique run/attempt labels, record their exact source commit,
+mark trigger=workflow_dispatch and tag=null, and retain version 0.0.6/code 11008.
+Release verification also rejects manual provenance. Flatpak diagnostic log names
+include attempt numbers so failed-job retries can retain fresh logs without a
+same-run artifact-name collision. Package artifact retention remains 30 days;
+Flatpak logs remain seven days. No release/tag is created or changed.
+
+The complete Python helper suite passed 40 tests with one Linux-only skip. CI
+helper regressions also passed under a simulated pull_request environment.
+Coverage includes unmerged manual source selection, preserved release gates,
+manual metadata, refusal to publish manual artifacts, platform selection and
+publish-job guard. Workflow YAML parsed successfully and diff whitespace checks
+passed. No hosted workflow was dispatched and no package/app was built locally.
+The manual trigger must first land on the default branch before GitHub exposes
+Run workflow; see the [manual build guide](releases.md#manual-diagnostic-builds-no-release-needed).

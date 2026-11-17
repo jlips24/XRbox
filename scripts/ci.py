@@ -118,8 +118,13 @@ def metadata(directory):
     validate_release_version(os.environ['XRBOX_TAG'], app)
     target = {'linux-arm64-flatpak': 'aarch64-unknown-linux-gnu',
               'android-development-apk': 'aarch64-linux-android'}[os.environ['XRBOX_BUILD_KIND']]
+    trigger = os.environ.get('GITHUB_EVENT_NAME', 'release')
+    if trigger not in ('release', 'workflow_dispatch'):
+        raise ValueError('Unsupported build trigger: ' + trigger)
     info = {
-        'tag': os.environ['XRBOX_TAG'],
+        'tag': os.environ['XRBOX_TAG'] if trigger == 'release' else None,
+        'trigger': trigger,
+        'build_label': os.environ.get('XRBOX_BUILD_LABEL', os.environ['XRBOX_TAG']),
         'kind': os.environ['XRBOX_BUILD_KIND'],
         'source_revision': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
         'core_version': core, 'app_version': app,
@@ -140,13 +145,34 @@ def release_source(tag):
     return subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
 
 
+def build_source():
+    """Resolve release gates or a manually selected ref to one immutable revision."""
+    event = os.environ['GITHUB_EVENT_NAME']
+    if event == 'release':
+        tag = os.environ['XRBOX_TAG']
+        revision = release_source(tag)
+        label = tag
+    elif event == 'workflow_dispatch':
+        # This is a version label for existing build helpers, not a published tag.
+        tag = 'v' + release_version.load(ROOT)['version']
+        revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
+        run, attempt = int(os.environ['GITHUB_RUN_ID']), int(os.environ['GITHUB_RUN_ATTEMPT'])
+        if run <= 0 or attempt <= 0:
+            raise ValueError('Manual build run and attempt must be positive')
+        label = f'manual-{run}-{attempt}'
+    else:
+        raise ValueError('Unsupported build trigger: ' + event)
+    return dict(eligible='true', tag=tag, revision=revision, label=label)
+
+
 def release_assets(linux, android, output, tag, revision):
     """Combine only verified outputs from this release's exact source revision."""
     if not valid_tag(tag):
         raise ValueError('Invalid release tag')
     for directory, kind in [(linux, 'linux-arm64-flatpak'), (android, 'android-development-apk')]:
         info = json.loads((directory / 'build.json').read_text())
-        if (info['tag'], info['source_revision'], info['kind'], info['app_version']) != (tag, revision, kind, tag[1:]):
+        if (info.get('trigger', 'release') != 'release' or
+                (info['tag'], info['source_revision'], info['kind'], info['app_version']) != (tag, revision, kind, tag[1:])):
             raise ValueError('Release artifact provenance mismatch: ' + kind)
         actual = {str(path.relative_to(directory)): digest(path, 'sha256')
                   for path in sorted(directory.rglob('*')) if path.is_file() and path.name != 'build.json'}
@@ -167,7 +193,7 @@ def release_assets(linux, android, output, tag, revision):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['rust-version', 'tag', 'godot', 'android', 'metadata', 'release-source', 'release-assets'])
+    parser.add_argument('action', choices=['rust-version', 'tag', 'godot', 'android', 'metadata', 'release-source', 'build-source', 'release-assets'])
     parser.add_argument("--output", type=Path)
     parser.add_argument("--linux", type=Path)
     parser.add_argument("--android", type=Path)
@@ -185,6 +211,11 @@ def main():
             if valid_tag(tag):
                 output.write('tag=' + tag + '\n')
         print('Release name accepted' if valid_tag(tag) else 'Skipped: name must match vX.X or vX.X.X')
+    elif action == 'build-source':
+        fields = build_source()
+        with Path(os.environ['GITHUB_OUTPUT']).open('a') as output:
+            for name, value in fields.items():
+                output.write(f'{name}={value}\n')
     elif action == 'release-source':
         tag = os.environ['XRBOX_TAG']
         revision = release_source(tag)
